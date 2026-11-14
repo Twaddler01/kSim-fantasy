@@ -109,7 +109,7 @@ export default class CategoryBrowser {
                 text: "Research Journal"
             }),
             el("p", {
-                text: "A record of materials, locations, resources, and discoveries."
+                text: "A record of materials, locations, and resources."
             })
         ]);
 

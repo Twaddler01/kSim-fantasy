@@ -12,7 +12,7 @@
  */
 
 export const initialGameData = {
-    version: 2,
+    version: 1,
     stage: 0,
     clicks: 0,
     inventory: {
@@ -26,7 +26,6 @@ export const initialGameData = {
         particleStability: 0,
         observation: 0
     },
-    discoveries: [],
     log: [
         {
             id: 1,

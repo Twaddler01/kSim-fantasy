@@ -25,6 +25,12 @@ export default class SaveManager {
             }
 
             const parsed = JSON.parse(saved);
+            if (parsed.version !== this.initialData.version) {
+                console.warn(
+                    `Save version mismatch: saved v${parsed.version}, expected v${this.initialData.version}.`
+                );
+                // TODO: per-version migrations here
+            }
             const fresh = this.freshGame();
             const savedData = parsed;
 
@@ -41,10 +47,6 @@ export default class SaveManager {
                     ...fresh.upgrades,
                     ...(parsed.upgrades ?? {})
                 },
-
-                discoveries: Array.isArray(parsed.discoveries)
-                    ? parsed.discoveries
-                    : [],
 
                 events: {
                     ...(fresh.events ?? {}),

@@ -30,12 +30,10 @@ buildTileSprites()
 import attachDebugPanel from "./debug/attach.js";
 
 // Panels
-import DiscoveryPanel from "./src/ui/panels/DiscoveryPanel.js";
 import SynthesisPanel from "./src/ui/panels/SynthesisPanel.js";
 import UpgradePanel from "./src/ui/panels/UpgradePanel.js";
 import LogPanel from "./src/ui/panels/LogPanel.js";
 import JournalPanel from "./src/ui/panels/journal/JournalPanel.js";
-import PlanPanel from "./src/ui/panels/PlanPanel.js";
 
 import MainObjective from "./src/ui/panels/MainObjective.js";
 import ObjectiveTracker from "./src/ui/panels/ObjectiveTracker.js";
@@ -46,8 +44,6 @@ import FieldWorkPanel from "./src/ui/panels/FieldWorkPanel.js";
 import { createFieldIcon } from "./src/ui/fieldIcons.js";
 
 import Inventory from "./src/ui/panels/Inventory.js";
-// TODO
-import ExperimentPanel from "./src/ui/panels/ExperimentPanel.js";
 
 // Components
 import { el } from "./src/ui/components/Element.js";
@@ -64,20 +60,16 @@ import { Tabs } from "./src/ui/navigation/Tabs/Tabs.js";
 
 import { initialGameData } from "./src/data/initialGameData.js";
 import { resourceDefinitions } from "./src/data/resources.js";
-import { discoveries } from "./src/data/discoveries.js";
 import { upgradeDefinitions } from "./src/data/upgrades.js";
 import { FIELD_DEFINITIONS } from "./src/data/fields.js";
 import {
     addLog,
-    stir,
     buyUpgrade,
     upgradeCost,
     canAfford,
     payCost,
     costLabel,
-    formatNumber,
-    consumeParticles,
-    completeDiscovery
+    formatNumber
 } from "./src/functions.js";
 
 import { materials } from "./src/data/materials.js";
@@ -108,7 +100,7 @@ import NewBadge from "./src/notifications/NewBadge.js";
 import Toast from "./src/notifications/Toast.js";
 
 const saveManager = new SaveManager({
-    key: "ksim-quantum-foundations-v1",
+    key: "ksim-fantasy-v1",
     initialData: initialGameData
 });
 
@@ -158,23 +150,6 @@ for (const upgrade of upgradeDefinitions) {
             id: `upgrade:${upgrade.id}`,
             trigger: upgrade.trigger,
             content: upgrade
-        });
-    }
-}
-
-// Ordinary discoveries and hidden observations.
-for (const discovery of discoveries) {
-    if (discovery.hidden) {
-        eventProcessor.registerEvent({
-            id: `observation:${discovery.id}`,
-            trigger: discovery.trigger,
-            content: discovery
-        });
-    } else {
-        eventProcessor.registerEvent({
-            id: `discovery:${discovery.id}`,
-            trigger: discovery.trigger,
-            content: discovery
         });
     }
 }
@@ -342,21 +317,6 @@ const synthesisPanel = new SynthesisPanel({
     processProgression
 });
 
-const discoveryPanel = new DiscoveryPanel({
-    getGame: () => game,
-    discoveries,
-    resourceDefinitions,
-    canAfford,
-    costLabel,
-
-    hasEventOccurred: id => eventProcessor.hasOccurred(`observation:${id}`),
-
-    completeInvestigation,
-
-    showToast: message => showToast(message),
-    unreadManager
-});
-
 const logPanel = new LogPanel({
     getGame: () => game,
     unreadManager,
@@ -433,20 +393,6 @@ for (const field of FIELD_DEFINITIONS) {
     });
 }
 
-/* TODO
-const experimentPanel = new ExperimentPanel({
-    getGame: () => game,
-    discoveries,
-    save,
-    refreshUI: options => refreshUI(options),
-    showToast: message => showToast(message),
-    processProgression,
-    notifyUnread,
-    resourcePopups,
-    unreadManager
-});
-*/
-
 function updateInventory() {
     ui.inventory?.update();
 }
@@ -509,10 +455,6 @@ function renderEquipmentTab() {
     );
 }
 
-function renderPlanTab() {
-    return planPanel.getElement();
-}
-
 function renderLogTab() {
     return renderDatabasePanel(
         "Experiment Log",
@@ -545,14 +487,6 @@ function renderTabContent() {
             label: "LAB",
             render: renderLabTab
         },
-        // TODO: Attach ExperimentPanel to its own tab once the
-        // experiments system unlocks in progression.
-        //
-        // {
-        //     id: "experiments",
-        //     label: "EXPERIMENTS",
-        //     render: () => experimentPanel.getElement()
-        // },
         {
             id: "fieldWork",
             label: "FIELD WORK",
@@ -567,11 +501,6 @@ function renderTabContent() {
             id: "equipment",
             label: "EQUIPMENT",
             render: renderEquipmentTab
-        },
-        {
-            id: "plan",
-            label: "PLAN",
-            render: renderPlanTab
         },
         {
             id: "log",
@@ -621,7 +550,7 @@ function processProgression({ notify = true } = {}) {
     let changed = false;
     let batch;
 
-    // Process repeatedly because completing one discovery
+    // Process repeatedly because completing one event
     // can satisfy another event's trigger.
     do {
         batch = eventProcessor.process();
@@ -647,53 +576,6 @@ function processProgression({ notify = true } = {}) {
 
                 changed = true;
                 continue;
-            }
-
-            // Ordinary scientific discovery.
-            if (id.startsWith("discovery:")) {
-                const completed = completeDiscovery(game, content, {
-                    onUnread: notifyUnread,
-                    onProgress: processProgression
-                });
-
-                if (completed) {
-                    changed = true;
-                }
-
-                continue;
-            }
-
-            // TODO
-            // Hidden observation becomes available.
-            if (id.startsWith("observation:")) {
-                console.warn('TODO: observations tab');
-                return;
-                
-                /*const observation = content;
-                const announcement = observation.announcement;
-
-                logEvent(
-                    game,
-                    `ALERT: ${announcement?.message ?? observation.name}`,
-                    {
-                        category: "important",
-                        tab: "observations",
-                        contentId: observation.id,
-                        notificationTargets: [
-                            {
-                                tab: "observations",
-                                itemId: observation.id
-                            }
-                        ]
-                    }
-                );
-
-                if (notify && announcement) {
-                    showAnnouncement(announcement);
-                }
-
-                changed = true;
-                continue;*/
             }
 
             // Upgrade becomes permanently available.
@@ -756,47 +638,6 @@ function processProgression({ notify = true } = {}) {
     return changed;
 }
 
-function completeInvestigation(item) {
-    if (!item?.id) return false;
-
-    if (!eventProcessor.hasOccurred(`observation:${item.id}`)) {
-        return false;
-    }
-
-    game.discoveries ??= [];
-
-    if (game.discoveries.includes(item.id)) {
-        return false;
-    }
-
-    if (!payCost(game, item.cost ?? {})) {
-        return false;
-    }
-
-    game.discoveries.push(item.id);
-
-    logEvent(
-        game,
-        `INVESTIGATION COMPLETE: ${item.name}. ${item.description}`,
-        {
-            category: "important",
-            tab: "observations",
-            contentId: item.id,
-            notificationTargets: [
-                {
-                    tab: "observations",
-                    itemId: item.id
-                }
-            ]
-        }
-    );
-
-    save();
-    refreshUI({ database: true });
-
-    return true;
-}
-
 // Evaluate conditions already satisfied by the loaded save.
 // Suppress transient notifications during initial startup.
 processProgression({ notify: false });
@@ -837,10 +678,6 @@ function updateActiveTabUI() {
             updateEquipmentTab();
             break;
 
-        case "plan":
-            updatePlanTab();
-            break;
-
         case "log":
             updateLogTab();
             break;
@@ -865,10 +702,6 @@ function updateEquipmentTab() {
     updateActiveDatabaseCount(
         `${Object.values(game.upgrades).reduce((a, b) => a + b, 0)} levels`
     );
-}
-
-function updatePlanTab() {
-    planPanel.update();
 }
 
 function updateLogTab() {
@@ -940,50 +773,6 @@ const upgradePanel = new UpgradePanel({
     unreadManager
 });
 
-const planPanel = new PlanPanel({
-    getGame: () => game,
-    save,
-    refreshUI: options => refreshUI(options),
-
-    onCellSelect: (plan, cell, state) => {
-        if (state.insufficientResearch) {
-            showToast("Not enough Research points.");
-            return;
-        }
-
-        if (state.revealed) {
-            // Later: open tile details and modification controls.
-        }
-    },
-
-    onEvidence: (plan, cell) => {
-        logEvent(
-            game,
-            `PLAN ${plan.number}: Evidence recorded for ${cell.id}. ${cell.evidence}`,
-            { category: "discovery", tab: "log" }
-        );
-    },
-
-    onHiddenUnlock: (plan, cell, clue) => {
-        logEvent(game, `ANOMALY // ${clue.title}: ${clue.message}`, {
-            category: "important",
-            tab: "log"
-        });
-
-        showToast(`New observation: ${clue.title}`);
-    },
-
-    onComplete: plan => {
-        logEvent(
-            game,
-            `PLAN ${plan.number} COMPLETE: ${plan.name} has been reconstructed. The model is ready for further investigation.`,
-            { category: "important", tab: "log" }
-        );
-
-        showToast(`PLAN ${plan.number} reconstructed.`);
-    }
-});
-
 function render() {
     if (!app) return;
 
@@ -1043,17 +832,17 @@ function render() {
             el("div", {}, [
                 el("div", {
                     className: "brand-name",
-                    text: "kSim — Beyond Reality"
+                    text: "kSim — Fantasy RPG"
                 }),
                 el("div", {
                     className: "brand-subtitle",
-                    text: "QUANTUM FOUNDATIONS"
+                    text: "WILD REALMS"
                 })
             ])
         ]),
         el("span", {
             className: "stage-pill",
-            text: "LAB 01"
+            text: "v1.0"
         })
     ]);
     
@@ -1082,19 +871,6 @@ window.kSim = {
     },
     save,
     render,
-    stir: (multiplier = 1) => {
-        const result = stir(game, multiplier, {
-            onProgress: processProgression,
-            onUnread: notifyUnread
-        });
-
-        save();
-        refreshUI({ database: true });
-
-        return result;
-    },
-    // TODO
-    // experiment: (count = 1) => experimentPanel.runExperiments(count),
     clearStorage: () => saveManager.clear(),
     reset: resetGame
 };

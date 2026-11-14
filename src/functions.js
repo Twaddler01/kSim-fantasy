@@ -1,5 +1,4 @@
 import { upgradeDefinitions } from "./data/upgrades.js";
-import { applyEffects, describeEffects } from "./triggers/effects.js";
 import { addInventoryItem, removeInventoryItem } from "./data/inventory.js";
 
 export const LOG_RETENTION = {
@@ -15,37 +14,21 @@ export function formatNumber(value) {
 
 export function trimLog(game, limits = LOG_RETENTION) {
     game.log ??= [];
-
     for (const category of ["important", "activity"]) {
         const limit = Math.max(
             0,
             Math.floor(limits[category] ?? LOG_RETENTION[category])
         );
-
         const matching = game.log.filter(entry =>
             category === "important"
                 ? entry.category === "important"
                 : entry.category !== "important"
         );
-
         if (matching.length <= limit) continue;
-
-        // Newest entries are first; remove the oldest excess entries.
-        const removedIds = new Set(
-            matching.slice(limit).map(entry => entry.id)
-        );
-
+        const removedIds = new Set(matching.slice(limit).map(e => e.id));
         game.log = game.log.filter(entry => !removedIds.has(entry.id));
     }
 }
-
-/* 
-CURRENT BADGE SYSTEM:
-Log entry with NEW observations → OBSERVATIONS
-Log entry with NEW UNLOCKED equipment → EQUIPMENT
-Any "important" log entry → LAB LOG
-Any "activity" lpg entry → no badge.
-*/
 
 export function addLog(
     game,
@@ -61,28 +44,16 @@ export function addLog(
     } = {}
 ) {
     if (typeof message !== "string" || !message.trim()) {
-        console.warn("Ignored empty log entry:", {
-            message,
-            category,
-            tab
-        });
+        console.warn("Ignored empty log entry:", { message, category, tab });
         return null;
     }
-
     game.log ??= [];
     game.logSequence ??= Math.max(0, ...game.log.map(entry => entry.id ?? 0));
     game.logOnce ??= {};
-
     const alreadyLogged = onceKey != null && game.logOnce[onceKey];
-
     const effectiveCategory = alreadyLogged ? "activity" : category;
-
-    if (onceKey != null) {
-        game.logOnce[onceKey] = true;
-    }
-
+    if (onceKey != null) game.logOnce[onceKey] = true;
     const id = ++game.logSequence;
-
     game.log.unshift({
         id,
         message,
@@ -91,40 +62,30 @@ export function addLog(
         timestamp: Date.now(),
         ...(link ? { link } : {})
     });
-
     trimLog(game);
-
-    // Explicit targets notify their own tabs independently of log category.
     if (notificationTargets) {
         for (const target of notificationTargets) {
             if (target.tab === "log") continue;
-
             onUnread(target.tab, target.itemId ?? id);
         }
     } else if (
         ["observations", "equipment"].includes(tab) &&
         contentId != null
     ) {
-        // Preserve the default dedicated-tab behavior.
         onUnread(tab, contentId);
     }
-
-    // Only important messages create LAB LOG badges.
     if (effectiveCategory === "important") {
         const explicitlyTargetsLog =
-            notificationTargets?.some(target => target.tab === "log") ?? false;
-
+            notificationTargets?.some(t => t.tab === "log") ?? false;
         if (!explicitlyTargetsLog) {
             onUnread("log", id);
         } else {
             onUnread(
                 "log",
-                notificationTargets.find(target => target.tab === "log")
-                    ?.itemId ?? id
+                notificationTargets.find(t => t.tab === "log")?.itemId ?? id
             );
         }
     }
-
     return id;
 }
 
@@ -150,183 +111,17 @@ export function upgradeCost(definition, level) {
     return cost;
 }
 
-/**
- * Completes a discovery and applies its resource rewards.
- *
- * The caller is responsible for checking whether the
- * discovery should occur and for recording its ID.
- */
-export function completeDiscovery(
-    game,
-    discovery,
-    {
-        onUnread = () => {},
-        onProgress = () => {}
-    } = {}
-) {
-    if (!game || !discovery?.id) return false;
-
-    game.discoveries ??= [];
-
-    if (game.discoveries.includes(discovery.id)) {
-        return false;
-    }
-
-    game.discoveries.push(discovery.id);
-
-    const appliedEffects = applyEffects(
-        game,
-        discovery.effects,
-        { onProgress }
-    );
-
-    onProgress();
-
-    const rewardText = describeEffects(appliedEffects);
-
+export function buyUpgrade(game, id) {
+    const definition = upgradeDefinitions.find(item => item.id === id);
+    if (!definition) return false;
+    const level = game.upgrades[id] ?? 0;
+    if (level >= definition.maxLevel) return false;
+    if (!payCost(game, upgradeCost(definition, level))) return false;
+    game.upgrades[id] = level + 1;
     addLog(
         game,
-        `DISCOVERY: ${discovery.name}${
-            rewardText ? ` (${rewardText})` : ""
-        }.`,
-        {
-            category: "activity",
-            tab: "observations",
-            onUnread,
-            contentId: discovery.id,
-            notificationTargets: [
-                {
-                    tab: "observations",
-                    itemId: discovery.id
-                }
-            ],
-            link: {
-                tab: "observations",
-                itemId: discovery.id,
-                label: discovery.name
-            }
-        }
+        `EQUIPMENT UPDATED: ${definition.name} is now level ${level + 1}.`
     );
-
-    return true;
-}
-
-export function stir(
-    game,
-    multiplier = 1,
-    {
-        onProgress = () => {},
-        onUnread = () => {}
-    } = {}
-) {
-    const result = {
-        energy: 0,
-        particles: 0,
-        research: 0,
-        exoticMatter: 0,
-        events: []
-    };
-
-    const experiments = Math.max(
-        1,
-        Math.floor(Number(multiplier) || 1)
-    );
-
-    const energyPerExperiment =
-        1 + (game.upgrades.energyYield ?? 0);
-
-    const particleChance = Math.min(
-        0.65,
-        0.25 + (game.upgrades.particleStability ?? 0) * 0.05
-    );
-
-    const researchChance = Math.min(
-        0.6,
-        0.08 + (game.upgrades.observation ?? 0) * 0.08
-    );
-
-    for (let i = 0; i < experiments; i++) {
-        game.clicks += 1;
-
-        addInventoryItem(game, "energy", energyPerExperiment);
-        result.energy += energyPerExperiment;
-
-        if (Math.random() < particleChance) {
-            addInventoryItem(game, "particles", 1);
-            result.particles += 1;
-        }
-
-        if (Math.random() < researchChance) {
-            addInventoryItem(game, "research", 1);
-            result.research += 1;
-        }
-
-        // Process progression after every experiment.
-        onProgress();
-
-        // Anomaly chance becomes available after its discovery.
-        if (
-            game.discoveries.includes("quantumAnomaly") &&
-            Math.random() < 0.03
-        ) {
-            addInventoryItem(game, "exoticMatter", 1);
-            result.exoticMatter += 1;
-        }
-    }
-
-    if (result.particles) {
-        result.events.push(
-            `Particle formation: +${result.particles}`
-        );
-    }
-
-    if (result.research) {
-        result.events.push(
-            `Useful observations: +${result.research}`
-        );
-    }
-
-    if (result.exoticMatter) {
-        result.events.push(
-            `ANOMALY: +${result.exoticMatter} Exotic Matter`
-        );
-
-        const anomalyMessage =
-            `ANOMALY: Exotic matter detected (${result.exoticMatter}). ` +
-            "The reading is inconsistent with known physics.";
-
-        addLog(game, anomalyMessage, {
-            category: "important",
-            onceKey: "anomaly",
-            onUnread
-        });
-    }
-
-    return result;
-}
-
-export function buyUpgrade(game, id) {
-    const definition = upgradeDefinitions.find(
-        item => item.id === id
-    );
-
-    if (!definition) return false;
-
-    const level = game.upgrades[id] ?? 0;
-
-    if (level >= definition.maxLevel) return false;
-
-    if (!payCost(game, upgradeCost(definition, level))) {
-        return false;
-    }
-
-    game.upgrades[id] = level + 1;
-
-    const purchaseMessage =
-        `EQUIPMENT UPDATED: ${definition.name} is now level ${level + 1}.`;
-
-    addLog(game, purchaseMessage);
-
     return true;
 }
 
@@ -340,23 +135,4 @@ export function costLabel(cost, resourceDefinitions = []) {
                 `${formatNumber(amount)} ${names[resource] ?? resource}`
         )
         .join(" · ");
-}
-
-export function consumeParticles(game) {
-    const particles = Math.floor(game.inventory.particles ?? 0);
-
-    if (particles <= 0) {
-        return { particles: 0, energy: 0 };
-    }
-
-    const energy = particles * 5;
-
-    removeInventoryItem(game, "particles", particles);
-    addInventoryItem(game, "energy", energy);
-
-    const conversionMessage = `RESOURCE CONVERSION: Consumed ${particles} particles for +${energy} Quantum Energy.`;
-    // Resource conversion: activity, so no badge.
-    addLog(game, conversionMessage);
-
-    return { particles, energy };
 }

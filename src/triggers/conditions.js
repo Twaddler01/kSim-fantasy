@@ -8,9 +8,6 @@ export function evaluateTrigger(game, trigger) {
     if (!game || !trigger) return false;
 
     switch (trigger.type) {
-        case "discovery":
-            return (game.discoveries ?? []).includes(trigger.id);
-
         case "inventoryAmount":
             if (!trigger.item) return false;
 
