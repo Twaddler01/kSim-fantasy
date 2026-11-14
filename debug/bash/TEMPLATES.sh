@@ -1,21 +1,15 @@
 
-# === kSim-mobile ===
-cd ~/projects/kSim-mobile
+# === kSim-fantasy ===
+cd /data/data/com.termux/files/home/storage/shared/Documents/kSim-fantasy
 git add .
-git commit -m "update"
+git commit -m "new"
 git push origin main
 
-# === mobile-ui-framework ===
-cd /data/data/com.termux/files/home/storage/shared/Documents/main-project/mobile-ui-framework
-git add .
-git commit -m "debug tests"
-git push origin main
 
-# === mobile-dev-console ===
-cd /data/data/com.termux/files/home/storage/shared/Documents/main-project/mobile-dev-console
-git add .
-git commit -m "v1.0.2 update 000"
-git push origin main
+
+
+
+
 
 # COPY: rsync -av \
 mkdir -p releases/v1.0.1
@@ -34,29 +28,6 @@ cd /data/data/com.termux/files/home/storage/shared/Documents/main-project/mobile
 
 
 
-# === acode-code-dump ===
-cd ~/projects/acode-code-dump
-git add .
-git commit -m "update"
-git push origin main
-
-# BUILD
-cd ~/projects/acode-code-dump
-npm run build
-cp plugin.zip ~/storage/shared/Documents/acode-code-dump/plugin.zip
-
-# DEV 
-cd ~/projects/acode-code-dump
-npm run dev
-
-
-
-
-# === devServer ===
-cd /data/data/com.termux/files/home/storage/shared/Documents/main-project/mobile-dev-console/DevServer
-node startServer.js
-
-
 
 
 
@@ -64,9 +35,6 @@ node startServer.js
 
 
 directory: /data/data/com.termux/files/home/storage/shared/Documents/main-project
-start_page: /mobile-dev-console/index.html
-
-directory: /data/data/com.termux/files/home/projects/kSim-mobile
 start_page: index.html
 
 
@@ -75,7 +43,6 @@ git tag -f v1.0.1 944c10f
 git push --force origin refs/tags/v1.0.1
 
 
-/data/data/com.termux/files/home/storage/shared/Documents/temp
 
 
 # === TERMUX ===
@@ -151,3 +118,16 @@ xargs -0 -r sed -i 's/GatheringField/FieldWorkPanel/g'
 
 
 fc -clip FieldCanvas.js FieldScene.js FieldWorkPanel.js
+
+
+
+
+port: 8080
+directory: /data/data/com.termux/files/home/projects/kSim-mobile
+start_page: index.html
+folder_listing: false
+disable_cache: true
+live_reload: true
+exclude_git: true
+launch_browser: true
+browser_package: org.mozilla.firefox
