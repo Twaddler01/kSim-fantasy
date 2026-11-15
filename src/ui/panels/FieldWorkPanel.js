@@ -163,41 +163,7 @@ export default class FieldWorkPanel {
 
         return el("div", { className: "field-work-active-view" }, [
             el("div", { className: "field-work-toolbar" }, [back]),
-            fieldView.getElement(),
-            this.renderFieldUpgrades()
-        ]);
-    }
-
-    renderFieldUpgrades() {
-        return el("div", { className: "field-upgrade-grid" }, [
-            Card(
-                "Improved Tools",
-                el("p", {
-                    className: "muted",
-                    text: "Better equipment could improve material recovery."
-                }),
-                "FIELD UPGRADE",
-                {
-                    tabId: "fieldWork",
-                    itemId: "field-upgrade-tools",
-                    icon: "🛠️",
-                    variant: "upgrade"
-                }
-            ),
-            Card(
-                "Efficient Extraction",
-                el("p", {
-                    className: "muted",
-                    text: "Refine field procedures to recover samples more efficiently."
-                }),
-                "FIELD UPGRADE",
-                {
-                    tabId: "fieldWork",
-                    itemId: "field-upgrade-extraction",
-                    icon: "⚙️",
-                    variant: "upgrade"
-                }
-            )
+            fieldView.getElement()
         ]);
     }
 

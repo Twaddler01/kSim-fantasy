@@ -98,21 +98,6 @@ export default class CategoryBrowser {
             this.selectedEntryType = null;
         }
 
-        const heading = el("header", {
-            className: "journal-heading"
-        }, [
-            el("div", {
-                className: "journal-eyebrow",
-                text: "RESEARCH DATABASE"
-            }),
-            el("h2", {
-                text: "Research Journal"
-            }),
-            el("p", {
-                text: "A record of materials, locations, and resources."
-            })
-        ]);
-
         this.categoryNav = el("nav", {
             className: "journal-categories",
             "aria-label": "Journal categories"
@@ -155,7 +140,6 @@ export default class CategoryBrowser {
         ]);
 
         this.element.replaceChildren(
-            heading,
             browser
         );
     }

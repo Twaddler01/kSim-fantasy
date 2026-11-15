@@ -144,14 +144,14 @@ h2 {
     font-size: 1.02rem;
     letter-spacing: -0.025em;
 }
-.lab-intro > p {
+.camp-intro > p {
     max-width: 680px;
     margin-bottom: 14px;
     color: #b7cbd9;
     line-height: 1.65;
     font-size: 0.91rem;
 }
-.lab-warning {
+.camp-warning {
     padding: 11px 12px;
     border-left: 3px solid var(--warning);
     border-radius: 0 9px 9px 0;
@@ -485,7 +485,7 @@ h2 {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: start;
     }
-    .lab-intro,
+    .camp-intro,
     .resource-grid {
         grid-column: 1/-1;
     }
@@ -545,7 +545,7 @@ h2 {
     flex-shrink: 0;
 }
 
-/* Keep reset separate from the active lab controls */
+/* Keep reset separate from the active controls */
 .reset-actions {
     display: flex;
     justify-content: flex-end;
@@ -885,25 +885,25 @@ body:not(.debug-mode) {
 }
 
 /* Compact workspace */
-.lab-tab-content {
+.camp-tab-content {
     display: grid;
     gap: 10px;
 }
 
-.lab-intro,
+.camp-intro,
 .field-panel,
 .database-view {
     min-width: 0;
     padding: 13px;
 }
 
-.lab-intro > p {
+.camp-intro > p {
     margin-bottom: 10px;
     font-size: 0.78rem;
     line-height: 1.45;
 }
 
-.lab-warning {
+.camp-warning {
     padding: 8px 9px;
     font-size: 0.62rem;
 }
@@ -1422,8 +1422,6 @@ body:not(.debug-mode) {
     border: 1px solid #527e78;
     border-radius: 6px;
 }
-
-/* Horizontal tab navigation arrows */
 
 /* Horizontal tab navigation arrows */
 .tabs-bar-container {
@@ -2314,7 +2312,7 @@ body:not(.debug-mode) {
 }
 
 /* OBJECTIVES */
-/* ============ Main Objective (LAB tab) ============ */
+/* ============ Main Objective (CAMP tab) ============ */
 .main-objective {
     display: flex;
     flex-direction: column;
@@ -2671,7 +2669,7 @@ body:not(.debug-mode) {
     font-weight: 600;
 }
 
-.objective-tracker__open-lab {
+.objective-tracker__open-camp {
     align-self: flex-end;
     margin-top: 4px;
     padding: 4px 8px;
@@ -2684,9 +2682,9 @@ body:not(.debug-mode) {
     cursor: pointer;
 }
 
-/* LAB tab badge → bare dot instead of count chip */
-/* LAB tab badge → dot, but inside the standard badge envelope */
-#ksim-tab-lab .tab-unread-badge {
+/* CAMP tab badge → bare dot instead of count chip */
+/* CAMP tab badge → dot, but inside the standard badge envelope */
+#ksim-tab-camp .tab-unread-badge {
     position: relative;
     min-width: 20px;
     width: 20px;
@@ -2700,7 +2698,7 @@ body:not(.debug-mode) {
     color: transparent;
 }
 
-#ksim-tab-lab .tab-unread-badge::after {
+#ksim-tab-camp .tab-unread-badge::after {
     content: "";
     position: absolute;
     top: 50%;

@@ -8,5 +8,5 @@ A mobile-first native HTML/CSS/JavaScript RPG game.
 
 ## Run
 
-- Serve the project over HTTP (for example, with the included DevServer from /mobile-dev-consoole) and open `index.html`. 
+- Serve the project over HTTP (for example, with the included DevServer from /mobile-dev-console) and open `index.html`. 
 - Web release coming soon.

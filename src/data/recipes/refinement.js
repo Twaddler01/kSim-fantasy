@@ -1,43 +1,54 @@
-// src/data/refinement.js
-
 export const refinementRecipes = [
     {
-        id: "crushQuartz",
-        name: "Crush Quartz",
-        description: "Break quartz into a fine powder for further processing.",
+        id: "smeltIron",
+        name: "Smelt Iron",
+        description: "Melt iron ore with coal into a usable ingot.",
         inputs: {
-            quartz: 3,
-            energy: 2
+            ironOre: 2,
+            coal: 1
         },
         outputs: {
-            quartzPowder: 2
+            ironIngot: 1
         },
-        durationSeconds: 2
+        durationSeconds: 6
     },
     {
-        id: "makeGlass",
-        name: "Produce Glass",
-        description: "Heat silica into a stable glass material.",
+        id: "smeltSteel",
+        name: "Smelt Steel",
+        description: "Combine iron and coal at high heat for steel.",
         inputs: {
-            silica: 4,
-            energy: 3
+            ironIngot: 2,
+            coal: 2
         },
         outputs: {
-            glass: 2
+            steelIngot: 1
         },
-        durationSeconds: 5
+        durationSeconds: 12
     },
     {
-        id: "smeltCopper",
-        name: "Smelt Copper",
-        description: "Extract usable copper ingots from raw copper.",
+        id: "brewHealingPotion",
+        name: "Brew Healing Potion",
+        description: "Steep sunpetal and moonbloom into a restorative draught.",
         inputs: {
-            copper: 3,
-            energy: 3
+            sunpetal: 3,
+            moonbloom: 1
         },
         outputs: {
-            copperIngot: 1
+            healingPotion: 1
         },
-        durationSeconds: 4
+        durationSeconds: 8
+    },
+    {
+        id: "brewFocusTonic",
+        name: "Brew Focus Tonic",
+        description: "A moonbloom-dominant infusion that sharpens the mind.",
+        inputs: {
+            moonbloom: 3,
+            sunpetal: 1
+        },
+        outputs: {
+            focusTonic: 1
+        },
+        durationSeconds: 10
     }
 ];

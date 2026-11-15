@@ -3,9 +3,9 @@ import { el } from "../components/Element.js";
 import { getCurrentStage, checkRequirements } from "../../data/stages.js";
 
 export default class ObjectiveTracker {
-    constructor({ getGame, navigateToLab }) {
+    constructor({ getGame, navigateToCamp }) {
         this.getGame = getGame;
-        this.navigateToLab = navigateToLab;
+        this.navigateToCamp = navigateToCamp;
         this.element = null;
         this.expanded = false;
         this._lastStageId = null;
@@ -145,14 +145,14 @@ export default class ObjectiveTracker {
                 "button",
                 {
                     type: "button",
-                    className: "objective-tracker__open-lab",
+                    className: "objective-tracker__open-camp",
                     onClick: () => {
                         this.expanded = false;
                         this.update();
-                        this.navigateToLab();
+                        this.navigateToCamp();
                     }
                 },
-                ["Open LAB →"]
+                ["Open CAMP →"]
             )
         ]);
     }

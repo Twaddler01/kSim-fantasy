@@ -1,4 +1,4 @@
-// src/data/mineralSprites.js
+// src/data/MaterialSprites.js
 import { getDrawing } from "../assets/icons/materials/materialDrawings.js";
 import { materials } from "./materials.js";
 import { svgToImage } from "./svgToImage.js";
@@ -13,7 +13,7 @@ const DEFAULT_SIZE = 64;
  * getDrawing() always resolves through the generic subtype fallback
  * if no exact drawing exists, so no material is ever blank.
  */
-export async function buildMineralSprites({
+export async function buildMaterialSprites({
     variants = DEFAULT_VARIANTS,
     size = DEFAULT_SIZE
 } = {}) {

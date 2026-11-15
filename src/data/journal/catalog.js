@@ -1,6 +1,6 @@
 // src/data/journal/catalog.js
 
-import { locations } from "../entities/locations.js";
+import { locations } from "../locations.js";
 import { FIELD_DEFINITIONS } from "../fields.js";
 import { materials } from "../materials.js";
 

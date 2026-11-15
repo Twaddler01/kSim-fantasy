@@ -41,10 +41,13 @@ export default class JournalPanel {
         }, [
             el("div", {
                 className: "journal-eyebrow",
-                text: "RESEARCH DATABASE"
+                text: "COMPENDUM"
             }),
             el("h2", {
-                text: "Research Journal"
+                text: "Adventure Journal"
+            }),
+            el("p", {
+                text: "Everything you have seen, gathered, and made."
             })
         ]);
 

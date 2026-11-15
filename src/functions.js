@@ -68,10 +68,7 @@ export function addLog(
             if (target.tab === "log") continue;
             onUnread(target.tab, target.itemId ?? id);
         }
-    } else if (
-        ["observations", "equipment"].includes(tab) &&
-        contentId != null
-    ) {
+    } else if (tab === "equipment" && contentId != null) {
         onUnread(tab, contentId);
     }
     if (effectiveCategory === "important") {

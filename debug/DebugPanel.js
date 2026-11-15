@@ -56,7 +56,7 @@ export default class DebugPanel {
                         tab: "log"
                     });
                     this.save?.();
-                    this.showToast("Added lab log entry.");
+                    this.showToast("Added test log entry.");
                     this.refreshUI({ database: true });
                 }
             },

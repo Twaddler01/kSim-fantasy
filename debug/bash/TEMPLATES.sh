@@ -98,7 +98,7 @@ grep -RIn 'panel' \
 
 
 
-grep -rn "reality" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
+grep -rn "recoverMaterial" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
 
 
 

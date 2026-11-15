@@ -30,34 +30,6 @@ export function evaluateTrigger(game, trigger) {
                 : matches.some(Boolean);
         }
 
-        case "experimentCount":
-            return (game.clicks ?? 0) >= (trigger.min ?? 0);
-
-        case "imventoryAmount":
-            if (!trigger.inventory) return false;
-
-            return (
-                (game.inventory?.[trigger.inventory] ?? 0) >=
-                (trigger.amount ?? 0)
-            );
-
-        case "planProgress": {
-            const planState = game.plan?.formulas?.[trigger.planId];
-
-            if (!planState) return false;
-
-            return (
-                (planState.revealed ?? []).length >=
-                (trigger.tilesRevealed ?? 0)
-            );
-        }
-
-        case "planComplete": {
-            const planState = game.plan?.formulas?.[trigger.planId];
-
-            return planState?.completed === true;
-        }
-
         default:
             // Unknown conditions must not accidentally unlock content.
             return false;

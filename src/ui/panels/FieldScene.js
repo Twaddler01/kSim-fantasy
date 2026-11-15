@@ -71,6 +71,7 @@ export default class FieldScene {
             world: this.world,
             respawnDelay: this.respawnDelay,
             backgroundCanvas: this.backgroundCanvas, // may be null
+            title: this.field.name,
             onCollect: (deposit, screenPos) =>
                 this.handleCollect(deposit, screenPos),
             onRespawn: deposit => this.buildRespawn(deposit),

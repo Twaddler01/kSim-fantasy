@@ -2,12 +2,12 @@
 
 // WIP
 import FieldScene from "./src/ui/panels/FieldScene.js";
-import { buildMineralSprites } from "./src/data/mineralSprites.js";
+import { buildMaterialSprites } from "./src/data/materialSprites.js";
 
-let mineralSprites = {};
-buildMineralSprites()
+let materialSprites = {};
+buildMaterialSprites()
     .then(sprites => {
-        mineralSprites = sprites;
+        materialSprites = sprites;
         ui.fieldWorkPanel?.refreshFieldSprites?.();
         refreshUI();
     })
@@ -29,6 +29,9 @@ buildTileSprites()
 // Debug
 import attachDebugPanel from "./debug/attach.js";
 
+// Icons
+import { MaterialIcon } from "./src/assets/icons/materials/MaterialIcon.js";
+
 // Panels
 import SynthesisPanel from "./src/ui/panels/SynthesisPanel.js";
 import UpgradePanel from "./src/ui/panels/UpgradePanel.js";
@@ -39,7 +42,6 @@ import MainObjective from "./src/ui/panels/MainObjective.js";
 import ObjectiveTracker from "./src/ui/panels/ObjectiveTracker.js";
 import { tryAdvanceStage, getCurrentStage } from "./src/data/stages.js";
 
-// mcv
 import FieldWorkPanel from "./src/ui/panels/FieldWorkPanel.js";
 import { createFieldIcon } from "./src/ui/fieldIcons.js";
 
@@ -48,11 +50,6 @@ import Inventory from "./src/ui/panels/Inventory.js";
 // Components
 import { el } from "./src/ui/components/Element.js";
 import { Button } from "./src/ui/components/Button.js";
-import { Card } from "./src/ui/components/Card.js";
-import { ProgressBar } from "./src/ui/components/ProgressBar.js";
-import Badge from "./src/ui/components/Badge.js";
-import CollapsiblePanel from "./src/ui/components/CollapsiblePanel.js";
-
 // Nvigation
 import { Tabs } from "./src/ui/navigation/Tabs/Tabs.js";
 
@@ -67,7 +64,6 @@ import {
     buyUpgrade,
     upgradeCost,
     canAfford,
-    payCost,
     costLabel,
     formatNumber
 } from "./src/functions.js";
@@ -75,9 +71,7 @@ import {
 import { materials } from "./src/data/materials.js";
 import {
     initializeInventory,
-    syncInventoryDiscovery,
-    addInventoryItem,
-    removeInventoryItem
+    syncInventoryDiscovery
 } from "./src/data/inventory.js";
 
 import ResourcePopups from "./src/ui/effects/ResourcePopups.js";
@@ -96,7 +90,6 @@ import { recoverMaterial } from "./src/systems/MaterialRecovery.js";
 
 import UnreadManager from "./src/managers/UnreadManager.js";
 import Announce from "./src/notifications/Announce.js";
-import NewBadge from "./src/notifications/NewBadge.js";
 import Toast from "./src/notifications/Toast.js";
 
 const saveManager = new SaveManager({
@@ -140,9 +133,7 @@ for (const field of FIELD_DEFINITIONS) {
 for (const upgrade of upgradeDefinitions) {
     unlockManager.registerUnlock({
         id: upgrade.id,
-        initialUnlocked: ["energyYield", "particleStability"].includes(
-            upgrade.id
-        )
+        initialUnlocked: ["fieldTools", "swordDrills"].includes(upgrade.id)
     });
 
     if (upgrade.trigger) {
@@ -168,7 +159,7 @@ for (const unlock of progressionUnlocks) {
     });
 }
 
-let activeTab = "lab";
+let activeTab = "camp";
 let ui = {};
 
 const announce = new Announce();
@@ -220,10 +211,10 @@ function notifyUnread(tabId, itemId, options = {}) {
 }
 
 // Starting conditions
-if (unlockManager.unlock("labValley")) {
-    notifyUnread("fieldWork", "field-labValley");
+if (unlockManager.unlock("whisperingMeadow")) {
+    notifyUnread("fieldWork", "field-whisperingMeadow");
 }
-unlockManager.unlock("labBorderlamds");
+// Ironhollow Mine unlocks via its inventoryAmount trigger (5 oak logs).
 
 function logEvent(game, message, options = {}) {
     return addLog(game, message, {
@@ -250,7 +241,7 @@ function handleFieldUnlock(fieldId, { notify = true } = {}) {
 
     if (notify) {
         showToast(`${field.name} unlocked!`);
-    
+
         showAnnouncement({
             title: "NEW FIELD AVAILABLE",
             message: `${field.name}: ${field.description}`,
@@ -260,54 +251,6 @@ function handleFieldUnlock(fieldId, { notify = true } = {}) {
 
     return true;
 }
-
-function discoverMaterial(material, source = "recovery") {
-    if (!material?.id || material.category !== "raw") {
-        return false;
-    }
-
-    game.operations ??= {};
-    game.operations.discoveredMaterials ??= {};
-
-    const records = game.operations.discoveredMaterials;
-
-    if (records[material.id]) {
-        return false;
-    }
-
-    records[material.id] = {
-        discoveredAt: Date.now(),
-        source,
-        notes: ""
-    };
-
-    logEvent(game, `NEW MATERIAL DISCOVERED: ${material.name}.`, {
-        category: "activity",
-        tab: "log",
-        notificationTargets: [
-            {
-                tab: "operations",
-                itemId: `material-${material.id}`
-            }
-        ]
-    });
-
-    showAnnouncement({
-        title: "NEW MATERIAL DISCOVERED",
-        message: `${material.name}: ${
-            material.description ??
-            "A new raw material has been added to the research inventory."
-        }`
-    });
-
-    return true;
-}
-
-// Persistent Operations state.
-game.operations ??= {};
-
-// Quantum Field is temporarily inactive.
-game.operations.quantumFieldUnlocked = false;
 
 const synthesisPanel = new SynthesisPanel({
     getGame: () => game,
@@ -330,17 +273,38 @@ const journalPanel = new JournalPanel({
 
 function handleFieldGather(field, event, target) {
     const result = recoverMaterial(game, target.id, target.richness ?? 1);
+
     if (!result.ok) {
         showToast(result.reason);
         return false;
     }
+
     resourcePopups.show(
-        [{ amount: result.amount ?? 1, icon: result.item.icon, materialId: result.item.id }],
+        [
+            {
+                amount: result.amount ?? 1,
+                icon: result.item.icon,
+                materialId: result.item.id
+            }
+        ],
         event
     );
-    if (discoverMaterial(result.item, "gathering-field")) {
-        showToast(`New material discovered: ${result.item.name}`);
+
+    if (result.newlyDiscovered) {
+        logEvent(game, `NEW MATERIAL DISCOVERED: ${result.item.name}.`, {
+            category: "important",
+            tab: "log"
+        });
+
+        showAnnouncement({
+            title: "NEW MATERIAL DISCOVERED",
+            message: `${result.item.name}: ${
+                result.item.description ?? "A new material enters your journal."
+            }`,
+            symbol: MaterialIcon(result.item.id, { size: 44 })
+        });
     }
+
     processProgression();
     save();
     refreshUI({ database: true });
@@ -358,12 +322,13 @@ const fieldWorkPanel = new FieldWorkPanel({
     refreshTab: () => ui.tabs?.update({ refreshContent: true }),
     resourcePopups,
 
-    createField: field => new FieldScene({
-        field,
-        getSprites: () => mineralSprites,
-        getTiles: () => getTileCache(),
-        onGather: handleFieldGather,
-    })
+    createField: field =>
+        new FieldScene({
+            field,
+            getSprites: () => materialSprites,
+            getTiles: () => getTileCache(),
+            onGather: handleFieldGather
+        })
 });
 
 ui.fieldWorkPanel = fieldWorkPanel;
@@ -379,17 +344,17 @@ const mainObjective = new MainObjective({
 
 const objectiveTracker = new ObjectiveTracker({
     getGame: () => game,
-    navigateToLab: () => navigateTo({ tab: "lab" })
+    navigateToCamp: () => navigateTo({ tab: "camp" })
 });
 
 // Navigation — still registered in main because it's global,
 // but delegating to the panel:
 registerPage("fieldWork", "selector", {
-    activate: () => fieldWorkPanel.showSelector(),
+    activate: () => fieldWorkPanel.showSelector()
 });
 for (const field of FIELD_DEFINITIONS) {
     registerPage("fieldWork", field.id, {
-        activate: () => fieldWorkPanel.showField(field.id),
+        activate: () => fieldWorkPanel.showField(field.id)
     });
 }
 
@@ -409,7 +374,7 @@ function renderDatabasePanel(title, count, content) {
     return el("section", { className: "database-view" }, [
         el("div", { className: "section-heading" }, [
             el("div", {}, [
-                el("div", { className: "eyebrow", text: "LAB DATABASE" }),
+                el("div", { className: "eyebrow", text: "DATABASE" }),
                 el("h2", { text: title })
             ]),
             el("span", {
@@ -435,8 +400,8 @@ function updateActiveDatabaseCount(count) {
 // TAB CONTENT RENDERERS
 // ========================================
 
-function renderLabTab() {
-    return ui.labContent;
+function renderCampTab() {
+    return ui.campContent;
 }
 
 function renderFieldWorkTab() {
@@ -449,7 +414,7 @@ function renderSynthesisTab() {
 
 function renderEquipmentTab() {
     return renderDatabasePanel(
-        "Lab Equipment",
+        "Equipment",
         `${Object.values(game.upgrades).reduce((a, b) => a + b, 0)} levels`,
         upgradePanel.render()
     );
@@ -457,7 +422,7 @@ function renderEquipmentTab() {
 
 function renderLogTab() {
     return renderDatabasePanel(
-        "Experiment Log",
+        "Journey",
         `${game.log.length} entries`,
         logPanel.render()
     );
@@ -483,9 +448,9 @@ function renderTabContent() {
             render: renderDebugTab
         },
         {
-            id: "lab",
-            label: "LAB",
-            render: renderLabTab
+            id: "camp",
+            label: "CAMP",
+            render: renderCampTab
         },
         {
             id: "fieldWork",
@@ -504,7 +469,7 @@ function renderTabContent() {
         },
         {
             id: "log",
-            label: "LAB LOG",
+            label: "LOG",
             render: renderLogTab
         },
         {
@@ -516,18 +481,11 @@ function renderTabContent() {
 
     const tabs = new Tabs({
         activeId: activeTab,
-        label: "Laboratory sections",
+        label: "Sections",
         unreadManager,
         tabs: tabDefinitions.map(tab => ({
             ...tab,
-            unread: [
-                "lab",
-                "fieldWork",
-                "observations",
-                "equipment",
-                "log",
-                "operations"
-            ].includes(tab.id)
+            unread: ["camp", "fieldWork", "equipment", "log"].includes(tab.id)
         })),
         onChange: id => {
             activeTab = id;
@@ -648,10 +606,10 @@ function updateActiveTabUI() {
         fieldWorkPanel.deactivateField?.();
     }
 
-    if (activeTab === "lab") {
+    if (activeTab === "camp") {
         const stage = getCurrentStage(game);
         if (stage) {
-            unreadManager.markRead("lab", `objective-${stage.id}`);
+            unreadManager.markRead("camp", `objective-${stage.id}`);
         }
     }
 
@@ -659,13 +617,9 @@ function updateActiveTabUI() {
         case "debug":
             debugPanel.update();
             break;
-        case "lab":
-            updateLabTab();
+        case "camp":
+            updateCampTab();
             break;
-        // TODO
-        // case "experiments":
-        //     experimentPanel.update();
-        //     break;
         case "fieldWork":
             updateFieldWorkTab();
             break;
@@ -688,7 +642,7 @@ function updateActiveTabUI() {
     }
 }
 
-function updateLabTab() {
+function updateCampTab() {
     mainObjective?.update?.();
 }
 
@@ -730,8 +684,8 @@ function refreshUI({ database = false } = {}) {
         save();
         if (result.to) {
             showToast(`Objective complete. New objective: ${result.to.name}.`);
-            // Fire the LAB tab badge so the player knows to check in.
-            notifyUnread("lab", `objective-${result.to.id}`);
+            // Fire the CAMP tab badge so the player knows to check in.
+            notifyUnread("camp", `objective-${result.to.id}`);
         } else {
             showToast("Objective chain complete.");
         }
@@ -781,18 +735,23 @@ function render() {
         return;
     }
 
-    const intro = el("section", { className: "lab-intro sim-card" }, [
+    const intro = el("section", { className: "camp-intro sim-card" }, [
         el("div", {
             className: "eyebrow",
-            text: "RESEARCH FACILITY // SECTOR 01"
+            text: "WILD REALMS // CAMP"
         }),
-        el("h1", { text: "The Quantum Laboratory" }),
+        el("h1", { text: "The Valley Road" }),
         el("p", {
-            text: "The field generator is online. Your instruments are calibrated just well enough to begin. Produce quantum energy, observe particle formation, and record anything that should not be possible."
+            text:
+                "The valley opens ahead of you — grass, old pines, a " +
+                "hillside cut that might be iron. Gather what you can. " +
+                "The journal is blank; everything you find belongs in it."
         }),
         el("div", {
-            className: "lab-warning",
-            text: "⚠ RESEARCH NOTE: Theoretical safety limits are not the same as proven safety limits."
+            className: "camp-warning",
+            text:
+                "⚠ FIELD NOTE: Anything you carry out of the valley " +
+                "has to come from somewhere."
         })
     ]);
 
@@ -807,7 +766,7 @@ function render() {
                 () => {
                     if (
                         confirm(
-                            "Reset Quantum Foundations progress? This does not affect your older Origins save."
+                            "Reset Wild Realms progress? This clears your current save."
                         )
                     ) {
                         resetGame();
@@ -820,7 +779,7 @@ function render() {
         ]
     );
 
-    ui.labContent = el("div", { className: "lab-tab-content" }, [
+    ui.campContent = el("div", { className: "camp-tab-content" }, [
         mainObjective.getElement(),
         intro,
         resetPanel
@@ -828,7 +787,7 @@ function render() {
 
     const topbar = el("header", { className: "topbar" }, [
         el("div", { className: "brand" }, [
-            el("div", { className: "brand-mark", text: "⚛" }),
+            el("div", { className: "brand-mark", text: "⚔" }),
             el("div", {}, [
                 el("div", {
                     className: "brand-name",
@@ -845,7 +804,7 @@ function render() {
             text: "v1.0"
         })
     ]);
-    
+
     ui.inventory = new Inventory({
         getGame: () => game,
         formatNumber
@@ -857,12 +816,12 @@ function render() {
         ui.inventory.element,
         renderTabContent()
     ]);
-    
+
     ui.layout = layout;
     app.replaceChildren(layout);
 
     updateSharedUI();
-    updateLabTab();
+    updateCampTab();
 }
 
 window.kSim = {

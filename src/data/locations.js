@@ -1,11 +1,11 @@
 export const locations = [
     {
-        id: "lab",
+        id: "camp",
         type: "location",
-        name: "LAB",
-        icon: "🔬",
+        name: "Camp",
+        icon: "🏕️",
         description:
-            "Your home and central research hub. The starting point for exploration, experimentation, and scientific discovery.",
+            "Your base at the valley's edge. A fire, a tent, and a workbench — enough to begin.",
 
         metadata: {
             hidden: false,

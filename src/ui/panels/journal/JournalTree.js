@@ -435,18 +435,7 @@ export default class JournalTree {
                         "div",
                         {
                             className: "journal-tree-detail-heading"
-                        },
-                        [
-                            el("span", {
-                                className: "journal-tree-detail-icon",
-                                text: "📖"
-                            }),
-                            el("div", {}, [
-                                el("h3", {
-                                    text: "Research Journal"
-                                })
-                            ])
-                        ]
+                        }
                     ),
                     el("p", {
                         text: "Select an entry from the tree to view its details and relationships."

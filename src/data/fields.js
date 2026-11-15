@@ -1,139 +1,99 @@
 export const FIELD_DEFINITIONS = [
     {
-        id: "labValley",
-        name: "Lab Valley",
-        visualVariant: "stone",
-        icon: "🪨",
-        description: "Locate scattered deposits and recover raw samples.",
+        id: "whisperingMeadow",
+        name: "Whispering Meadow",
+        visualVariant: "meadow",
+        icon: "🌿",
+        description:
+            "A quiet meadow at the valley's edge. Herbs grow thick here, and old oak branches lie scattered in the grass.",
         unlockTrigger: null,
 
-        // --- world / spawn tuning (defaults shown; omit to use these) ---
         background: {
             tileset: "grassland",
             tileSize: 40,
             baseColor: "#2d3d2a",
-            patchScale: 1.6, // tiles drawn at 1.6× cell size
+            patchScale: 1.6,
             baseTiles: [
                 { tile: "grassA", weight: 60 },
                 { tile: "grassB", weight: 40 }
             ],
             scatter: [
-                { tile: "flowers", weight: 5 },
+                { tile: "flowers", weight: 7 },
                 { tile: "smallRock", weight: 2 }
             ],
-            scatterDensity: 0.12 // ~12% of cells get a scatter item
+            scatterDensity: 0.14
         },
         depositCount: 10,
-        respawnSeconds: 3,
+        respawnSeconds: 5,
         world: { width: 1200, height: 900 },
-        margin: 80, // distance from world edge where deposits can spawn
-        minSpacing: 100, // minimum distance between initial deposits
-        depositRadius: 22, // collider + base draw radius
-
-        // --- optional per-field overrides (null = use material + code default) ---
-        strikeCountTable: null, // e.g. [{ richness: 3, strikes: 5 }]
-        sparkleTable: null, // e.g. [{ richness: 2, tier: 2 }]
-
+        margin: 80,
+        minSpacing: 100,
+        depositRadius: 22,
+        strikeCountTable: null,
+        sparkleTable: null,
         spawnTable: [
-            { materialId: "stone", weight: 70 },
-            { materialId: "quartz", weight: 25 },
-            { materialId: "copper", weight: 5 }
+            { materialId: "sunpetal", weight: 60 },
+            { materialId: "oakLog", weight: 25 },
+            { materialId: "moonbloom", weight: 15 }
         ],
         richnessTable: [
-            { amount: 1, weight: 80 },
-            { amount: 2, weight: 15 },
-            { amount: 3, weight: 4 },
-            { amount: 5, weight: 1 }
+            { amount: 1, weight: 70 },
+            { amount: 2, weight: 20 },
+            { amount: 3, weight: 8 },
+            { amount: 4, weight: 2 }
         ]
     },
     {
-        id: "labBorderlamds",
-        name: "Lab Borderlamds",
-        materialId: "stone",
-        visualVariant: "stone",
-        icon: "🪨",
+        id: "ironhollowMine",
+        name: "Ironhollow Mine",
+        visualVariant: "mine",
+        icon: "⛏️",
         description:
-            "Further away from home -- a little less safe? There appears to be a better sample selection here.",
-        unlockTrigger: null,
+            "An old prospecting cut in the hillside. Iron, copper, and coal — if you can find a vein.",
+        unlockTrigger: {
+            type: "inventoryAmount",
+            item: "oakLog",
+            amount: 5
+        },
+
+        background: {
+            tileset: "grassland",
+            tileSize: 40,
+            baseColor: "#252a26",
+            patchScale: 1.5,
+            baseTiles: [
+                { tile: "grassA", weight: 70 },
+                { tile: "grassB", weight: 30 }
+            ],
+            scatter: [{ tile: "smallRock", weight: 5 }],
+            scatterDensity: 0.09
+        },
+        depositCount: 10,
+        respawnSeconds: 6,
+        world: { width: 1200, height: 900 },
+        margin: 80,
+        minSpacing: 100,
+        depositRadius: 22,
+        strikeCountTable: null,
+        sparkleTable: null,
         spawnTable: [
-            { materialId: "stone", weight: 50 },
-            { materialId: "quartz", weight: 20 },
-            { materialId: "copper", weight: 15 },
-            { materialId: "silica", weight: 15 }
+            { materialId: "ironOre", weight: 45 },
+            { materialId: "copperOre", weight: 30 },
+            { materialId: "coal", weight: 25 }
         ],
         richnessTable: [
-            { amount: 1, weight: 45 },
+            { amount: 1, weight: 55 },
             { amount: 2, weight: 25 },
             { amount: 3, weight: 15 },
-            { amount: 5, weight: 15 }
-        ]
-    },
-    {
-        id: "quartz",
-        name: "Quartz Field",
-        materialId: "quartz",
-        visualVariant: "crystal",
-        icon: "💎",
-        description: "A crystalline mineral suitable for processing.",
-        unlockTrigger: null,
-        spawnTable: [{ materialId: "quartz", weight: 100 }],
-        richnessTable: [
-            { amount: 1, weight: 80 },
-            { amount: 2, weight: 15 },
-            { amount: 3, weight: 4 },
-            { amount: 5, weight: 1 }
-        ]
-    },
-    {
-        id: "copper",
-        name: "Copper Field",
-        materialId: "copper",
-        visualVariant: "ore",
-        icon: "🟠",
-        description: "Locate Copper nodes and recover raw samples.",
-        unlockTrigger: {
-            type: "inventoryAmount",
-            item: "stone",
-            amount: 10
-        },
-        spawnTable: [{ materialId: "copper", weight: 100 }],
-        richnessTable: [
-            { amount: 1, weight: 80 },
-            { amount: 2, weight: 15 },
-            { amount: 3, weight: 4 },
-            { amount: 5, weight: 1 }
-        ]
-    },
-    {
-        id: "silicon",
-        name: "Silicon Field",
-        materialId: "silicon",
-        visualVariant: "crystal",
-        icon: "🔹",
-        description: "Locate Silicon nodes and recover mineral samples.",
-        unlockTrigger: {
-            type: "inventoryAmount",
-            item: "copper",
-            amount: 12
-        },
-        spawnTable: [{ materialId: "silicon", weight: 100 }],
-        richnessTable: [
-            { amount: 1, weight: 80 },
-            { amount: 2, weight: 15 },
-            { amount: 3, weight: 4 },
-            { amount: 5, weight: 1 }
+            { amount: 5, weight: 5 }
         ]
     }
 ];
 
 export function getFieldIconMaterialId(field) {
     if (!field) return null;
-
-    // Explicit identity wins — useful for mixed fields with a
-    // thematic flagship material.
     if (field.materialId) return field.materialId;
 
-    // Otherwise: dominant spawn weight.
     const spawn = [...(field.spawnTable ?? [])]
         .filter(e => e.weight > 0)
         .sort((a, b) => b.weight - a.weight)[0];

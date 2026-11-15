@@ -1,13 +1,14 @@
 export const progressionUnlocks = [
     {
-        id: "advancedFabrication",
-        name: "Fabricator",
-        description: "Unlocks advanced material fabrication.",
+        id: "forgeMastery",
+        name: "Forge Mastery",
+        description:
+            "Unlocks smithing, leatherworking, and weapon fabrication.",
         initialUnlocked: false,
         trigger: {
             type: "inventoryAmount",
-            item: "research",
-            amount: 100
+            item: "ironIngot",
+            amount: 3
         }
     }
 ];

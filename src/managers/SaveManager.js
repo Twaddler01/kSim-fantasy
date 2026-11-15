@@ -87,20 +87,6 @@ export default class SaveManager {
                     }
                 },
 
-                inventory: {
-                    ...(fresh.inventory ?? {}),
-                    ...(parsed.inventory ?? {})
-                },
-
-                operations: {
-                    ...(fresh.operations ?? {}),
-                    ...(parsed.operations ?? {}),
-                    discoveredMaterials: {
-                        ...(fresh.operations?.discoveredMaterials ?? {}),
-                        ...(parsed.operations?.discoveredMaterials ?? {})
-                    }
-                },
-
                 appState: {
                     ...(fresh.appState ?? {}),
                     ...(parsed.appState ?? {}),
@@ -111,7 +97,7 @@ export default class SaveManager {
                 }
             };
         } catch (error) {
-            console.warn("Could not load Quantum Foundations save:", error);
+            console.warn("Could not load save:", error);
             return this.freshGame();
         }
     }
@@ -121,7 +107,7 @@ export default class SaveManager {
             localStorage.setItem(this.key, JSON.stringify(game));
             return true;
         } catch (error) {
-            console.warn("Could not save Quantum Foundations:", error);
+            console.warn("Could not save:", error);
             return false;
         }
     }

@@ -1,36 +1,34 @@
 export const upgradeDefinitions = [
     {
-        id: "energyYield",
-        name: "Field Amplifier",
-        icon: "⚡",
-        description: "+1 Quantum Energy per experiment per level.",
-        baseCost: { energy: 300 },
+        id: "fieldTools",
+        name: "Field Tools",
+        icon: "🔨",
+        description: "+1 bonus sample per successful gather, per level.",
+        baseCost: { gold: 50 },
+        maxLevel: 3
+    },
+    {
+        id: "swordDrills",
+        name: "Sword Drills",
+        icon: "⚔️",
+        description: "+2 attack in battle, per level.",
+        baseCost: { gold: 100 },
         maxLevel: 5
     },
     {
-        id: "particleStability",
-        name: "Particle Stabilization",
-        icon: "⚛️",
-        description:
-            "+5 percentage points to particle formation chance per level.",
-        baseCost: { energy: 450, research: 2 },
-        maxLevel: 5
-    },
-    {
-        id: "observation",
-        name: "Improved Instrumentation",
-        icon: "🔬",
-        description:
-            "+8 percentage points to useful research observations per level.",
-        baseCost: { energy: 600, particles: 3 },
-        maxLevel: 5,
+        id: "herbalistsKit",
+        name: "Herbalist's Kit",
+        icon: "🌿",
+        description: "+1 bonus potion per brew, per level.",
+        baseCost: { gold: 75, sunpetal: 15 },
+        maxLevel: 3,
         trigger: {
             type: "upgradeLevel",
-            upgradeIds: ["energyYield", "particleStability"],
+            upgradeIds: ["fieldTools", "swordDrills"],
             minLevel: 1,
             match: "any"
         },
         unlockDescription:
-            "Requires at least one level of Field Amplifier or Particle Stabilization."
+            "Requires at least one level of Field Tools or Sword Drills."
     }
 ];

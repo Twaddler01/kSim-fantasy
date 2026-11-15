@@ -1,86 +1,9 @@
-// src/materials.js
+// src/data/materials.js
 
 export const materials = [
-    // --------------------------------------------------
-    // RAW MATERIALS — recovered from gathering fields
-    // --------------------------------------------------
-{
-        id: "stone",
-        name: "Stone Sample",
-        category: "raw",
-        subtype: "mineral",
-        tier: 1,
-        icon: "🪨",
-        description: "A rough fragment of common stone recovered from the field.",
-        mining: { strikesBase: 6, sparkleBase: 0 }   // baseline: current behavior
-    },
-    {
-        id: "quartz",
-        name: "Quartz",
-        category: "raw",
-        subtype: "mineral",
-        tier: 1,
-        icon: "💎",
-        description: "A crystalline mineral suitable for processing.",
-        mining: { strikesBase: 9, sparkleBase: 1 }   // naturally sparkly
-    },
-    {
-        id: "copper",
-        name: "Copper Sample",
-        category: "raw",
-        subtype: "ore",
-        tier: 2,
-        icon: "🟠",
-        description: "A recovered conductive metal sample.",
-        mining: { strikesBase: 12, sparkleBase: 0 }   // ore is tougher
-    },
-    {
-        id: "silicon",
-        name: "Silicon Sample",
-        category: "raw",
-        subtype: "mineral",
-        tier: 2,
-        icon: "🔹",
-        description: "A semiconductor-grade mineral sample.",
-        mining: { strikesBase: 15, sparkleBase: 0 }
-    },
-    {
-        id: "silica",
-        name: "Silica Sample",
-        category: "raw",
-        subtype: "mineral",
-        tier: 1,
-        icon: "💎",
-        description: "A mineral precursor for engineered crystal structures.",
-        mining: { strikesBase: 20, sparkleBase: 2 }
-    },
-    {
-        id: "graphite",
-        name: "Graphite",
-        category: "raw",
-        subtype: "mineral",
-        tier: 1,
-        icon: "⬛",
-        description: "A carbon-rich mineral useful in conductive materials."
-    },
-    {
-        id: "clay",
-        name: "Clay",
-        category: "raw",
-        subtype: "mineral",
-        tier: 1,
-        icon: "🟤",
-        description: "A workable mineral feedstock for heat-resistant materials."
-    },
-    {
-        id: "sulfur",
-        name: "Sulfur",
-        category: "raw",
-        subtype: "mineral",
-        tier: 1,
-        icon: "🟡",
-        description: "A reactive mineral used in chemical processing."
-    },
+    // ==========================================
+    // RAW — gathered from fields or dropped
+    // ==========================================
     {
         id: "ironOre",
         name: "Iron Ore",
@@ -88,298 +11,164 @@ export const materials = [
         subtype: "ore",
         tier: 1,
         icon: "🪨",
-        description: "An iron-bearing ore suitable for smelting."
+        description:
+            "A chunk of rock heavy with iron. Smelts into usable ingots.",
+        mining: { strikesBase: 6, sparkleBase: 0 }
     },
     {
-        id: "aluminum",
-        name: "Aluminum-Bearing Ore",
+        id: "copperOre",
+        name: "Copper Ore",
         category: "raw",
         subtype: "ore",
-        tier: 2,
-        icon: "⬜",
-        description: "A lightweight-metal feedstock recovered from bauxite deposits."
+        tier: 1,
+        icon: "🟠",
+        description: "A softer ore, useful for early tools and alloys.",
+        mining: { strikesBase: 5, sparkleBase: 0 }
     },
     {
-        id: "nickelOre",
-        name: "Nickel Ore",
+        id: "coal",
+        name: "Coal",
         category: "raw",
-        subtype: "ore",
-        tier: 2,
-        icon: "🪨",
-        description: "A metal-bearing ore for advanced alloys."
-    },
-    {
-        id: "zincOre",
-        name: "Zinc Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 2,
-        icon: "🪨",
-        description: "A zinc-bearing ore for material processing."
-    },
-    {
-        id: "lithiumOre",
-        name: "Lithium Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 3,
-        icon: "🪨",
-        description: "A lithium-bearing ore for specialized chemical processing."
-    },
-    {
-        id: "cobaltOre",
-        name: "Cobalt Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 3,
-        icon: "🪨",
-        description: "A cobalt-bearing ore for advanced material production."
-    },
-    {
-        id: "titaniumOre",
-        name: "Titanium Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 3,
-        icon: "🪨",
-        description: "A high-strength metal feedstock."
-    },
-    {
-        id: "rareEarthOre",
-        name: "Rare Earth Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 3,
-        icon: "🪨",
-        description: "An ore containing elements useful in advanced electronics."
-    },
-    {
-        id: "tungstenOre",
-        name: "Tungsten Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 4,
-        icon: "🪨",
-        description: "A dense metal feedstock for specialized equipment."
-    },
-    {
-        id: "tantalumOre",
-        name: "Tantalum Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 4,
-        icon: "🪨",
-        description: "A rare metal feedstock for electronic components."
-    },
-    {
-        id: "platinumOre",
-        name: "Platinum Ore",
-        category: "raw",
-        subtype: "ore",
-        tier: 4,
-        icon: "🪨",
-        description: "A rare metal-bearing deposit."
-    },
-    {
-        id: "meteoriteFragment",
-        name: "Meteorite Fragment",
-        category: "raw",
-        subtype: "anomalous",
-        tier: 4,
-        icon: "☄️",
-        description: "An extraterrestrial fragment with unusual material properties."
-    },
-    {
-        id: "unstableIsotope",
-        name: "Unstable Isotope",
-        category: "raw",
-        subtype: "anomalous",
-        tier: 5,
-        icon: "☢️",
-        description: "An isotope exhibiting unusual decay behavior."
-    },
-    {
-        id: "anomalousCrystal",
-        name: "Anomalous Crystal",
-        category: "raw",
-        subtype: "anomalous",
-        tier: 5,
-        icon: "💠",
-        description: "A crystal exhibiting unexplained field interactions."
-    },
-    {
-        id: "quantumParticleTrace",
-        name: "Quantum Particle Trace",
-        category: "raw",
-        subtype: "discovery",
-        tier: 5,
-        icon: "⚛️",
-        description: "Evidence of a particle interaction outside the expected model."
-    },
-
-    // --------------------------------------------------
-    // PROCESSED MATERIALS
-    // --------------------------------------------------
-    {
-        id: "quartzPowder",
-        name: "Quartz Powder",
-        category: "processed",
         subtype: "mineral",
         tier: 1,
-        icon: "◈",
-        description: "Quartz reduced to a fine powder."
+        icon: "⬛",
+        description: "Black, brittle, and burns hot. Fuel for the forge.",
+        mining: { strikesBase: 4, sparkleBase: 0 }
     },
     {
-        id: "glass",
-        name: "Glass",
-        category: "processed",
-        subtype: "ceramic",
+        id: "sunpetal",
+        name: "Sunpetal",
+        category: "raw",
+        subtype: "herb",
         tier: 1,
-        icon: "🔹",
-        description: "Silica transformed into a stable glass material."
+        icon: "🌻",
+        description:
+            "A small golden flower, warm to the touch. Common in meadows.",
+        mining: { strikesBase: 3, sparkleBase: 0 }
     },
     {
-        id: "copperIngot",
-        name: "Copper Ingot",
+        id: "moonbloom",
+        name: "Moonbloom",
+        category: "raw",
+        subtype: "herb",
+        tier: 2,
+        icon: "🌙",
+        description: "A pale blue flower that only opens under moonlight.",
+        mining: { strikesBase: 5, sparkleBase: 1 }
+    },
+    {
+        id: "oakLog",
+        name: "Oak Log",
+        category: "raw",
+        subtype: "wood",
+        tier: 1,
+        icon: "🌳",
+        description:
+            "A sturdy log, useful for handles and simple construction.",
+        mining: { strikesBase: 4, sparkleBase: 0 }
+    },
+    {
+        id: "wolfHide",
+        name: "Wolf Hide",
+        category: "raw",
+        subtype: "hide",
+        tier: 1,
+        icon: "🐺",
+        description: "A rough pelt, still smelling of pine and blood.",
+        // Not mined from a field — dropped by creatures in battle.
+        mining: { strikesBase: 1, sparkleBase: 0 }
+    },
+    {
+        id: "voidShard",
+        name: "Void Shard",
+        category: "raw",
+        subtype: "anomalous",
+        tier: 3,
+        icon: "💠",
+        description: "A crystal that seems to drink the light around it.",
+        mining: { strikesBase: 12, sparkleBase: 2 }
+    },
+
+    // ==========================================
+    // PROCESSED — crafted from raw
+    // ==========================================
+    {
+        id: "ironIngot",
+        name: "Iron Ingot",
+        category: "processed",
+        subtype: "metal",
+        tier: 1,
+        icon: "🔩",
+        description: "A refined bar of iron. The base of most smithing work."
+    },
+    {
+        id: "steelIngot",
+        name: "Steel Ingot",
         category: "processed",
         subtype: "metal",
         tier: 2,
-        icon: "🟠",
-        description: "Copper ore refined into a usable metal ingot."
+        icon: "⚙️",
+        description: "Iron hardened with coal. Suitable for weapons."
     },
     {
-        id: "lithiumCompound",
-        name: "Lithium Compound",
+        id: "healingPotion",
+        name: "Healing Potion",
         category: "processed",
-        subtype: "chemical",
-        tier: 3,
-        icon: "⚗️",
-        description: "A refined lithium-bearing compound."
+        subtype: "potion",
+        tier: 1,
+        icon: "🧪",
+        description: "Restores a modest amount of health when consumed."
     },
     {
-        id: "conductiveAlloy",
-        name: "Conductive Alloy",
+        id: "focusTonic",
+        name: "Focus Tonic",
         category: "processed",
-        subtype: "alloy",
-        tier: 2,
-        icon: "🔩",
-        description: "A processed alloy suitable for precision assemblies."
-    },
-    {
-        id: "ceramicInsulator",
-        name: "Ceramic Insulator",
-        category: "processed",
-        subtype: "ceramic",
-        tier: 2,
-        icon: "◻️",
-        description: "A heat-resistant insulating component."
-    },
-    {
-        id: "resonanceCrystal",
-        name: "Resonance Crystal",
-        category: "processed",
-        subtype: "advanced",
-        tier: 5,
-        icon: "💠",
-        description: "A fictional crystal engineered to respond to the Temporal Resonance model."
-    },
-    {
-        id: "phaseStableCrystal",
-        name: "Phase-Stable Crystal",
-        category: "processed",
-        subtype: "advanced",
-        tier: 5,
-        icon: "🔷",
-        description: "A fictional crystal treated to resist phase drift."
+        subtype: "potion",
+        tier: 1,
+        icon: "🍶",
+        description: "Sharpens the mind and restores mana."
     },
 
-    // --------------------------------------------------
-    // CRAFTED COMPONENTS
-    // --------------------------------------------------
+    // ==========================================
+    // CRAFTED — finished equipment
+    // ==========================================
     {
-        id: "copperConductor",
-        name: "Copper Conductor",
-        category: "crafted",
-        subtype: "component",
-        tier: 2,
-        icon: "〰️",
-        description: "A precision conductor manufactured from a copper sample."
-    },
-    {
-        id: "siliconWafer",
-        name: "Silicon Wafer",
-        category: "crafted",
-        subtype: "component",
-        tier: 2,
-        icon: "▤",
-        description: "A processed silicon substrate for control electronics."
-    },
-    {
-        id: "opticalSensor",
-        name: "Optical Sensor",
-        category: "crafted",
-        subtype: "component",
-        tier: 3,
-        icon: "📡",
-        description: "A sensor assembly for measuring particle-field response."
-    },
-    {
-        id: "energyCapacitor",
-        name: "Energy Capacitor",
-        category: "crafted",
-        subtype: "component",
-        tier: 3,
-        icon: "🔋",
-        description: "A component that stores and releases controlled energy."
-    },
-
-    // --------------------------------------------------
-    // CRAFTED ASSEMBLIES AND EQUIPMENT
-    // --------------------------------------------------
-    {
-        id: "resonanceCore",
-        name: "Resonance Core",
-        category: "crafted",
-        subtype: "assembly",
-        tier: 5,
-        icon: "🧿",
-        description: "The central unit that translates the formula into field patterns."
-    },
-    {
-        id: "containmentAssembly",
-        name: "Containment Assembly",
-        category: "crafted",
-        subtype: "assembly",
-        tier: 5,
-        icon: "⭕",
-        description: "A housing designed to keep experimental matter within a controlled field."
-    },
-    {
-        id: "measurementUnit",
-        name: "Measurement & Control Unit",
-        category: "crafted",
-        subtype: "assembly",
-        tier: 5,
-        icon: "🎛️",
-        description: "The interface used to measure and tune an experimental object's response."
-    },
-    {
-        id: "energyRegulator",
-        name: "Energy Regulation Unit",
-        category: "crafted",
-        subtype: "assembly",
-        tier: 5,
-        icon: "⚡",
-        description: "A regulated power stage capable of operating with exotic matter."
-    },
-    {
-        id: "particleReconfigurationArray",
-        name: "Particle Reconfiguration Array",
+        id: "ironDagger",
+        name: "Iron Dagger",
         category: "crafted",
         subtype: "equipment",
-        tier: 5,
-        icon: "⚛️",
-        description: "A complete instrument for controlled particle manipulation."
+        tier: 1,
+        icon: "🗡️",
+        description: "A basic iron blade. Light and quick."
+    },
+    {
+        id: "ironSword",
+        name: "Iron Sword",
+        category: "crafted",
+        subtype: "equipment",
+        tier: 2,
+        icon: "⚔️",
+        description:
+            "A serviceable steel sword. No one will write a song about it."
+    },
+    {
+        id: "leatherVest",
+        name: "Leather Vest",
+        category: "crafted",
+        subtype: "equipment",
+        tier: 1,
+        icon: "🦺",
+        description: "Simple hide armor. Better than nothing."
+    },
+    {
+        id: "runedDagger",
+        name: "Runed Dagger",
+        category: "crafted",
+        subtype: "equipment",
+        tier: 3,
+        icon: "🔮",
+        description:
+            "A steel dagger marked with void-touched runes. Warmer than it should be."
     }
 ];
 

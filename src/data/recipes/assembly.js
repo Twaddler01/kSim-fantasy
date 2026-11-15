@@ -2,19 +2,20 @@
 
 export const assemblyRecipes = [
     {
-        id: "assembleResonanceCore",
-        name: "Resonance Core",
-        description: "Combine specialized components into a functioning resonance core.",
+        id: "assembleRunedDagger",
+        name: "Assemble Runed Dagger",
+        description:
+            "Bind a void shard into a steel blade. The runes are not decorative.",
+        unlockId: "forgeMastery",
         inputs: {
-            resonanceCrystal: 2,
-            copperConductor: 2,
-            energyCapacitor: 1,
-            energy: 25
+            steelIngot: 1,
+            voidShard: 1,
+            moonbloom: 2
         },
         outputs: {
-            resonanceCore: 1
+            runedDagger: 1
         },
-        durationSeconds: 30,
+        durationSeconds: 45,
         unique: true
     }
 ];

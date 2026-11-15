@@ -86,6 +86,7 @@ export default class FieldCanvas {
         respawnDelay = 3,
         backgroundCanvas = null,
         fallbackDepositCount = 10,
+        title = null,
         onCollect,
         onRespawn,
         showToast
@@ -93,6 +94,7 @@ export default class FieldCanvas {
         this.onCollect = onCollect;
         this.onRespawn = onRespawn;
         this.showToast = showToast;
+        this.title = title;
 
         this.element = null;
         this.canvas = null;
@@ -144,6 +146,10 @@ export default class FieldCanvas {
 
     setBackground(canvas) {
         this.backgroundCanvas = canvas;
+    }
+
+    setTitle(title) {
+        this.title = title;
     }
     
     // ---------------------------------------------------------------
@@ -703,14 +709,14 @@ export default class FieldCanvas {
         ctx.font = "600 14px system-ui, -apple-system, 'Segoe UI', sans-serif";
         ctx.textBaseline = "top";
         ctx.fillText(
-            this.hudText ?? `Deposits collected: ${this.collected}`,
+            this.title ?? '',
             12,
             12
         );
 
         ctx.fillStyle = "rgba(180,210,240,0.65)";
         ctx.font = "400 12px system-ui, -apple-system, 'Segoe UI', sans-serif";
-        ctx.fillText("Tap to move · drag to pan · mine the deposits", 12, 32);
+        ctx.fillText("Tap to move · drag to pan", 12, 32);
     }
 
     drawMinimap() {

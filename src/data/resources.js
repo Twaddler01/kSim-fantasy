@@ -1,27 +1,18 @@
 export const resourceDefinitions = [
     {
-        id: "energy",
-        name: "Energy",
-        icon: "⚡",
-        description: "Available energy for experiments and processing.",
+        id: "gold",
+        name: "Gold",
+        icon: "🪙",
+        description:
+            "Coin. Smiths, alchemists, and merchants do not work for free.",
         initiallyDiscovered: true
     },
     {
-        id: "particles",
-        name: "Particles",
-        icon: "⚛️",
-        description: "Particles recovered or generated during experiments."
-    },
-    {
-        id: "research",
-        name: "Research",
-        icon: "🔬",
-        description: "Research accumulated through discoveries."
-    },
-    {
-        id: "exoticMatter",
-        name: "Exotic Matter",
-        icon: "🌀",
-        description: "An unusual form of matter with unexplained properties."
+        id: "experience",
+        name: "Experience",
+        icon: "🌟",
+        description:
+            "What you have learned. Accumulates toward the next level.",
+        initiallyDiscovered: true
     }
 ];

@@ -67,9 +67,9 @@ export default class Announce {
     }
 
     show({
-        title = "LABORATORY ANNOUNCEMENT",
+        title = "NOTICE",
         message = "",
-        eyebrow = "⚠ PRIORITY LAB ALERT",
+        eyebrow = "⚠ FIELD ALERT",
         symbol = "◉",
         actionLabel = "",
         onClose = null,

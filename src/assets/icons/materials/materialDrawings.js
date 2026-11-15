@@ -321,7 +321,10 @@ function drawStoneField(svg) {
         // Facets
         {
             tag: "path",
-            attrs: { d: "M12 15 Q18 9 26 8 L24 20 Q18 20 14 22 Z", fill: "#c0c7ce" }
+            attrs: {
+                d: "M12 15 Q18 9 26 8 L24 20 Q18 20 14 22 Z",
+                fill: "#c0c7ce"
+            }
         },
         {
             tag: "path",
@@ -329,7 +332,10 @@ function drawStoneField(svg) {
         },
         {
             tag: "path",
-            attrs: { d: "M14 22 Q20 22 24 20 L22 30 Q16 30 12 28 Z", fill: "#737e8a" }
+            attrs: {
+                d: "M14 22 Q20 22 24 20 L22 30 Q16 30 12 28 Z",
+                fill: "#737e8a"
+            }
         },
         {
             tag: "path",
@@ -383,8 +389,14 @@ function drawQuartzField(svg) {
                 "stroke-width": 0.7
             }
         },
-        { tag: "polygon", attrs: { points: "10,20 15,16 16,25", fill: "#F5FBFF" } },
-        { tag: "polygon", attrs: { points: "15,16 20,22 16,25", fill: "#8CB9F2" } },
+        {
+            tag: "polygon",
+            attrs: { points: "10,20 15,16 16,25", fill: "#F5FBFF" }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "15,16 20,22 16,25", fill: "#8CB9F2" }
+        },
         // Main crystal — lower profile
         {
             tag: "polygon",
@@ -395,8 +407,14 @@ function drawQuartzField(svg) {
                 "stroke-width": 0.8
             }
         },
-        { tag: "polygon", attrs: { points: "19,16 25,9 25,22 21,25", fill: "#F7FCFF" } },
-        { tag: "polygon", attrs: { points: "25,9 32,16 29,24 25,22", fill: "#FFF0CC" } },
+        {
+            tag: "polygon",
+            attrs: { points: "19,16 25,9 25,22 21,25", fill: "#F7FCFF" }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "25,9 32,16 29,24 25,22", fill: "#FFF0CC" }
+        },
         {
             tag: "polygon",
             attrs: { points: "21,25 25,22 25,37 19,34", fill: "#A5B7F0" }
@@ -415,9 +433,15 @@ function drawQuartzField(svg) {
                 "stroke-width": 0.6
             }
         },
-        { tag: "polygon", attrs: { points: "32,24 37,21 36,29", fill: "#F7FCFF" } },
+        {
+            tag: "polygon",
+            attrs: { points: "32,24 37,21 36,29", fill: "#F7FCFF" }
+        },
         // Pebbles
-        { tag: "ellipse", attrs: { cx: 9, cy: 42, rx: 2, ry: 1.5, fill: "#4a4a5a" } },
+        {
+            tag: "ellipse",
+            attrs: { cx: 9, cy: 42, rx: 2, ry: 1.5, fill: "#4a4a5a" }
+        },
         {
             tag: "ellipse",
             attrs: { cx: 40, cy: 42, rx: 2.5, ry: 1.5, fill: "#4a4a5a" }
@@ -440,7 +464,10 @@ function drawCopperField(svg) {
         },
         {
             tag: "path",
-            attrs: { d: "M12 14 Q20 7 30 8 L27 20 Q19 20 15 22 Z", fill: "#7a746e" }
+            attrs: {
+                d: "M12 14 Q20 7 30 8 L27 20 Q19 20 15 22 Z",
+                fill: "#7a746e"
+            }
         },
         {
             tag: "path",
@@ -448,7 +475,10 @@ function drawCopperField(svg) {
         },
         {
             tag: "path",
-            attrs: { d: "M15 22 Q22 22 27 20 L25 30 Q17 30 12 27 Z", fill: "#504a46" }
+            attrs: {
+                d: "M15 22 Q22 22 27 20 L25 30 Q17 30 12 27 Z",
+                fill: "#504a46"
+            }
         },
         {
             tag: "path",
@@ -556,7 +586,10 @@ function drawGenericOre(svg) {
         },
         {
             tag: "path",
-            attrs: { d: "M12 16 Q20 8 30 10 L28 22 Q20 22 16 24 Z", fill: "#7a746e" }
+            attrs: {
+                d: "M12 16 Q20 8 30 10 L28 22 Q20 22 16 24 Z",
+                fill: "#7a746e"
+            }
         },
         {
             tag: "path",
@@ -580,7 +613,14 @@ function drawGenericAnomalous(svg) {
     addShapes(svg, [
         {
             tag: "ellipse",
-            attrs: { cx: 24, cy: 32, rx: 16, ry: 8, fill: "#4a2a6a", opacity: 0.35 }
+            attrs: {
+                cx: 24,
+                cy: 32,
+                rx: 16,
+                ry: 8,
+                fill: "#4a2a6a",
+                opacity: 0.35
+            }
         },
         {
             tag: "path",
@@ -613,91 +653,580 @@ function drawGenericAnomalous(svg) {
 // --- Generic "metal" / "alloy" (ingots, conductive alloy, etc.) ---
 function drawGenericMetal(svg) {
     addShapes(svg, [
-        { tag: "path", attrs: { d: "M8 34 L14 24 L36 24 L40 34 Z", fill: "#8a929c", stroke: "#c5cdd6", "stroke-width": 1 } },
-        { tag: "path", attrs: { d: "M14 24 L20 14 L34 14 L36 24 Z", fill: "#b0bac5", stroke: "#e0e6ec", "stroke-width": 1 } },
-        { tag: "path", attrs: { d: "M20 14 L34 14 L36 24 L22 24 Z", fill: "#d0d8e0", opacity: 0.55 } },
+        {
+            tag: "path",
+            attrs: {
+                d: "M8 34 L14 24 L36 24 L40 34 Z",
+                fill: "#8a929c",
+                stroke: "#c5cdd6",
+                "stroke-width": 1
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M14 24 L20 14 L34 14 L36 24 Z",
+                fill: "#b0bac5",
+                stroke: "#e0e6ec",
+                "stroke-width": 1
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M20 14 L34 14 L36 24 L22 24 Z",
+                fill: "#d0d8e0",
+                opacity: 0.55
+            }
+        }
     ]);
 }
 
 // --- Generic "ceramic" / "glass" ---
 function drawGenericCeramic(svg) {
     addShapes(svg, [
-        { tag: "path", attrs: { d: "M14 12 L34 12 L36 36 L12 36 Z", fill: "#a3c0d6", stroke: "#e0f0ff", "stroke-width": 1 } },
-        { tag: "path", attrs: { d: "M14 12 L20 12 L20 36 L12 36 Z", fill: "#e0f0ff", opacity: 0.7 } },
-        { tag: "path", attrs: { d: "M18 18 L24 18 L22 30", fill: "none", stroke: "#ffffff", "stroke-width": 1, opacity: 0.8 } }
+        {
+            tag: "path",
+            attrs: {
+                d: "M14 12 L34 12 L36 36 L12 36 Z",
+                fill: "#a3c0d6",
+                stroke: "#e0f0ff",
+                "stroke-width": 1
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M14 12 L20 12 L20 36 L12 36 Z",
+                fill: "#e0f0ff",
+                opacity: 0.7
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M18 18 L24 18 L22 30",
+                fill: "none",
+                stroke: "#ffffff",
+                "stroke-width": 1,
+                opacity: 0.8
+            }
+        }
     ]);
 }
 
 // --- Generic "chemical" ---
 function drawGenericChemical(svg) {
     addShapes(svg, [
-        { tag: "rect", attrs: { x: 18, y: 8, width: 12, height: 8, fill: "#5a6474", stroke: "#8892a0", "stroke-width": 0.8 } },
-        { tag: "path", attrs: { d: "M16 16 L32 16 L32 40 L16 40 Z", fill: "#88e0b0", stroke: "#5a6474", "stroke-width": 1 } },
-        { tag: "path", attrs: { d: "M16 26 L32 26 L32 40 L16 40 Z", fill: "#4ac090", opacity: 0.85 } },
-        { tag: "path", attrs: { d: "M20 20 L28 20", fill: "none", stroke: "#c8ffe0", "stroke-width": 1.2, opacity: 0.8 } }
+        {
+            tag: "rect",
+            attrs: {
+                x: 18,
+                y: 8,
+                width: 12,
+                height: 8,
+                fill: "#5a6474",
+                stroke: "#8892a0",
+                "stroke-width": 0.8
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M16 16 L32 16 L32 40 L16 40 Z",
+                fill: "#88e0b0",
+                stroke: "#5a6474",
+                "stroke-width": 1
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M16 26 L32 26 L32 40 L16 40 Z",
+                fill: "#4ac090",
+                opacity: 0.85
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M20 20 L28 20",
+                fill: "none",
+                stroke: "#c8ffe0",
+                "stroke-width": 1.2,
+                opacity: 0.8
+            }
+        }
     ]);
 }
 
 // --- Generic "advanced" crystal ---
 function drawGenericAdvanced(svg) {
     addShapes(svg, [
-        { tag: "polygon", attrs: { points: "24,6 34,16 34,32 24,42 14,32 14,16", fill: "#b0d0ff", stroke: "#f0f8ff", "stroke-width": 1 } },
-        { tag: "polygon", attrs: { points: "24,6 34,16 24,22 14,16", fill: "#e8f4ff" } },
-        { tag: "polygon", attrs: { points: "14,16 24,22 14,32", fill: "#8ea8e0" } },
-        { tag: "polygon", attrs: { points: "34,16 34,32 24,22", fill: "#a4bcf0" } },
-        { tag: "circle", attrs: { cx: 24, cy: 26, r: 2.2, fill: "#ffffff", opacity: 0.9 } }
+        {
+            tag: "polygon",
+            attrs: {
+                points: "24,6 34,16 34,32 24,42 14,32 14,16",
+                fill: "#b0d0ff",
+                stroke: "#f0f8ff",
+                "stroke-width": 1
+            }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "24,6 34,16 24,22 14,16", fill: "#e8f4ff" }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "14,16 24,22 14,32", fill: "#8ea8e0" }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "34,16 34,32 24,22", fill: "#a4bcf0" }
+        },
+        {
+            tag: "circle",
+            attrs: { cx: 24, cy: 26, r: 2.2, fill: "#ffffff", opacity: 0.9 }
+        }
     ]);
 }
 
 // --- Generic "component" (PCB-style chip) ---
 function drawGenericComponent(svg) {
     addShapes(svg, [
-        { tag: "rect", attrs: { x: 10, y: 16, width: 28, height: 16, rx: 2, fill: "#3a4453", stroke: "#7cc8ff", "stroke-width": 1 } },
-        { tag: "rect", attrs: { x: 14, y: 20, width: 20, height: 8, fill: "#5a7a8a" } },
-        { tag: "path", attrs: { d: "M14 12 L14 16 M22 12 L22 16 M30 12 L30 16 M14 32 L14 36 M22 32 L22 36 M30 32 L30 36", fill: "none", stroke: "#aeb7c2", "stroke-width": 1.4, "stroke-linecap": "round" } }
+        {
+            tag: "rect",
+            attrs: {
+                x: 10,
+                y: 16,
+                width: 28,
+                height: 16,
+                rx: 2,
+                fill: "#3a4453",
+                stroke: "#7cc8ff",
+                "stroke-width": 1
+            }
+        },
+        {
+            tag: "rect",
+            attrs: { x: 14, y: 20, width: 20, height: 8, fill: "#5a7a8a" }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M14 12 L14 16 M22 12 L22 16 M30 12 L30 16 M14 32 L14 36 M22 32 L22 36 M30 32 L30 36",
+                fill: "none",
+                stroke: "#aeb7c2",
+                "stroke-width": 1.4,
+                "stroke-linecap": "round"
+            }
+        }
     ]);
 }
 
 // --- Generic "assembly" / "equipment" ---
 function drawGenericAssembly(svg) {
     addShapes(svg, [
-        { tag: "circle", attrs: { cx: 24, cy: 24, r: 14, fill: "#3a4453", stroke: "#7cc8ff", "stroke-width": 1.2 } },
-        { tag: "circle", attrs: { cx: 24, cy: 24, r: 8, fill: "#586378", stroke: "#aeb7c2", "stroke-width": 1 } },
+        {
+            tag: "circle",
+            attrs: {
+                cx: 24,
+                cy: 24,
+                r: 14,
+                fill: "#3a4453",
+                stroke: "#7cc8ff",
+                "stroke-width": 1.2
+            }
+        },
+        {
+            tag: "circle",
+            attrs: {
+                cx: 24,
+                cy: 24,
+                r: 8,
+                fill: "#586378",
+                stroke: "#aeb7c2",
+                "stroke-width": 1
+            }
+        },
         { tag: "circle", attrs: { cx: 24, cy: 24, r: 3.2, fill: "#7cc8ff" } },
         { tag: "circle", attrs: { cx: 24, cy: 24, r: 1.6, fill: "#ffffff" } },
-        { tag: "path", attrs: { d: "M24 6 L24 12 M24 36 L24 42 M6 24 L12 24 M36 24 L42 24", fill: "none", stroke: "#7cc8ff", "stroke-width": 1.5, "stroke-linecap": "round", opacity: 0.7 } }
+        {
+            tag: "path",
+            attrs: {
+                d: "M24 6 L24 12 M24 36 L24 42 M6 24 L12 24 M36 24 L42 24",
+                fill: "none",
+                stroke: "#7cc8ff",
+                "stroke-width": 1.5,
+                "stroke-linecap": "round",
+                opacity: 0.7
+            }
+        }
+    ]);
+}
+
+// --- Generic "herb" ---
+function drawGenericHerb(svg) {
+    addShapes(svg, [
+        {
+            tag: "path",
+            attrs: {
+                d: "M24 42 Q22 30 24 20",
+                fill: "none",
+                stroke: "#4a7a3a",
+                "stroke-width": 2,
+                "stroke-linecap": "round"
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M22 32 Q14 28 12 22 Q18 22 22 26",
+                fill: "#5a9a4a",
+                stroke: "#3a6a2a",
+                "stroke-width": 0.6,
+                "stroke-linejoin": "round"
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M26 28 Q34 24 36 18 Q30 18 26 22",
+                fill: "#7ab85a",
+                stroke: "#3a6a2a",
+                "stroke-width": 0.6,
+                "stroke-linejoin": "round"
+            }
+        },
+        {
+            tag: "circle",
+            attrs: {
+                cx: 24,
+                cy: 16,
+                r: 3,
+                fill: "#e0c060",
+                stroke: "#a08030",
+                "stroke-width": 0.6
+            }
+        },
+        { tag: "circle", attrs: { cx: 24, cy: 16, r: 1.2, fill: "#fff0a0" } },
+        {
+            tag: "path",
+            attrs: {
+                d: "M18 42 Q22 38 24 42 Q26 38 30 42",
+                fill: "none",
+                stroke: "#4a7a3a",
+                "stroke-width": 1.2,
+                "stroke-linecap": "round"
+            }
+        }
+    ]);
+}
+
+// --- Generic "wood" ---
+function drawGenericWood(svg) {
+    addShapes(svg, [
+        {
+            tag: "rect",
+            attrs: {
+                x: 8,
+                y: 18,
+                width: 32,
+                height: 10,
+                rx: 3,
+                fill: "#6a4a2a",
+                stroke: "#3a2510",
+                "stroke-width": 0.8
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M12 22 Q20 24 28 22 M16 25 Q22 27 30 25",
+                fill: "none",
+                stroke: "#3a2510",
+                "stroke-width": 0.6,
+                opacity: 0.7
+            }
+        },
+        {
+            tag: "ellipse",
+            attrs: {
+                cx: 40,
+                cy: 23,
+                rx: 3,
+                ry: 5,
+                fill: "#a07a5a",
+                stroke: "#5a3a20",
+                "stroke-width": 0.6
+            }
+        },
+        {
+            tag: "ellipse",
+            attrs: {
+                cx: 40,
+                cy: 23,
+                rx: 1.5,
+                ry: 2.5,
+                fill: "none",
+                stroke: "#5a3a20",
+                "stroke-width": 0.4
+            }
+        },
+        {
+            tag: "rect",
+            attrs: {
+                x: 10,
+                y: 30,
+                width: 24,
+                height: 8,
+                rx: 2,
+                fill: "#7a5a3a",
+                stroke: "#3a2510",
+                "stroke-width": 0.6
+            }
+        },
+        {
+            tag: "ellipse",
+            attrs: {
+                cx: 34,
+                cy: 34,
+                rx: 2.5,
+                ry: 4,
+                fill: "#b09070",
+                stroke: "#5a3a20",
+                "stroke-width": 0.5
+            }
+        }
+    ]);
+}
+
+// --- Generic "hide" ---
+function drawGenericHide(svg) {
+    addShapes(svg, [
+        {
+            tag: "path",
+            attrs: {
+                d: "M10 14 Q16 12 24 14 Q32 12 38 14 Q40 20 38 26 Q42 30 38 34 Q32 36 24 34 Q16 36 10 34 Q8 28 10 26 Q6 22 10 14 Z",
+                fill: "#a07850",
+                stroke: "#5a3a20",
+                "stroke-width": 1,
+                "stroke-linejoin": "round"
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M16 20 Q20 18 24 20 M24 24 Q28 22 32 24 M18 28 Q22 26 26 28",
+                fill: "none",
+                stroke: "#7a5030",
+                "stroke-width": 0.6,
+                opacity: 0.7
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M14 18 Q18 15 22 18",
+                fill: "none",
+                stroke: "#d0a880",
+                "stroke-width": 1,
+                opacity: 0.8
+            }
+        }
+    ]);
+}
+
+// --- Generic "potion" ---
+function drawGenericPotion(svg) {
+    addShapes(svg, [
+        {
+            tag: "rect",
+            attrs: {
+                x: 21,
+                y: 6,
+                width: 6,
+                height: 4,
+                rx: 1,
+                fill: "#a08050",
+                stroke: "#5a3a20",
+                "stroke-width": 0.5
+            }
+        },
+        {
+            tag: "rect",
+            attrs: {
+                x: 21,
+                y: 10,
+                width: 6,
+                height: 6,
+                fill: "#d0e8f0",
+                stroke: "#8aa8b8",
+                "stroke-width": 0.5
+            }
+        },
+        {
+            tag: "circle",
+            attrs: {
+                cx: 24,
+                cy: 30,
+                r: 12,
+                fill: "#d0e8f0",
+                stroke: "#8aa8b8",
+                "stroke-width": 0.8
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M14 30 Q14 38 24 40 Q34 38 34 30 Q30 34 24 34 Q18 34 14 30 Z",
+                fill: "#d05060"
+            }
+        },
+        {
+            tag: "path",
+            attrs: {
+                d: "M16 24 Q18 20 20 22",
+                fill: "none",
+                stroke: "#ffffff",
+                "stroke-width": 1,
+                opacity: 0.6
+            }
+        },
+        {
+            tag: "circle",
+            attrs: { cx: 20, cy: 22, r: 1.2, fill: "#ffffff", opacity: 0.8 }
+        }
     ]);
 }
 
 // --- True fallback (safety net) ---
 function drawGenericFallback(svg) {
     addShapes(svg, [
-        { tag: "polygon", attrs: { points: "24,8 38,18 38,32 24,40 10,32 10,18", fill: "#586378", stroke: "#aeb7c2", "stroke-width": 1.2, "stroke-linejoin": "round" } },
-        { tag: "polygon", attrs: { points: "24,8 38,18 24,24 10,18", fill: "#a3adb8" } },
-        { tag: "polygon", attrs: { points: "10,18 24,24 10,32", fill: "#4a5464" } },
-        { tag: "polygon", attrs: { points: "38,18 38,32 24,24", fill: "#7a8493" } }
+        {
+            tag: "polygon",
+            attrs: {
+                points: "24,8 38,18 38,32 24,40 10,32 10,18",
+                fill: "#586378",
+                stroke: "#aeb7c2",
+                "stroke-width": 1.2,
+                "stroke-linejoin": "round"
+            }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "24,8 38,18 24,24 10,18", fill: "#a3adb8" }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "10,18 24,24 10,32", fill: "#4a5464" }
+        },
+        {
+            tag: "polygon",
+            attrs: { points: "38,18 38,32 24,24", fill: "#7a8493" }
+        }
     ]);
 }
 
 export const materialDrawings = {
-    stone:  { core: drawStoneCore,  field: drawStoneField,  crumbs: ["#5a6370", "#6b7480", "#aeb7c2"] },
-    quartz: { core: drawQuartzCore, field: drawQuartzField, crumbs: ["#8892a0", "#B8D9FF", "#c5cdd6"] },
-    copper: { core: drawCopperCore, field: drawCopperField, crumbs: ["#5a5450", "#c87950", "#a95c3d"] }
+    stone: {
+        core: drawStoneCore,
+        field: drawStoneField,
+        crumbs: ["#5a6370", "#6b7480", "#aeb7c2"]
+    },
+    quartz: {
+        core: drawQuartzCore,
+        field: drawQuartzField,
+        crumbs: ["#8892a0", "#B8D9FF", "#c5cdd6"]
+    },
+    copper: {
+        core: drawCopperCore,
+        field: drawCopperField,
+        crumbs: ["#5a5450", "#c87950", "#a95c3d"]
+    }
 };
 
 const genericDrawings = {
-    mineral:   { core: drawGenericMineral,   field: drawGenericMineral,   crumbs: ["#8892a0", "#a3adb8", "#c5cdd6"] },
-    ore:       { core: drawGenericOre,       field: drawGenericOre,       crumbs: ["#5a5450", "#8a8280", "#d08a50"] },
-    anomalous: { core: drawGenericAnomalous, field: drawGenericAnomalous, crumbs: ["#4a2a6a", "#8a7aa0", "#d090ff"] },
-    metal:     { core: drawGenericMetal,     field: drawGenericMetal,     crumbs: ["#8a929c", "#b0bac5", "#e0e6ec"] },
-    alloy:     { core: drawGenericMetal,     field: drawGenericMetal,     crumbs: ["#8a929c", "#b0bac5", "#e0e6ec"] },
-    ceramic:   { core: drawGenericCeramic,   field: drawGenericCeramic,   crumbs: ["#a3c0d6", "#e0f0ff"] },
-    chemical:  { core: drawGenericChemical,  field: drawGenericChemical,  crumbs: ["#88e0b0", "#4ac090"] },
-    advanced:  { core: drawGenericAdvanced,  field: drawGenericAdvanced,  crumbs: ["#b0d0ff", "#8ea8e0"] },
-    component: { core: drawGenericComponent, field: drawGenericComponent, crumbs: ["#3a4453", "#7cc8ff", "#aeb7c2"] },
-    assembly:  { core: drawGenericAssembly,  field: drawGenericAssembly,  crumbs: ["#3a4453", "#7cc8ff"] },
-    equipment: { core: drawGenericAssembly,  field: drawGenericAssembly,  crumbs: ["#3a4453", "#7cc8ff"] },
-    fallback:  { core: drawGenericFallback,  field: drawGenericFallback,  crumbs: ["#586378", "#aeb7c2"] }
+    mineral: {
+        core: drawGenericMineral,
+        field: drawGenericMineral,
+        crumbs: ["#8892a0", "#a3adb8", "#c5cdd6"]
+    },
+    ore: {
+        core: drawGenericOre,
+        field: drawGenericOre,
+        crumbs: ["#5a5450", "#8a8280", "#d08a50"]
+    },
+    anomalous: {
+        core: drawGenericAnomalous,
+        field: drawGenericAnomalous,
+        crumbs: ["#4a2a6a", "#8a7aa0", "#d090ff"]
+    },
+    herb: {
+        core: drawGenericHerb,
+        field: drawGenericHerb,
+        crumbs: ["#4a7a3a", "#7ab85a", "#e0c060"]
+    },
+    wood: {
+        core: drawGenericWood,
+        field: drawGenericWood,
+        crumbs: ["#3a2510", "#6a4a2a", "#a07a5a"]
+    },
+    hide: {
+        core: drawGenericHide,
+        field: drawGenericHide,
+        crumbs: ["#5a3a20", "#a07850", "#d0a880"]
+    },
+    potion: {
+        core: drawGenericPotion,
+        field: drawGenericPotion,
+        crumbs: ["#8aa8b8", "#d05060", "#d0e8f0"]
+    },
+    metal: {
+        core: drawGenericMetal,
+        field: drawGenericMetal,
+        crumbs: ["#8a929c", "#b0bac5", "#e0e6ec"]
+    },
+    alloy: {
+        core: drawGenericMetal,
+        field: drawGenericMetal,
+        crumbs: ["#8a929c", "#b0bac5", "#e0e6ec"]
+    },
+    ceramic: {
+        core: drawGenericCeramic,
+        field: drawGenericCeramic,
+        crumbs: ["#a3c0d6", "#e0f0ff"]
+    },
+    chemical: {
+        core: drawGenericChemical,
+        field: drawGenericChemical,
+        crumbs: ["#88e0b0", "#4ac090"]
+    },
+    advanced: {
+        core: drawGenericAdvanced,
+        field: drawGenericAdvanced,
+        crumbs: ["#b0d0ff", "#8ea8e0"]
+    },
+    component: {
+        core: drawGenericComponent,
+        field: drawGenericComponent,
+        crumbs: ["#3a4453", "#7cc8ff", "#aeb7c2"]
+    },
+    assembly: {
+        core: drawGenericAssembly,
+        field: drawGenericAssembly,
+        crumbs: ["#3a4453", "#7cc8ff"]
+    },
+    equipment: {
+        core: drawGenericAssembly,
+        field: drawGenericAssembly,
+        crumbs: ["#3a4453", "#7cc8ff"]
+    },
+    fallback: {
+        core: drawGenericFallback,
+        field: drawGenericFallback,
+        crumbs: ["#586378", "#aeb7c2"]
+    }
 };
 
 export function getCrumbColors(materialId) {
