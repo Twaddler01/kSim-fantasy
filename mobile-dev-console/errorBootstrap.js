@@ -42,12 +42,8 @@
             position: "fixed",
             top: "10px",
             left: "10px",
-            right: "auto",
-
-            width: "fit-content",
-            maxWidth: "calc(100vw - 20px)",
+            right: "10px",
             maxHeight: "70vh",
-
             overflow: "auto",
             padding: "12px",
             background: "#300",
@@ -115,7 +111,7 @@
             // The main console is unavailable: use the fallback.
             window.showFatalError(title, error);
 
-            // TEMP
+// TEMP
             // Also report the error to the parent loader.
             window.parent.postMessage(
                 {
@@ -149,7 +145,7 @@
 
         window.showFatalError("Unhandled Promise Error", event.reason);
 
-        // TEMP
+// TEMP
         window.parent.postMessage(
             {
                 source: "mobile-dev-console",

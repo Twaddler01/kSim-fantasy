@@ -139,7 +139,12 @@ export const materials = [
         subtype: "equipment",
         tier: 1,
         icon: "🗡️",
-        description: "A basic iron blade. Light and quick."
+        description: "A basic iron blade. Light and quick.",
+        equipment: {
+            slot: "mainHand",
+            weaponType: "melee",
+            stats: { attack: 4 }
+        }
     },
     {
         id: "ironSword",
@@ -149,7 +154,12 @@ export const materials = [
         tier: 2,
         icon: "⚔️",
         description:
-            "A serviceable steel sword. No one will write a song about it."
+            "A serviceable steel sword. No one will write a song about it.",
+        equipment: {
+            slot: "mainHand",
+            weaponType: "melee",
+            stats: { attack: 8 }
+        }
     },
     {
         id: "leatherVest",
@@ -158,7 +168,11 @@ export const materials = [
         subtype: "equipment",
         tier: 1,
         icon: "🦺",
-        description: "Simple hide armor. Better than nothing."
+        description: "Simple hide armor. Better than nothing.",
+        equipment: {
+            slot: "chest",
+            stats: { defense: 3, health: 10 }
+        }
     },
     {
         id: "runedDagger",
@@ -168,7 +182,12 @@ export const materials = [
         tier: 3,
         icon: "🔮",
         description:
-            "A steel dagger marked with void-touched runes. Warmer than it should be."
+            "A steel dagger marked with void-touched runes. Warmer than it should be.",
+        equipment: {
+            slot: "mainHand",
+            weaponType: "melee",
+            stats: { attack: 12, agility: 2 }
+        }
     }
 ];
 

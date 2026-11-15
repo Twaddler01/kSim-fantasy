@@ -48,9 +48,7 @@ export default class DOMInspector {
             this.handleInspectorEvent(event.detail);
         };
 
-        // Scoped to this console's element instead of a page-wide window
-        // event, so other projects (or a second console) never see it.
-        this.consoleElement.addEventListener(
+        window.addEventListener(
             "devtools-inspect-event",
             this.onInspectorEvent
         );
@@ -143,11 +141,10 @@ export default class DOMInspector {
                 if (!this.picking) return;
 
                 // The existing toggle button remains interactive.
-                // composedPath() keeps this correct inside a shadow root,
-                // where document-level listeners see a retargeted target.
-                const path = event.composedPath?.() ?? [event.target];
-
-                if (path.includes(this.pickButton)) {
+                if (
+                    event.target === this.pickButton ||
+                    this.pickButton.contains(event.target)
+                ) {
                     return;
                 }
 
@@ -726,7 +723,7 @@ export default class DOMInspector {
         this.destroyed = true;
         this.refreshVersion++;
 
-        this.consoleElement.removeEventListener(
+        window.removeEventListener(
             "devtools-inspect-event",
             this.onInspectorEvent
         );
@@ -751,5 +748,3 @@ export default class DOMInspector {
         );
     }
 }
-
-

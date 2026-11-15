@@ -3,6 +3,7 @@ import ConsoleOutput from "./ConsoleOutput.js";
 import { icon } from "./icons.js";
 import DOMInspector from "./DOMInspector.js";
 import TestRegistry from "./TestRegistry.js";
+import ConsoleCommands from "./ConsoleCommands.js";
 
 export default class Console {
     constructor(settings = {}) {
@@ -10,7 +11,6 @@ export default class Console {
             settings.element ?? document.getElementById("consoleLog");
 
         this.settings = {
-            // Actual validation and fallback happens in createConsoleHost() in console-loader.js
             mode: settings.mode ?? "overlay",
             mountPoint: settings.mountPoint ?? "#devtools",
             height: settings.height ?? "60dvh",
@@ -18,7 +18,8 @@ export default class Console {
             mirrorToNative: settings.mirrorToNative ?? false,
             showCopyButtons: settings.showCopyButtons ?? false,
             allowDragOutsideBounds: settings.allowDragOutsideBounds ?? true,
-            logTestOutput: settings.logTestOutput ?? true
+            logTestOutput: settings.logTestOutput ?? true,
+            evaluationBridge: settings.evaluationBridge ?? null   // ← add
         };
 
         if (!this.element) {
@@ -28,21 +29,18 @@ export default class Console {
         this.cleanupCallbacks = [];
         this.previousDevConsole = window.devConsole;
 
-        // The loader claims window.devConsole itself when it owns the
-        // lifecycle (overlay/embedded). Standalone use keeps the old behavior.
-        this.exposeGlobal = settings.exposeGlobal ?? true;
-
-        // Hooks for the stylesheet. Added here, removed in destroy(), so a
-        // reused element never keeps a previous mode's layout rules.
-        this.rootClasses = ["mdc-root", `mdc-${this.settings.mode}`];
-        this.element.classList.add(...this.rootClasses);
-
         this.createUI();
 
         this.output = new ConsoleOutput(
             this.element.querySelector("#js-console"),
             this.settings
         );
+        
+        this.commands = new ConsoleCommands({
+            container: this.element.querySelector("#consoleCommandSlot"),
+            evaluator: code => this.evaluate(code),
+            output: this.output
+        });
 
         this.inspector = new DOMInspector({
             panel: this.element.querySelector("#consoleInspectPanel"),
@@ -70,9 +68,7 @@ export default class Console {
         }
 
         // Public instance for application debugging.
-        if (this.exposeGlobal) {
-            window.devConsole = this;
-        }
+        window.devConsole = this;
 
         // Capture console.log(), console.warn(), etc.
         if (this.settings.captureConsole) {
@@ -179,6 +175,9 @@ export default class Console {
                     <div class="console-output-scroll">
                         <div id="js-console"></div>
                     </div>
+                    
+                    <div id="consoleCommandSlot"></div>
+                    
                     <footer class="console-log-footer">
                         <span class="console-footer-status">CONSOLE OUTPUT</span>
                         <span class="console-toolbar-spacer"></span>
@@ -684,13 +683,24 @@ this.toggleButton.addEventListener("click", () => {
             }
         });
 
-        // Publish the viewport immediately; refresh once more after layout.
-        this.applyViewportPosition();
+        // Wait one frame so the console has its final initial dimensions.
         refresh();
     }
 
     refreshViewportPosition() {
         if (this.settings.mode !== "overlay" || !this.element.isConnected) return;
+        const viewport = this.getViewportMetrics();
+        const rect = this.element.getBoundingClientRect();
+
+        if (this.isDocked) {
+            this.viewportPosition = {
+                x: 0,
+                y: Math.max(0, viewport.height - rect.height)
+            };
+        } else {
+            this.constrainViewportPosition(viewport, rect);
+        }
+
         this.applyViewportPosition();
     }
 
@@ -711,32 +721,24 @@ this.toggleButton.addEventListener("click", () => {
         this.viewportPosition = { x, y };
     }
 
-    // Layout is CSS-driven. JS only publishes the visual viewport and, while
-    // floating, the drag offset. Docked needs no measuring at all, so it is
-    // correct before the stylesheet finishes loading and survives keyboard,
-    // zoom and orientation changes without a second pass.
     applyViewportPosition() {
         if (this.settings.mode !== "overlay" || !this.element.isConnected) return;
-
         const viewport = this.getViewportMetrics();
-        const style = this.element.style;
-
-        style.setProperty("--mdc-vv-left", `${viewport.offsetLeft}px`);
-        style.setProperty("--mdc-vv-top", `${viewport.offsetTop}px`);
-        style.setProperty("--mdc-vv-width", `${viewport.width}px`);
-        style.setProperty("--mdc-vv-height", `${viewport.height}px`);
-
-        this.element.classList.toggle("is-floating", !this.isDocked);
+        const rect = this.element.getBoundingClientRect();
 
         if (this.isDocked) {
-            style.removeProperty("--mdc-x");
-            style.removeProperty("--mdc-y");
-            return;
+            this.viewportPosition.x = 0;
+            this.viewportPosition.y = Math.max(0, viewport.height - rect.height);
+        } else {
+            this.constrainViewportPosition(viewport, rect);
         }
 
-        this.constrainViewportPosition(viewport);
-        style.setProperty("--mdc-x", `${this.viewportPosition.x}px`);
-        style.setProperty("--mdc-y", `${this.viewportPosition.y}px`);
+        this.element.style.left = `${viewport.offsetLeft + this.viewportPosition.x}px`;
+        this.element.style.top = `${viewport.offsetTop + this.viewportPosition.y}px`;
+        this.element.style.right = "auto";
+        this.element.style.bottom = "auto";
+        this.element.style.width = `${viewport.width}px`;
+        this.element.style.maxHeight = `${viewport.height}px`;
     }
 
     undock() {
@@ -836,6 +838,25 @@ this.toggleButton.addEventListener("click", () => {
         this.output.table(data);
     }
 
+    async evaluate(code) {
+        if (this.settings.mode === "overlay") {
+            // Overlay mode runs in the parent document; indirect eval
+            // executes in that window's global scope, so `kSim` and any
+            // other globals are visible to the typed code.
+            const result = (0, eval)(code);
+            if (result instanceof Promise) return await result;
+            return result;
+        }
+    
+        if (this.settings.evaluationBridge?.evaluate) {
+            return this.settings.evaluationBridge.evaluate(code);
+        }
+    
+        throw new Error(
+            "Console evaluation bridge is unavailable in this mode."
+        );
+    }
+    
     info(...items) {
         this.output.log(...items);
     }
@@ -880,25 +901,6 @@ this.toggleButton.addEventListener("click", () => {
         this.inspector?.destroy?.();
         this.tests?.destroy?.();
 
-        // Make destroy() the true inverse of the constructor: leave the
-        // element exactly as it was handed to us.
-        this.element.replaceChildren();
-        this.element.classList.remove(
-            ...this.rootClasses,
-            "is-floating",
-            "collapsed"
-        );
-        for (const name of [
-            "--mdc-vv-left",
-            "--mdc-vv-top",
-            "--mdc-vv-width",
-            "--mdc-vv-height",
-            "--mdc-x",
-            "--mdc-y"
-        ]) {
-            this.element.style.removeProperty(name);
-        }
-
         if (window.devConsole === this) {
             if (this.previousDevConsole == null) {
                 delete window.devConsole;
@@ -908,6 +910,4 @@ this.toggleButton.addEventListener("click", () => {
         }
     }
 }
-
-
 

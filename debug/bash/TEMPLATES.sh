@@ -1,13 +1,38 @@
 
 # === kSim-fantasy ===
+# regular push
 cd /data/data/com.termux/files/home/storage/shared/Documents/kSim-fantasy
 git add .
-git commit -m "new"
+git commit -m "migration: 2"
 git push origin main
 
+##################
+# ── start a phase with BRANCH ──────────────────────────────────
+cd /data/data/com.termux/files/home/storage/shared/Documents/kSim-fantasy
+git status                              # confirm clean tree
+git switch -c phase-4-2-entity-refactor   # create AND switch
 
+# ── save files, boot, test ─────────────────────────
+# (paste the files I gave you, refresh browser, verify)
 
+# ── lock in progress (may repeat several times) ────
+git add -A
+git commit -m "4.2: entity refactor"
 
+# ── merge to main + tag + push ─────────────────────
+git switch main
+git merge phase-4-2-entity-refactor
+git tag v0.4.1
+git branch -d phase-4-2-entity-refactor
+git push --follow-tags
+
+##################
+# update NO BRANCH
+cd /data/data/com.termux/files/home/storage/shared/Documents/kSim-fantasy
+git add -A
+git commit -m "4.1: add equipment blocks to crafted items"
+git tag v0.4.1
+git push --follow-tags
 
 
 
