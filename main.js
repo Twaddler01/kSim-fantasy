@@ -957,11 +957,10 @@ function render() {
 }
 
 window.kSim = {
-    get data() {
-        return game;
-    },
+    get data() { return game; },
     save,
     render,
+    announce: opts => showAnnouncement(opts),
     clearStorage: () => saveManager.clear(),
     reset: resetGame
 };

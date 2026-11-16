@@ -49,6 +49,18 @@ export default class DebugPanel {
     addActions() {
         this.actions = [
             {
+    label: "Queue 3 Announcements",
+    run: () => {
+        for (let i = 1; i <= 3; i++) {
+            this.showAnnouncement({
+                title: `Announcement ${i}`,
+                message: `Queued test message ${i}.`
+            });
+        }
+        this.showToast("3 announcements queued.");
+    }
+},
+            {
                 label: 'TEST',
                 run: async () => {
                     const { addInventoryItem } = await import("../src/data/inventory.js");

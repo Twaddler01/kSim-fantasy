@@ -39,6 +39,11 @@ export default class Announce {
             id: "ksim-announce-message"
         });
 
+        this.queueBadge = el("div", {
+            className: "ksim-announce__queue",
+            hidden: true
+        });
+
         this.actionButton = el("button", {
             className: "ksim-announce__action",
             type: "button",
@@ -58,6 +63,7 @@ export default class Announce {
             this.symbol,
             this.titleElement,
             this.messageElement,
+            this.queueBadge,
             this.actionButton,
             this.closeButton
         );
@@ -87,6 +93,12 @@ export default class Announce {
             onGoTo
         });
 
+        // If an announcement is already showing, the queue just grew —
+        // update its badge immediately so the player sees "+N more".
+        if (this.current) {
+            this.updateQueueBadge();
+        }
+
         this.showNext();
     }
 
@@ -105,9 +117,12 @@ export default class Announce {
         } else {
             this.symbol.textContent = String(symbol ?? "◉");
         }
-        
+
         this.titleElement.textContent = title;
         this.messageElement.textContent = message;
+
+        // Recompute the badge from the current queue.
+        this.updateQueueBadge();
 
         const hasAction = Boolean(actionLabel) && typeof onGoTo === "function";
 
@@ -122,6 +137,16 @@ export default class Announce {
         this.panel.style.animation = "";
 
         this.closeButton.focus();
+    }
+
+    updateQueueBadge() {
+        const remaining = this.queue.length;
+        if (remaining > 0) {
+            this.queueBadge.textContent = `+${remaining} more`;
+            this.queueBadge.hidden = false;
+        } else {
+            this.queueBadge.hidden = true;
+        }
     }
 
     close() {
