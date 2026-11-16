@@ -1,12 +1,12 @@
 import { el } from "../components/Element.js";
 import { Button } from "../components/Button.js";
-import { Card } from "../components/Card.js";
 import Badge from "../components/Badge.js";
 import NewBadge from "../../notifications/NewBadge.js";
 import { createFieldIcon } from "../fieldIcons.js";
 import { materials } from "../../data/materials.js";
 import { getFieldSpawnBreakdown } from "../../data/fields.js";
 import { MaterialIcon } from "../../assets/icons/materials/MaterialIcon.js";
+import WorldMapPanel from "./WorldMapPanel.js";
 
 export default class FieldWorkPanel {
     constructor({
@@ -17,7 +17,8 @@ export default class FieldWorkPanel {
         fieldDefinitions,
         navigateTo,
         createField,
-        refreshTab // () => ui.tabs.update({ refreshContent: true })
+        refreshTab,
+        showToast
     }) {
         this.getGame = getGame;
         this.save = save;
@@ -26,11 +27,13 @@ export default class FieldWorkPanel {
         this.fieldDefinitions = fieldDefinitions;
         this.navigateTo = navigateTo;
         this.refreshTab = refreshTab;
+        this.showToast = showToast ?? (() => {});
 
         this._viewKey = null;
-        this.view = "selector";
+        this.view = "map"; // default view
         this.fieldViews = new Map();
         this.badges = new Map();
+        this.worldMap = null;
 
         this.element = null;
         this.fieldCards = null;
@@ -47,9 +50,17 @@ export default class FieldWorkPanel {
     }
 
     // --- navigation entry points ---------------------------------------
-    showSelector() {
+    showMap() {
         this.deactivateField();
-        this.view = "selector";
+        this.view = "map";
+        this.fieldSelectionButton = null;
+        this.refreshTab();
+        return true;
+    }
+
+    showList() {
+        this.deactivateField();
+        this.view = "list";
         this.fieldSelectionButton = null;
         this.refreshTab();
         return true;
@@ -84,12 +95,13 @@ export default class FieldWorkPanel {
         if (!this.element) return this;
 
         const fieldId = this.view === "field" ? this.activeFieldId() : null;
-        const viewKey = fieldId ? `field:${fieldId}` : "selector";
+        const viewKey = fieldId ? `field:${fieldId}` : `view:${this.view}`;
 
         // Skip rebuild if the view hasn't changed. Rebuilding would detach
         // and re-attach the canvas, losing pointer capture mid-gesture.
         if (this._viewKey === viewKey) {
             if (fieldId) this.getFieldView(fieldId)?.update?.();
+            else if (this.view === "map") this.worldMap?.update?.();
             return this;
         }
 
@@ -98,10 +110,11 @@ export default class FieldWorkPanel {
         if (fieldId) {
             this.element.replaceChildren(this.renderActiveField());
             this.getFieldView(fieldId)?.update?.();
+        } else if (this.view === "map") {
+            this.element.replaceChildren(this.renderMap());
+            this.worldMap?.update?.();
         } else {
-            this.view = "selector";
-            this.fieldSelectionButton = null;
-            this.element.replaceChildren(this.renderSelector());
+            this.element.replaceChildren(this.renderList());
         }
 
         return this;
@@ -121,16 +134,61 @@ export default class FieldWorkPanel {
         return this.getGame().appState.navigation.activeFieldId;
     }
 
-    renderSelector() {
+    // --- MAP VIEW -------------------------------------------------------
+
+    renderMap() {
+        if (!this.worldMap) {
+            this.worldMap = new WorldMapPanel({
+                getGame: this.getGame,
+                unlockManager: this.unlockManager,
+                unreadManager: this.unreadManager,
+                fieldDefinitions: this.fieldDefinitions,
+                onSelectField: fieldId => this.showField(fieldId),
+                showToast: message => this.showToast(message)
+            });
+        }
+
+        return el("section", { className: "world-map-section" }, [
+            el("div", { className: "world-map-header" }, [
+                el("div", {}, [
+                    el("div", { className: "eyebrow", text: "THE VALLEY" }),
+                    el("h2", { text: "World Map" })
+                ]),
+                el("button", {
+                    type: "button",
+                    className: "world-map-list-toggle",
+                    text: "☰ LIST",
+                    "aria-label": "Show field list",
+                    onClick: () => this.showList()
+                })
+            ]),
+            this.worldMap.getElement()
+        ]);
+    }
+
+    // --- LIST VIEW ------------------------------------------------------
+
+    renderList() {
         const section = el(
             "section",
             { className: "field-selection-section" },
             [
-                el("div", {
-                    className: "eyebrow",
-                    text: "GATHERING LOCATIONS"
-                }),
-                el("h2", { text: "Select a Field" }),
+                el("div", { className: "world-map-header" }, [
+                    el("div", {}, [
+                        el("div", {
+                            className: "eyebrow",
+                            text: "GATHERING LOCATIONS"
+                        }),
+                        el("h2", { text: "All Fields" })
+                    ]),
+                    el("button", {
+                        type: "button",
+                        className: "world-map-list-toggle",
+                        text: "🗺 MAP",
+                        "aria-label": "Show world map",
+                        onClick: () => this.showMap()
+                    })
+                ]),
                 el("p", {
                     className: "muted",
                     text: "Choose a field, then enter it when you're ready."
@@ -145,17 +203,19 @@ export default class FieldWorkPanel {
         return section;
     }
 
+    // --- FIELD VIEW -----------------------------------------------------
+
     renderActiveField() {
         const fieldId = this.activeFieldId();
         if (!fieldId) {
-            this.view = "selector";
+            this.view = "map";
             this.fieldSelectionButton = null;
-            return this.renderSelector();
+            return this.renderMap();
         }
 
-        const fieldView = this.getFieldView(this.activeFieldId());
+        const fieldView = this.getFieldView(fieldId);
 
-        const back = Button("← FIELD SELECTIONS", () => this.showSelector(), {
+        const back = Button("← MAP", () => this.showMap(), {
             variant: "secondary-button"
         });
         this.fieldSelectionButton = back;
@@ -166,6 +226,8 @@ export default class FieldWorkPanel {
             fieldView.getElement()
         ]);
     }
+
+    // --- FIELD CARDS (list view only) ----------------------------------
 
     updateFieldCards() {
         if (!this.fieldCards) return;
@@ -213,7 +275,11 @@ export default class FieldWorkPanel {
                             text: unlocked
                                 ? field.description
                                 : `Requires ${field.unlockTrigger?.amount ?? 0} ${
-                                      field.unlockTrigger?.item ?? "resources"
+                                      this.materialName(
+                                          field.unlockTrigger?.item
+                                      ) ??
+                                      field.unlockTrigger?.item ??
+                                      "resources"
                                   } Samples`
                         }),
                         unlocked ? this.renderFieldMaterials(field) : null
@@ -294,6 +360,10 @@ export default class FieldWorkPanel {
     refreshBadges() {
         for (const field of this.fieldDefinitions) {
             this.getBadge(field.id).refresh();
+        }
+        // Map pins render unread state directly; refresh them too.
+        if (this.view === "map") {
+            this.worldMap?.update?.();
         }
     }
 

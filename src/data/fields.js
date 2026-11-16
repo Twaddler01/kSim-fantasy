@@ -4,6 +4,7 @@ export const FIELD_DEFINITIONS = [
         name: "Whispering Meadow",
         visualVariant: "meadow",
         icon: "🌿",
+        mapPosition: { x: 32, y: 73 },
         description:
             "A quiet meadow at the valley's edge. Herbs grow thick here, and old oak branches lie scattered in the grass.",
         unlockTrigger: null,
@@ -57,6 +58,7 @@ export const FIELD_DEFINITIONS = [
         name: "Ironhollow Mine",
         visualVariant: "mine",
         icon: "⛏️",
+        mapPosition: { x: 75, y: 38 },
         description:
             "An old prospecting cut in the hillside. Iron, copper, and coal — if you can find a vein.",
         unlockTrigger: {

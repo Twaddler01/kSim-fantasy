@@ -3216,7 +3216,9 @@ body.battle-open {
 .loot-line-amount {
     flex-shrink: 0;
     color: #7dffb3;
-    font: 700 0.78rem "DM Mono", monospace;
+    font:
+        700 0.78rem "DM Mono",
+        monospace;
     font-variant-numeric: tabular-nums;
 }
 
@@ -3754,5 +3756,190 @@ FIELD
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* ========================================
+   World Map
+   ======================================== */
+
+.world-map-section,
+.field-selection-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.world-map-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.world-map-header h2 {
+    margin: 4px 0 0;
+}
+
+.world-map-list-toggle {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font:
+        600 0.62rem "DM Mono",
+        monospace;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.world-map-list-toggle:active {
+    background: rgba(98, 228, 244, 0.08);
+    color: var(--cyan);
+}
+
+.world-map-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 10 / 7;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0e1710;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.world-map-bg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.world-map-pin-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.world-map-pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 2;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.world-map-pin-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid rgba(98, 228, 244, 0.55);
+    background: rgba(8, 22, 34, 0.92);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.55),
+        0 0 0 3px rgba(8, 22, 34, 0.4);
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease,
+        border-color 120ms ease;
+}
+
+.world-map-pin:active .world-map-pin-icon {
+    transform: scale(0.94);
+}
+
+.world-map-pin-icon-svg {
+    display: block;
+    width: 26px;
+    height: 26px;
+}
+
+.world-map-pin-label {
+    max-width: 90px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(8, 22, 34, 0.8);
+    color: var(--text);
+    font:
+        600 0.58rem "DM Mono",
+        monospace;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.world-map-pin.is-active .world-map-pin-icon {
+    border-color: var(--cyan);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.55),
+        0 0 16px rgba(98, 228, 244, 0.45);
+}
+
+.world-map-pin.is-locked {
+    opacity: 0.55;
+}
+
+.world-map-pin.is-locked .world-map-pin-icon {
+    border-color: rgba(120, 130, 140, 0.45);
+    background: rgba(20, 24, 28, 0.92);
+    filter: grayscale(1);
+}
+
+.world-map-pin.is-locked .world-map-pin-icon-svg {
+    opacity: 0.5;
+}
+
+.world-map-pin-lock {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    border-radius: 50%;
+    background: rgba(20, 24, 28, 0.95);
+    border: 1px solid rgba(120, 130, 140, 0.4);
+    transform: translate(35%, -35%);
+    pointer-events: none;
+}
+
+.world-map-pin-dot {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent-color, #7c83ff);
+    box-shadow: 0 0 8px rgba(124, 131, 255, 0.9);
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .world-map-pin-icon {
+        transition: none;
     }
 }

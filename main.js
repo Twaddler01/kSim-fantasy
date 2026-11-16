@@ -340,8 +340,11 @@ const objectiveTracker = new ObjectiveTracker({
 
 // Navigation — still registered in main because it's global,
 // but delegating to the panel:
-registerPage("fieldWork", "selector", {
-    activate: () => fieldWorkPanel.showSelector()
+registerPage("fieldWork", "map", {
+    activate: () => fieldWorkPanel.showMap()
+});
+registerPage("fieldWork", "list", {
+    activate: () => fieldWorkPanel.showList()
 });
 for (const field of FIELD_DEFINITIONS) {
     registerPage("fieldWork", field.id, {
