@@ -811,7 +811,9 @@ function render() {
 
     ui.inventory = new Inventory({
         getGame: () => game,
-        formatNumber
+        formatNumber,
+        save,
+        refreshUI: options => refreshUI(options)
     });
 
     const layout = el("div", { className: "game-layout" }, [

@@ -47,7 +47,7 @@ button {
     align-items: center;
     justify-content: space-between;
     flex: 0 0 auto;
-    padding: 6px 12px;                 /* was 9px 13px */
+    padding: 6px 12px; /* was 9px 13px */
     gap: 8px;
     border-bottom: 1px solid var(--line);
     background: rgba(5, 14, 25, 0.88);
@@ -64,7 +64,7 @@ button {
 .brand-mark {
     display: grid;
     place-items: center;
-    width: 28px;                        /* was 34px */
+    width: 28px; /* was 34px */
     height: 28px;
     flex: 0 0 auto;
     font-size: 0.85rem;
@@ -80,7 +80,7 @@ button {
     letter-spacing: 0.04em;
 }
 .brand-subtitle {
-    font-size: 0.52rem;                 /* was 0.55rem */
+    font-size: 0.52rem; /* was 0.55rem */
 }
 .eyebrow {
     color: var(--muted);
@@ -90,8 +90,8 @@ button {
     letter-spacing: 0.14em;
 }
 .stage-pill {
-    padding: 5px 8px;                   /* was 7px 9px */
-    font-size: 0.58rem;                 /* was 0.62rem */
+    padding: 5px 8px; /* was 7px 9px */
+    font-size: 0.58rem; /* was 0.62rem */
 }
 .count-pill,
 .level-pill {
@@ -660,7 +660,7 @@ body:not(.debug-mode) {
     align-items: center;
     gap: 2px;
     padding: 3px 5px;
-    min-height: 32px;                  /* was 34 + 51 stacked */
+    min-height: 32px; /* was 34 + 51 stacked */
 }
 
 .inventory-compact {
@@ -668,7 +668,7 @@ body:not(.debug-mode) {
     display: flex;
     gap: 3px;
     overflow-x: auto;
-    overscroll-behavior: contain;      /* stop mobile swipe-up-from-row */
+    overscroll-behavior: contain; /* stop mobile swipe-up-from-row */
     scrollbar-width: thin;
     padding: 0;
     min-width: 0;
@@ -678,7 +678,7 @@ body:not(.debug-mode) {
 .resource-chip {
     display: flex;
     flex: 0 0 auto;
-    flex-direction: row;               /* was column */
+    flex-direction: row; /* was column */
     align-items: center;
     gap: 3px;
     padding: 3px 6px;
@@ -703,7 +703,9 @@ body:not(.debug-mode) {
 
 .resource-chip-value {
     color: var(--cyan);
-    font: 700 0.68rem "DM Mono", monospace;
+    font:
+        700 0.68rem "DM Mono",
+        monospace;
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
@@ -2217,9 +2219,6 @@ body:not(.debug-mode) {
     font-variant-numeric: tabular-nums;
 }
 
-
-
-
 .exploration-demo {
     position: relative;
     margin: 12px 0;
@@ -2230,7 +2229,7 @@ body:not(.debug-mode) {
 }
 
 .exploration-demo {
-    position: relative;             /* required for the SVG overlay */
+    position: relative; /* required for the SVG overlay */
     margin: 12px 0;
     border-radius: 12px;
     overflow: hidden;
@@ -2245,7 +2244,7 @@ body:not(.debug-mode) {
     top: 0;
     width: 40px;
     height: 40px;
-    pointer-events: none;           /* ← lets taps reach the canvas */
+    pointer-events: none; /* ← lets taps reach the canvas */
     will-change: transform;
     filter: drop-shadow(0 0 6px rgba(120, 200, 255, 0.75));
 }
@@ -2268,13 +2267,23 @@ body:not(.debug-mode) {
 }
 
 @keyframes idle-float {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-1px); }
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-1px);
+    }
 }
 
 @keyframes walk-bob {
-    0%, 100% { transform: translateY(0)   rotate(-2deg); }
-    50%      { transform: translateY(-2px) rotate(2deg); }
+    0%,
+    100% {
+        transform: translateY(0) rotate(-2deg);
+    }
+    50% {
+        transform: translateY(-2px) rotate(2deg);
+    }
 }
 
 /* Core glow pulses independently */
@@ -2284,15 +2293,22 @@ body:not(.debug-mode) {
 }
 
 @keyframes core-pulse {
-    0%, 100% { opacity: 0.55; transform: scale(0.9); }
-    50%      { opacity: 1;    transform: scale(1.15); }
+    0%,
+    100% {
+        opacity: 0.55;
+        transform: scale(0.9);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.15);
+    }
 }
 
 .exploration-player {
     position: absolute;
     left: 0;
     top: 0;
-    width: 48px;                  /* was 40px */
+    width: 48px; /* was 40px */
     height: 48px;
     pointer-events: none;
     will-change: transform;
@@ -2307,8 +2323,15 @@ body:not(.debug-mode) {
 }
 
 @keyframes lamp-pulse {
-    0%, 100% { opacity: 0.8; transform: scale(1); }
-    50%      { opacity: 1;   transform: scale(1.15); }
+    0%,
+    100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.15);
+    }
 }
 
 /* OBJECTIVES */
@@ -2556,7 +2579,9 @@ body:not(.debug-mode) {
 
 .tracker-strip__label {
     color: #7cc8ff;
-    font: 600 0.58rem "DM Mono", monospace;
+    font:
+        600 0.58rem "DM Mono",
+        monospace;
     letter-spacing: 0.1em;
     flex-shrink: 0;
 }
@@ -2583,7 +2608,9 @@ body:not(.debug-mode) {
 
 .tracker-strip__count {
     color: #a8b8c8;
-    font: 600 0.6rem "DM Mono", monospace;
+    font:
+        600 0.6rem "DM Mono",
+        monospace;
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
 }
@@ -2624,8 +2651,14 @@ body:not(.debug-mode) {
 }
 
 @keyframes tracker-drop {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Requirement rows (unchanged) */
@@ -2637,8 +2670,12 @@ body:not(.debug-mode) {
     font-size: 11.5px;
 }
 
-.tracker-req__label { color: #a8b8c8; }
-.tracker-req__label.is-done { color: #7cc8ff; }
+.tracker-req__label {
+    color: #a8b8c8;
+}
+.tracker-req__label.is-done {
+    color: #7cc8ff;
+}
 
 .tracker-req__bar {
     height: 3px;
@@ -2764,7 +2801,9 @@ body:not(.debug-mode) {
     border-radius: 5px;
     background: rgba(105, 190, 224, 0.08);
     border: 1px solid rgba(105, 190, 224, 0.12);
-    font: 600 0.55rem "DM Mono", monospace;
+    font:
+        600 0.55rem "DM Mono",
+        monospace;
     color: var(--muted);
     line-height: 1;
 }
@@ -2793,4 +2832,181 @@ body:not(.debug-mode) {
     width: 44px;
     height: 44px;
     margin: 0 auto;
+}
+
+/* ========================================
+   Inventory — Character Sheet
+   ======================================== */
+
+.character-sheet {
+    padding: 10px 8px 8px;
+    border-bottom: 1px solid rgba(105, 190, 224, 0.12);
+    margin-bottom: 4px;
+}
+
+.character-sheet-title {
+    margin: 0 0 8px;
+    font:
+        700 0.6rem "DM Mono",
+        monospace;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+.character-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed rgba(105, 190, 224, 0.1);
+}
+
+.character-stat {
+    display: inline-flex;
+    gap: 4px;
+    font:
+        500 0.7rem "DM Mono",
+        monospace;
+    white-space: nowrap;
+}
+
+.character-stat-label {
+    color: var(--muted);
+    letter-spacing: 0.06em;
+}
+
+.character-stat strong {
+    color: var(--cyan);
+    font-variant-numeric: tabular-nums;
+}
+
+.character-slots {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.character-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 6px 8px;
+    min-height: 48px;
+    min-width: 0;
+
+    border: 1px solid rgba(105, 190, 224, 0.15);
+    border-radius: 6px;
+    background: rgba(5, 16, 28, 0.35);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    transition:
+        border-color 120ms ease,
+        background 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.character-slot.is-filled {
+    border-color: rgba(98, 228, 244, 0.35);
+    background: rgba(98, 228, 244, 0.05);
+}
+
+.character-slot.is-empty {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.character-slot:active {
+    transform: scale(0.98);
+}
+
+.character-slot.is-empty:active {
+    transform: none;
+}
+
+.character-slot-label {
+    font:
+        500 0.52rem "DM Mono",
+        monospace;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+.character-slot-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.character-slot-icon {
+    flex: 0 0 auto;
+    display: block;
+}
+
+.character-slot-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+}
+
+.character-slot-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ========================================
+   Inventory — Item List + Equip Buttons
+   ======================================== */
+
+.inventory-items-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+@media (min-width: 600px) {
+    .inventory-items-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 6px;
+    }
+}
+
+.inventory-item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.inventory-equip-btn {
+    padding: 3px 8px;
+    min-height: 24px;
+    border: 1px solid rgba(98, 228, 244, 0.35);
+    border-radius: 4px;
+    background: rgba(98, 228, 244, 0.08);
+    color: var(--cyan);
+    font:
+        700 0.58rem "DM Mono",
+        monospace;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.inventory-equip-btn:active {
+    background: rgba(98, 228, 244, 0.18);
 }

@@ -49,6 +49,15 @@ export default class DebugPanel {
     addActions() {
         this.actions = [
             {
+                label: 'TEST',
+                run: async () => {
+                    const { addInventoryItem } = await import("../src/data/inventory.js");
+addInventoryItem(kSim.data, "ironSword", 1);
+addInventoryItem(kSim.data, "leatherVest", 1);
+kSim.render();
+                }
+            },
+            {
                 label: "Show Character",
                 run: () => {
                     const game = this.getGame();
