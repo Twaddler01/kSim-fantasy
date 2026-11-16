@@ -1,17 +1,27 @@
 // src/ui/panels/FieldScene.js
-// Field-work adapter over FieldCanvas.
-
-/*
-Want -- Change
-More/less rotation (rand() - 0.5) * 0.35 → * 0.2 (subtle) or * 0.5 (noticeable)
-More/less scale variety 0.9 + rand() * 0.2 → 0.95 + rand() * 0.1 (subtle) or 0.85 + rand() * 0.3 (bold)
-More crumbs 3 + Math.floor(rand() * 3) → 5 + Math.floor(rand() * 4)
-Bigger crumbs 1 + rand() * 1.5 → 1.2 + rand() * 2
-Wider scatter 0.8 + rand() * 0.8 → 0.7 + rand() * 1.1
-Crumbs further down (more "base") + s * 0.28 → + s * 0.35
-Softer shadow rgba(0,0,0,0.35) → rgba(0,0,0,0.25)
-Per-material crumb color materialDrawings.js → crumbs: [...] on that entry
-*/
+//
+// Adapter between a field definition and FieldCanvas.
+//
+// FieldScene owns:
+//   · Initial entity spawning (mixed by type via field.spawnTable)
+//   · Respawn logic per entity type
+//   · Dispatch of interactions to the appropriate scene callback
+//     (onGather, onEncounter, onOpenCache, onEnterCave)
+//
+// FieldCanvas owns:
+//   · Rendering, camera, input, tap-to-move, auto-approach
+//   · Per-entity strike counting (strikesRequired / strikesLanded)
+//   · Deactivation and respawn timing
+//
+// Entity types this scene understands:
+//   "gather"  → tap gathers a raw material (existing behavior)
+//   "enemy"   → tap opens an encounter (wired in Phase 4.5)
+//   "cache"   → tap opens a loot cache (Phase 4.7)
+//   "cave"    → tap enters a dungeon / POI (Phase 4.7)
+//
+// Fields can mix types in one spawnTable. Entities that have no
+// corresponding scene callback stay in place when tapped (they do not
+// disappear) and log a one-time warning to the dev console.
 
 import FieldCanvas from "./FieldCanvas.js";
 import { materials } from "../../data/materials.js";
@@ -40,25 +50,31 @@ export default class FieldScene {
     constructor({
         field,
         onGather,
+        onEncounter,
+        onOpenCache,
+        onEnterCave,
         getSprites = () => ({}),
         getTiles = () => null
     }) {
         this.field = field;
         this.onGather = onGather;
+        this.onEncounter = onEncounter;
+        this.onOpenCache = onOpenCache;
+        this.onEnterCave = onEnterCave;
         this.getSprites = getSprites;
         this.getTiles = getTiles;
         this.rawMaterials = materials.filter(m => m.category === "raw");
 
-        // Resolve tuning from the field, falling back to engine defaults.
+        // Resolve tuning from the field, with legacy field names as fallbacks.
         this.world = {
             width: field.world?.width ?? 1200,
             height: field.world?.height ?? 900
         };
-        this.depositCount = field.depositCount ?? 10;
+        this.entityCount = field.entityCount ?? field.depositCount ?? 10;
+        this.entityRadius = field.entityRadius ?? field.depositRadius ?? 22;
         this.respawnDelay = field.respawnSeconds ?? 3;
         this.margin = field.margin ?? 80;
         this.minSpacing = field.minSpacing ?? 100;
-        this.depositRadius = field.depositRadius ?? 22;
 
         this.backgroundCanvas = buildBackgroundCache(
             this.field,
@@ -67,14 +83,14 @@ export default class FieldScene {
         );
 
         this.canvas = new FieldCanvas({
-            deposits: this.buildInitialDeposits(),
+            entities: this.buildInitialEntities(),
             world: this.world,
             respawnDelay: this.respawnDelay,
-            backgroundCanvas: this.backgroundCanvas, // may be null
+            backgroundCanvas: this.backgroundCanvas,
             title: this.field.name,
-            onCollect: (deposit, screenPos) =>
-                this.handleCollect(deposit, screenPos),
-            onRespawn: deposit => this.buildRespawn(deposit),
+            onInteract: (entity, screenPos) =>
+                this.handleInteract(entity, screenPos),
+            onRespawn: entity => this.buildRespawn(entity),
             showToast: null
         });
 
@@ -94,20 +110,19 @@ export default class FieldScene {
     }
 
     // -----------------------------------------------------------------
+    // Entity building
+    // -----------------------------------------------------------------
 
-    buildInitialDeposits() {
+    buildInitialEntities() {
         const rand = seededRandom(hashString(this.field.id));
         const list = [];
-        const { margin, minSpacing, depositRadius, depositCount } = this;
+        const { margin, minSpacing, entityRadius, entityCount } = this;
         const ww = this.world.width;
         const wh = this.world.height;
 
-        for (let i = 0; i < depositCount; i++) {
-            const material = this.pickMaterial(rand);
-            const richness = this.selectRichness(rand);
-            const rotation = (rand() - 0.5) * 0.35; // ±0.175 rad ≈ ±10°
-            const scale = 0.9 + rand() * 0.2; // 0.9 – 1.1
-            const crumbs = this.makeCrumbs(rand, material.id, depositRadius);
+        for (let i = 0; i < entityCount; i++) {
+            const spawn = this.pickSpawn(rand);
+            const entity = this.buildEntityFromSpawn(spawn, rand, i);
 
             let x,
                 y,
@@ -118,48 +133,47 @@ export default class FieldScene {
                 attempts++;
             } while (
                 attempts < 40 &&
-                list.some(d => Math.hypot(d.x - x, d.y - y) < minSpacing)
+                list.some(e => Math.hypot(e.x - x, e.y - y) < minSpacing)
             );
 
-            list.push({
-                id: `${this.field.id}-dep-${i}`,
-                x,
-                y,
-                r: depositRadius,
-                materialId: material.id,
-                richness,
-                strikesRequired: this.selectStrikes(richness, material.id),
-                sparkleTier: this.selectSparkleTier(richness, material.id),
-                label: material.name,
-                sprite: this.getSpriteFor(material.id) ?? null,
-                rotation,
-                scale,
-                crumbs
-            });
+            entity.x = x;
+            entity.y = y;
+            list.push(entity);
         }
 
         return list;
     }
 
-    buildRespawn(oldDeposit) {
-        const rand = Math.random;
-        const { margin, depositRadius } = this;
-        const ww = this.world.width;
-        const wh = this.world.height;
+    buildEntityFromSpawn(spawn, rand, index) {
+        const type = spawn.type ?? "gather";
+        switch (type) {
+            case "gather":
+                return this.buildGatherEntity(spawn, rand, index);
+            case "enemy":
+                return this.buildEnemyEntity(spawn, rand, index);
+            case "cache":
+                return this.buildCacheEntity(spawn, rand, index);
+            case "cave":
+                return this.buildCaveEntity(spawn, rand, index);
+            default:
+                return this.buildGatherEntity(spawn, rand, index);
+        }
+    }
 
+    buildGatherEntity(spawn, rand, index) {
         const material =
-            this.rawMaterials.find(m => m.id === oldDeposit.materialId) ??
-            this.pickMaterial(rand);
+            materials.find(m => m.id === spawn.materialId) ??
+            this.rawMaterials[0];
+
         const richness = this.selectRichness(rand);
-        const rotation = (rand() - 0.5) * 0.35; // ±0.175 rad ≈ ±10°
-        const scale = 0.9 + rand() * 0.2; // 0.9 – 1.1
-        const crumbs = this.makeCrumbs(rand, material.id, depositRadius);
+        const rotation = (rand() - 0.5) * 0.35;
+        const scale = 0.9 + rand() * 0.2;
+        const crumbs = this.makeCrumbs(rand, material.id, this.entityRadius);
 
         return {
-            id: oldDeposit.id,
-            x: margin + rand() * (ww - margin * 2),
-            y: margin + rand() * (wh - margin * 2),
-            r: depositRadius,
+            id: `${this.field.id}-ent-${index}`,
+            type: "gather",
+            r: this.entityRadius,
             materialId: material.id,
             richness,
             strikesRequired: this.selectStrikes(richness, material.id),
@@ -168,46 +182,218 @@ export default class FieldScene {
             sprite: this.getSpriteFor(material.id) ?? null,
             rotation,
             scale,
-            crumbs
+            crumbs,
+            respawnSeconds: spawn.respawnSeconds ?? this.respawnDelay
         };
     }
 
-    pickMaterial(rand = Math.random) {
+    buildEnemyEntity(spawn, rand, index) {
+        return {
+            id: `${this.field.id}-ent-${index}`,
+            type: "enemy",
+            r: this.entityRadius,
+            enemyId: spawn.enemyId,
+            label: spawn.label ?? spawn.enemyId ?? "Enemy",
+            sprite: null, // populated in Phase 4.3 when enemy icons exist
+            strikesRequired: 1,
+            sparkleTier: 0,
+            rotation: 0,
+            scale: 1,
+            crumbs: [],
+            respawnSeconds: spawn.respawnSeconds ?? 60
+        };
+    }
+
+    buildCacheEntity(spawn, rand, index) {
+        return {
+            id: `${this.field.id}-ent-${index}`,
+            type: "cache",
+            r: this.entityRadius,
+            lootTableId: spawn.lootTableId,
+            label: spawn.label ?? "Cache",
+            sprite: null, // Phase 4.7 will add a chest sprite
+            strikesRequired: 1,
+            sparkleTier: 0,
+            rotation: 0,
+            scale: 1,
+            crumbs: [],
+            respawnSeconds:
+                spawn.respawnSeconds === undefined
+                    ? null // caches default to one-shot
+                    : spawn.respawnSeconds
+        };
+    }
+
+    buildCaveEntity(spawn, rand, index) {
+        return {
+            id: `${this.field.id}-ent-${index}`,
+            type: "cave",
+            r: this.entityRadius,
+            dungeonId: spawn.dungeonId,
+            label: spawn.label ?? "Cave Entrance",
+            sprite: null, // Phase 4.7 will add a cave sprite
+            strikesRequired: 1,
+            sparkleTier: 0,
+            rotation: 0,
+            scale: 1,
+            crumbs: [],
+            // Caves are POIs: they do not disappear when entered.
+            consumeOnInteract: false,
+            respawnSeconds: null
+        };
+    }
+
+    buildRespawn(oldEntity) {
+        const rand = Math.random;
+        const { margin } = this;
+        const ww = this.world.width;
+        const wh = this.world.height;
+
+        const spawn = {
+            type: oldEntity.type,
+            materialId: oldEntity.materialId,
+            enemyId: oldEntity.enemyId,
+            lootTableId: oldEntity.lootTableId,
+            dungeonId: oldEntity.dungeonId,
+            respawnSeconds: oldEntity.respawnSeconds,
+            label: oldEntity.label,
+            weight: 1
+        };
+
+        const entity = this.buildEntityFromSpawn(spawn, rand, 0);
+        entity.id = oldEntity.id;
+
+        entity.x = margin + rand() * (ww - margin * 2);
+        entity.y = margin + rand() * (wh - margin * 2);
+
+        return entity;
+    }
+
+    // -----------------------------------------------------------------
+    // Spawn selection
+    // -----------------------------------------------------------------
+
+    pickSpawn(rand = Math.random) {
         const table = this.field.spawnTable ?? [];
         const valid = table.filter(
-            e =>
-                e.weight > 0 &&
-                e.materialId !== "quantumParticleTrace" &&
-                materials.some(m => m.id === e.materialId)
+            entry => entry.weight > 0 && this.isValidSpawn(entry)
         );
 
         if (valid.length === 0) {
-            // Legacy fallback
+            // Legacy fallback: field declares a single materialId.
             const m = materials.find(m => m.id === this.field.materialId);
-            return (
-                m ??
-                this.rawMaterials[Math.floor(rand() * this.rawMaterials.length)]
-            );
+            return {
+                type: "gather",
+                materialId: m?.id ?? this.rawMaterials[0]?.id,
+                weight: 1
+            };
         }
 
         const total = valid.reduce((s, e) => s + e.weight, 0);
         let roll = rand() * total;
         for (const e of valid) {
             roll -= e.weight;
-            if (roll < 0) return materials.find(m => m.id === e.materialId);
+            if (roll < 0) return e;
         }
-        return materials.find(m => m.id === valid[valid.length - 1].materialId);
+        return valid[valid.length - 1];
     }
 
-    handleCollect(deposit, screenPos) {
-        this.collected++;
-
-        this.onGather?.(this.field, screenPos, {
-            // ← pass this.field first
-            id: deposit.materialId,
-            richness: deposit.richness
-        });
+    isValidSpawn(entry) {
+        const type = entry.type ?? "gather";
+        switch (type) {
+            case "gather":
+                return (
+                    Boolean(entry.materialId) &&
+                    materials.some(m => m.id === entry.materialId)
+                );
+            case "enemy":
+                return Boolean(entry.enemyId);
+            case "cache":
+                return Boolean(entry.lootTableId);
+            case "cave":
+                return Boolean(entry.dungeonId);
+            default:
+                return false;
+        }
     }
+
+    // -----------------------------------------------------------------
+    // Interaction dispatch
+    // -----------------------------------------------------------------
+
+    /**
+     * Returns true if the interaction consumed the entity (FieldCanvas
+     * will deactivate and schedule a respawn). Returns false to leave
+     * the entity in place — e.g. when a handler is not wired yet.
+     */
+    handleInteract(entity, screenPos) {
+        switch (entity.type) {
+            case "gather": {
+                if (!this.onGather) {
+                    console.warn(
+                        "[FieldScene] No onGather handler; entity not processed:",
+                        entity.materialId
+                    );
+                    return false;
+                }
+                const ok = this.onGather(this.field, screenPos, {
+                    id: entity.materialId,
+                    richness: entity.richness
+                });
+                return ok !== false;
+            }
+
+            case "enemy": {
+                if (!this.onEncounter) {
+                    console.warn(
+                        "[FieldScene] No onEncounter handler; enemy not processed:",
+                        entity.enemyId
+                    );
+                    return false;
+                }
+                this.onEncounter(this.field, screenPos, {
+                    enemyId: entity.enemyId
+                });
+                return true;
+            }
+
+            case "cache": {
+                if (!this.onOpenCache) {
+                    console.warn(
+                        "[FieldScene] No onOpenCache handler; cache not processed:",
+                        entity.lootTableId
+                    );
+                    return false;
+                }
+                this.onOpenCache(this.field, screenPos, {
+                    lootTableId: entity.lootTableId
+                });
+                return true;
+            }
+
+            case "cave": {
+                if (!this.onEnterCave) {
+                    console.warn(
+                        "[FieldScene] No onEnterCave handler; cave not processed:",
+                        entity.dungeonId
+                    );
+                    return false;
+                }
+                this.onEnterCave(this.field, screenPos, {
+                    dungeonId: entity.dungeonId
+                });
+                // Caves are POIs: even with a handler, keep them present.
+                return false;
+            }
+
+            default:
+                return false;
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Sprites and background
+    // -----------------------------------------------------------------
 
     getSpriteFor(materialId, variant = "field") {
         const entry = this.getSprites()[materialId];
@@ -221,8 +407,9 @@ export default class FieldScene {
     }
 
     refreshSprites() {
-        for (const d of this.canvas.deposits) {
-            d.sprite = this.getSpriteFor(d.materialId);
+        for (const e of this.canvas.entities) {
+            if (e.type !== "gather") continue;
+            e.sprite = this.getSpriteFor(e.materialId);
         }
     }
 
@@ -237,6 +424,10 @@ export default class FieldScene {
         this.backgroundCanvas = cache;
         this.canvas?.setBackground(cache);
     }
+
+    // -----------------------------------------------------------------
+    // Random rolls (gather only)
+    // -----------------------------------------------------------------
 
     selectRichness(rand = Math.random) {
         const table = this.field.richnessTable ?? [{ amount: 1, weight: 1 }];
@@ -271,7 +462,6 @@ export default class FieldScene {
         }
 
         // 2. Material base + richness scaling
-        //    base = 2 preserves current behavior (richness 1 = 2 strikes)
         const material = materials.find(m => m.id === materialId);
         const base = material?.mining?.strikesBase ?? 2;
         return Math.max(1, base + (richness - 1));
@@ -288,7 +478,6 @@ export default class FieldScene {
         }
 
         // 2. Material base + richness scaling
-        //    base = 0 preserves current behavior (richness 1 = 0 sparkles)
         const material = materials.find(m => m.id === materialId);
         const base = material?.mining?.sparkleBase ?? 0;
         return Math.max(0, Math.min(3, base + (richness - 1)));
@@ -301,14 +490,14 @@ export default class FieldScene {
         const crumbs = [];
         for (let i = 0; i < count; i++) {
             const angle = rand() * Math.PI * 2;
-            const dist = depositRadius * (0.8 + rand() * 0.8); // 0.8r – 1.6r
+            const dist = depositRadius * (0.8 + rand() * 0.8);
 
             crumbs.push({
                 dx: Math.cos(angle) * dist,
-                dy: Math.sin(angle) * dist * 0.7, // squash Y = top-down
-                r: 1 + rand() * 1.5, // 1–2.5px
+                dy: Math.sin(angle) * dist * 0.7,
+                r: 1 + rand() * 1.5,
                 color: colors[Math.floor(rand() * colors.length)],
-                alpha: 0.55 + rand() * 0.35 // 0.55–0.9
+                alpha: 0.55 + rand() * 0.35
             });
         }
         return crumbs;

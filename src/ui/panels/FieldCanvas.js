@@ -1,20 +1,15 @@
-
-
-
-
-
-
-
 // src/ui/panels/FieldCanvas.js
 //
-// Top-down exploration demo:
+// Top-down exploration canvas.
 //   · Camera pans over a world larger than the viewport
 //   · Tap  = walk player to world position under finger
 //   · Drag = pan camera (does not move player)
-//   · 10 deposits live in the world, each respawns after being mined
+//   · Interactable entities live in the world; each may respawn after
+//     being consumed. Entity types ("gather", "enemy", "cache", "cave")
+//     are handled by FieldScene via the onInteract callback.
 
-const STRIKE_REACH = 12; // px beyond touching that counts as "in reach"
-const TAP_HIT_RADIUS = 1.6; // tap hit detection, × d.r
+const INTERACT_REACH = 12; // px beyond touching that counts as "in reach"
+const TAP_HIT_RADIUS = 1.6; // tap hit detection, × entity.r
 
 const SPRITE_PX = 60;
 const SPRITE_HALF = SPRITE_PX / 2;
@@ -79,19 +74,33 @@ const PLAYER_SVG = `
 </svg>
 `;
 
+const ENTITY_FALLBACK_COLORS = {
+    gather: "rgba(120,255,180,0.75)",
+    enemy: "rgba(255,100,100,0.75)",
+    cache: "rgba(255,200,80,0.75)",
+    cave: "rgba(120,140,255,0.75)"
+};
+
+const ENTITY_MINIMAP_COLORS = {
+    gather: "rgba(120,255,180,0.9)",
+    enemy: "rgba(255,120,120,0.9)",
+    cache: "rgba(255,200,80,0.9)",
+    cave: "rgba(120,140,255,0.9)"
+};
+
 export default class FieldCanvas {
     constructor({
-        deposits = [],
+        entities = [],
         world = { width: 1200, height: 900 },
         respawnDelay = 3,
         backgroundCanvas = null,
-        fallbackDepositCount = 10,
+        fallbackEntityCount = 10,
         title = null,
-        onCollect,
+        onInteract,
         onRespawn,
         showToast
     } = {}) {
-        this.onCollect = onCollect;
+        this.onInteract = onInteract;
         this.onRespawn = onRespawn;
         this.showToast = showToast;
         this.title = title;
@@ -111,8 +120,8 @@ export default class FieldCanvas {
         // Clone so caller mutations don't leak in.
         this.world = { width: world.width, height: world.height };
         this.respawnDelay = respawnDelay;
-        this.backgroundCanvas = backgroundCanvas;   // ← add
-        this.fallbackDepositCount = fallbackDepositCount;
+        this.backgroundCanvas = backgroundCanvas;
+        this.fallbackEntityCount = fallbackEntityCount;
 
         this.camera = { x: 0, y: 0 };
         this.cameraInitialized = false;
@@ -126,8 +135,8 @@ export default class FieldCanvas {
             speed: PLAYER_SPEED
         };
 
-        this.pendingDeposits = deposits;
-        this.deposits = [];
+        this.pendingEntities = entities;
+        this.entities = [];
         this.collected = 0;
         this.time = 0;
 
@@ -141,7 +150,7 @@ export default class FieldCanvas {
         this._onPointerUp = e => this.handlePointerUp(e);
         this._onPointerCancel = e => this.handlePointerCancel(e);
 
-        this.approachingDeposit = null;
+        this.approachingEntity = null;
     }
 
     setBackground(canvas) {
@@ -151,7 +160,7 @@ export default class FieldCanvas {
     setTitle(title) {
         this.title = title;
     }
-    
+
     // ---------------------------------------------------------------
     // DOM
     // ---------------------------------------------------------------
@@ -182,18 +191,19 @@ export default class FieldCanvas {
 
         requestAnimationFrame(() => this.resize());
 
-        if (this.deposits.length === 0 && this.pendingDeposits.length > 0) {
-            this.deposits = this.pendingDeposits.map(d => ({
-                ...d,
+        if (this.entities.length === 0 && this.pendingEntities.length > 0) {
+            this.entities = this.pendingEntities.map(e => ({
+                type: "gather",
+                ...e,
                 pulse: Math.random() * Math.PI * 2,
                 active: true,
                 respawnAt: 0,
                 strikesLanded: 0,
                 cracks: [],
-                sparkles: this.makeSparkles(d.sparkleTier ?? 0, d.r ?? 22)
+                sparkles: this.makeSparkles(e.sparkleTier ?? 0, e.r ?? 22)
             }));
-        } else if (this.deposits.length === 0) {
-            this.spawnDeposits(this.fallbackDepositCount);
+        } else if (this.entities.length === 0) {
+            this.spawnFallbackEntities(this.fallbackEntityCount);
         }
 
         return this.element;
@@ -281,46 +291,48 @@ export default class FieldCanvas {
     }
 
     // ---------------------------------------------------------------
-    // Deposits
+    // Fallback entities (used only if the scene provides none)
     // ---------------------------------------------------------------
 
-    spawnDeposits(count) {
+    spawnFallbackEntities(count) {
         for (let i = 0; i < count; i++) {
-            this.deposits.push(this.makeDeposit());
+            this.entities.push(this.makeFallbackEntity());
         }
     }
 
-    makeDeposit() {
+    makeFallbackEntity() {
         const m = 60;
         for (let attempt = 0; attempt < 60; attempt++) {
             const x = m + Math.random() * (this.world.width - m * 2);
             const y = m + Math.random() * (this.world.height - m * 2);
 
-            const tooCloseToDeposit = this.deposits.some(
-                d => d.active && Math.hypot(d.x - x, d.y - y) < 100
+            const tooClose = this.entities.some(
+                e => e.active && Math.hypot(e.x - x, e.y - y) < 100
             );
             const tooCloseToPlayer =
                 Math.hypot(this.player.x - x, this.player.y - y) < 120;
 
-            if (!tooCloseToDeposit && !tooCloseToPlayer) {
-                return {
-                    x,
-                    y,
-                    r: 22,
-                    pulse: Math.random() * Math.PI * 2,
-                    active: true,
-                    respawnAt: 0
-                };
+            if (!tooClose && !tooCloseToPlayer) {
+                return this.createFallbackEntityAt(x, y);
             }
         }
-        // Fallback: place anywhere within margins.
+        return this.createFallbackEntityAt(
+            m + Math.random() * (this.world.width - m * 2),
+            m + Math.random() * (this.world.height - m * 2)
+        );
+    }
+
+    createFallbackEntityAt(x, y) {
         return {
-            x: m + Math.random() * (this.world.width - m * 2),
-            y: m + Math.random() * (this.world.height - m * 2),
-            r: 16,
-            pulse: 0,
+            type: "gather",
+            x,
+            y,
+            r: 22,
+            pulse: Math.random() * Math.PI * 2,
             active: true,
-            respawnAt: 0
+            respawnAt: 0,
+            strikesLanded: 0,
+            cracks: []
         };
     }
 
@@ -375,13 +387,13 @@ export default class FieldCanvas {
             const worldX = screenX + this.camera.x;
             const worldY = screenY + this.camera.y;
 
-            const hit = this.hitTestDeposit(worldX, worldY);
+            const hit = this.hitTestEntity(worldX, worldY);
             if (hit) {
-                this.tryStrike(hit);
+                this.tryInteract(hit);
             } else {
                 this.player.tx = this.clampWorldX(worldX);
                 this.player.ty = this.clampWorldY(worldY);
-                this.approachingDeposit = null;
+                this.approachingEntity = null;
             }
         }
 
@@ -428,44 +440,41 @@ export default class FieldCanvas {
 
         this.playerEl.classList.toggle("is-moving", moving);
 
-        for (const d of this.deposits) {
-            if (!d.active) continue;
-            // Auto-strike approaching deposit on arrival.
-            if (this.approachingDeposit) {
-                const d = this.approachingDeposit;
-                if (!d.active) {
-                    this.approachingDeposit = null;
-                } else if (this.inReach(d)) {
-                    this.strikeDeposit(d);
-                    this.approachingDeposit = null;
-                }
+        // Auto-interact when the player reaches an approached entity.
+        if (this.approachingEntity) {
+            const e = this.approachingEntity;
+            if (!e.active) {
+                this.approachingEntity = null;
+            } else if (this.inReach(e)) {
+                this.strikeEntity(e);
+                this.approachingEntity = null;
             }
         }
 
-        // Respawn via the adapter so it can pick the right material.
-        for (const d of this.deposits) {
-            if (d.active || this.time < d.respawnAt) continue;
+        // Respawn via the scene so it can pick the right entity definition.
+        for (const e of this.entities) {
+            if (e.active || this.time < e.respawnAt) continue;
 
             const fresh = this.onRespawn
-                ? this.onRespawn(d)
-                : this.makeDeposit(); // ← standalone fallback
+                ? this.onRespawn(e)
+                : this.makeFallbackEntity();
 
             if (fresh) {
-                Object.assign(d, fresh, {
+                Object.assign(e, fresh, {
                     pulse: 0,
                     active: true,
                     respawnAt: 0,
                     strikesLanded: 0,
                     cracks: []
                 });
-                d.sparkles = this.makeSparkles(d.sparkleTier ?? 0, d.r ?? 22);
+                e.sparkles = this.makeSparkles(e.sparkleTier ?? 0, e.r ?? 22);
             }
-            // If onRespawn returns null, deposit stays gone (finite field).
+            // If onRespawn returns null, entity stays gone (finite field).
         }
 
         // Animate pulses.
-        for (const d of this.deposits) {
-            d.pulse += dt * 3;
+        for (const e of this.entities) {
+            e.pulse += dt * 3;
         }
     }
 
@@ -519,12 +528,18 @@ export default class FieldCanvas {
         const { width: w, height: h } = this;
         const { width: ww, height: wh } = this.world;
 
-        // Background: one blit if we have a cache, else flat fill
+        // Background: one blit if we have a cache, else flat fill.
         if (this.backgroundCanvas) {
             ctx.drawImage(
                 this.backgroundCanvas,
-                cam.x, cam.y, w, h,
-                0, 0, w, h
+                cam.x,
+                cam.y,
+                w,
+                h,
+                0,
+                0,
+                w,
+                h
             );
         } else {
             ctx.fillStyle = "#0b0f14";
@@ -534,11 +549,11 @@ export default class FieldCanvas {
         ctx.save();
         ctx.translate(-cam.x, -cam.y);
 
-        // Grid only when there's no background
+        // Grid only when there's no background.
         if (!this.backgroundCanvas) {
             this.drawGrid();
         }
-        
+
         // World bounds.
         ctx.strokeStyle = "rgba(120,200,255,0.25)";
         ctx.lineWidth = 2;
@@ -551,38 +566,37 @@ export default class FieldCanvas {
         ctx.arc(this.player.tx, this.player.ty, 7, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Player shadow (in world space, under the SVG sprite).
-        // Player shadow (under feet, not under the pickaxe tip)
+        // Player shadow.
         ctx.fillStyle = "rgba(0,0,0,0.35)";
         ctx.beginPath();
         ctx.ellipse(
             this.player.x,
-            this.player.y + SPRITE_HALF - 10, // was - 4
+            this.player.y + SPRITE_HALF - 10,
             11,
             3.5,
             0,
             0,
-            Math.PI * 2 // was 12, 4
+            Math.PI * 2
         );
         ctx.fill();
 
-        // Deposits.
-        for (const d of this.deposits) {
-            if (!d.active) continue;
+        // Entities.
+        for (const e of this.entities) {
+            if (!e.active) continue;
 
-            // --- Hit shake (unchanged) ---
-            const sinceHit = this.time - (d.hitFlash ?? -999);
+            // Hit shake (unchanged).
+            const sinceHit = this.time - (e.hitFlash ?? -999);
             const shakeAmt = sinceHit < 0.12 ? (1 - sinceHit / 0.12) * 3 : 0;
             const drawX =
-                d.x + (shakeAmt ? (Math.random() - 0.5) * shakeAmt * 2 : 0);
+                e.x + (shakeAmt ? (Math.random() - 0.5) * shakeAmt * 2 : 0);
             const drawY =
-                d.y + (shakeAmt ? (Math.random() - 0.5) * shakeAmt * 2 : 0);
+                e.y + (shakeAmt ? (Math.random() - 0.5) * shakeAmt * 2 : 0);
 
-            const scale = d.scale ?? 1;
-            const rotation = d.rotation ?? 0;
-            const s = d.r * 3;
+            const scale = e.scale ?? 1;
+            const rotation = e.rotation ?? 0;
+            const s = (e.r ?? 22) * 3;
 
-            // --- 1. Ground shadow (base-anchored, scales but doesn't rotate) ---
+            // 1. Ground shadow.
             ctx.fillStyle = "rgba(0,0,0,0.35)";
             ctx.beginPath();
             ctx.ellipse(
@@ -596,9 +610,9 @@ export default class FieldCanvas {
             );
             ctx.fill();
 
-            // --- 2. Crumbs (ground clutter — no rotate, no scale) ---
-            if (d.crumbs) {
-                for (const c of d.crumbs) {
+            // 2. Crumbs (gather only; harmless for others since []).
+            if (e.crumbs) {
+                for (const c of e.crumbs) {
                     ctx.globalAlpha = c.alpha;
                     ctx.fillStyle = c.color;
                     ctx.beginPath();
@@ -614,29 +628,30 @@ export default class FieldCanvas {
                 ctx.globalAlpha = 1;
             }
 
-            // --- 3. Sprite (rotated + scaled) ---
-            if (d.sprite && d.sprite.complete && d.sprite.naturalWidth) {
+            // 3. Sprite (rotated + scaled).
+            if (e.sprite && e.sprite.complete && e.sprite.naturalWidth) {
                 ctx.save();
                 ctx.translate(drawX, drawY);
                 ctx.rotate(rotation);
                 ctx.scale(scale, scale);
-                ctx.drawImage(d.sprite, -s / 2, -s / 2, s, s);
+                ctx.drawImage(e.sprite, -s / 2, -s / 2, s, s);
                 ctx.restore();
             } else {
-                // Fallback circle (still gets scale for consistency)
-                const r = d.r ?? 22;
-                ctx.fillStyle = "rgba(120,255,180,0.75)";
+                const r = e.r ?? 22;
+                ctx.fillStyle =
+                    ENTITY_FALLBACK_COLORS[e.type] ??
+                    ENTITY_FALLBACK_COLORS.gather;
                 ctx.beginPath();
                 ctx.arc(drawX, drawY, r * scale, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            // Cracks
-            if (d.cracks && d.cracks.length > 0) {
+            // Cracks (gather only; enemies never add them).
+            if (e.cracks && e.cracks.length > 0) {
                 ctx.strokeStyle = "rgba(0,0,0,0.55)";
                 ctx.lineWidth = 1.5;
                 ctx.lineCap = "round";
-                for (const c of d.cracks) {
+                for (const c of e.cracks) {
                     ctx.beginPath();
                     ctx.moveTo(
                         drawX + Math.cos(c.angle) * c.innerR,
@@ -650,47 +665,37 @@ export default class FieldCanvas {
                 }
             }
 
-            // Sparkles (ambient orbital motes, tier from richness)
-            if (d.sparkleTier > 0 && d.sparkles) {
-                for (const s of d.sparkles) {
-                    const angle = s.baseAngle + this.time * s.orbitSpeed;
-                    const sx = drawX + Math.cos(angle) * s.orbitRadius;
-                    const sy = drawY + Math.sin(angle) * s.orbitRadius;
+            // Sparkles (gather only; tier drives count).
+            if (e.sparkleTier > 0 && e.sparkles) {
+                for (const sp of e.sparkles) {
+                    const angle = sp.baseAngle + this.time * sp.orbitSpeed;
+                    const sx = drawX + Math.cos(angle) * sp.orbitRadius;
+                    const sy = drawY + Math.sin(angle) * sp.orbitRadius;
                     const twinkle =
                         0.5 +
-                        0.5 * Math.sin(this.time * s.twinkleSpeed + s.phase);
+                        0.5 * Math.sin(this.time * sp.twinkleSpeed + sp.phase);
 
-                    // Soft glow
                     ctx.fillStyle = `rgba(160,255,200,${0.28 * twinkle})`;
                     ctx.beginPath();
-                    ctx.arc(sx, sy, s.size * 2.2, 0, Math.PI * 2);
+                    ctx.arc(sx, sy, sp.size * 2.2, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Bright core
                     ctx.fillStyle = `rgba(230,255,240,${0.55 + 0.4 * twinkle})`;
                     ctx.beginPath();
-                    ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
+                    ctx.arc(sx, sy, sp.size, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
-            /*
-            sparkleTable: [
-                { richness: 1, tier: 0 },
-                { richness: 2, tier: 1 },
-                { richness: 3, tier: 3 },   // this field makes tier 3 richer
-                { richness: 4, tier: 3 },
-            ]
-            */
 
-            // Progress pips
-            const required = d.strikesRequired ?? 1;
-            if (required > 1 && d.strikesLanded > 0) {
-                const pipY = drawY - d.r - 10;
+            // Progress pips (gather only, since others have strikesRequired 1).
+            const required = e.strikesRequired ?? 1;
+            if (required > 1 && e.strikesLanded > 0) {
+                const pipY = drawY - e.r - 10;
                 const gap = 6;
                 const startX = drawX - ((required - 1) * gap) / 2;
                 for (let i = 0; i < required; i++) {
                     ctx.fillStyle =
-                        i < d.strikesLanded
+                        i < e.strikesLanded
                             ? "#7cc8ff"
                             : "rgba(255,255,255,0.18)";
                     ctx.beginPath();
@@ -705,18 +710,28 @@ export default class FieldCanvas {
 
     drawHUD() {
         const ctx = this.ctx;
-        ctx.fillStyle = "#e8f4ff";
-        ctx.font = "600 14px system-ui, -apple-system, 'Segoe UI', sans-serif";
-        ctx.textBaseline = "top";
-        ctx.fillText(
-            this.title ?? '',
-            12,
-            12
-        );
 
-        ctx.fillStyle = "rgba(180,210,240,0.65)";
-        ctx.font = "400 12px system-ui, -apple-system, 'Segoe UI', sans-serif";
-        ctx.fillText("Tap to move · drag to pan", 12, 32);
+        const heading = this.title ?? "Field";
+
+        ctx.fillStyle = "#e8f4ff";
+        ctx.font = "600 15px system-ui, -apple-system, 'Segoe UI', sans-serif";
+        ctx.textBaseline = "top";
+        ctx.fillText(heading, 12, 12);
+
+        const countText = `Collected: ${this.collected}`;
+        ctx.font = "500 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+        ctx.fillStyle = "rgba(180,210,240,0.7)";
+        ctx.textAlign = "right";
+        ctx.fillText(countText, this.width - 12, 15);
+        ctx.textAlign = "left";
+
+        ctx.fillStyle = "rgba(180,210,240,0.6)";
+        ctx.font = "400 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+        ctx.fillText(
+            "Tap to move · drag to pan · tap a resource to gather",
+            12,
+            32
+        );
     }
 
     drawMinimap() {
@@ -746,12 +761,13 @@ export default class FieldCanvas {
             this.height * sy
         );
 
-        // Deposits.
-        for (const d of this.deposits) {
-            if (!d.active) continue;
-            ctx.fillStyle = "rgba(120,255,180,0.9)";
+        // Entities.
+        for (const e of this.entities) {
+            if (!e.active) continue;
+            ctx.fillStyle =
+                ENTITY_MINIMAP_COLORS[e.type] ?? ENTITY_MINIMAP_COLORS.gather;
             ctx.beginPath();
-            ctx.arc(mmX + d.x * sx, mmY + d.y * sy, 2, 0, Math.PI * 2);
+            ctx.arc(mmX + e.x * sx, mmY + e.y * sy, 2, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -768,76 +784,98 @@ export default class FieldCanvas {
         ctx.fill();
     }
 
-    hitTestDeposit(worldX, worldY) {
-        for (const d of this.deposits) {
-            if (!d.active) continue;
-            const r = d.r * TAP_HIT_RADIUS;
-            if (Math.hypot(worldX - d.x, worldY - d.y) <= r) return d;
+    hitTestEntity(worldX, worldY) {
+        for (const e of this.entities) {
+            if (!e.active) continue;
+            const r = (e.r ?? 22) * TAP_HIT_RADIUS;
+            if (Math.hypot(worldX - e.x, worldY - e.y) <= r) return e;
         }
         return null;
     }
 
-    inReach(d) {
+    inReach(entity) {
         const p = this.player;
-        return Math.hypot(p.x - d.x, p.y - d.y) <= p.r + d.r + STRIKE_REACH;
+        return (
+            Math.hypot(p.x - entity.x, p.y - entity.y) <=
+            p.r + (entity.r ?? 22) + INTERACT_REACH
+        );
     }
 
-    tryStrike(d) {
-        if (this.inReach(d)) {
-            this.strikeDeposit(d);
+    tryInteract(entity) {
+        if (this.inReach(entity)) {
+            this.strikeEntity(entity);
             return;
         }
 
-        // Walk to deposit edge; auto-strike once on arrival.
+        // Walk to entity edge; auto-interact once on arrival.
         const p = this.player;
-        const dx = d.x - p.x;
-        const dy = d.y - p.y;
+        const dx = entity.x - p.x;
+        const dy = entity.y - p.y;
         const dist = Math.hypot(dx, dy);
-        const stopDist = p.r + d.r + STRIKE_REACH * 0.5;
+        const stopDist = p.r + (entity.r ?? 22) + INTERACT_REACH * 0.5;
 
         if (dist > stopDist) {
-            p.tx = this.clampWorldX(d.x - (dx / dist) * stopDist);
-            p.ty = this.clampWorldY(d.y - (dy / dist) * stopDist);
+            p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
+            p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
         }
-        this.approachingDeposit = d;
+        this.approachingEntity = entity;
     }
 
-    strikeDeposit(d) {
-        if (!d.active) return;
-        const required = d.strikesRequired ?? 1;
-        if (d.strikesLanded >= required) return;
+    strikeEntity(entity) {
+        if (!entity.active) return;
+        const required = entity.strikesRequired ?? 1;
+        if (entity.strikesLanded >= required) return;
 
-        d.strikesLanded++;
-        d.hitFlash = this.time;
-        d.cracks.push(this.makeCrack(d));
+        entity.strikesLanded++;
+        entity.hitFlash = this.time;
 
-        if (d.strikesLanded >= required) {
-            this.completeDeposit(d);
+        // Cracks are a gather-specific visual. Enemies / caches / caves
+        // skip them.
+        if (entity.type === "gather") {
+            entity.cracks.push(this.makeCrack(entity));
+        }
+
+        if (entity.strikesLanded >= required) {
+            this.completeEntity(entity);
         }
     }
 
-    makeCrack(d) {
+    makeCrack(entity) {
+        const r = entity.r ?? 22;
         return {
             angle: Math.random() * Math.PI * 2,
-            innerR: d.r * (0.15 + Math.random() * 0.1),
-            outerR: d.r * (0.75 + Math.random() * 0.35)
+            innerR: r * (0.15 + Math.random() * 0.1),
+            outerR: r * (0.75 + Math.random() * 0.35)
         };
     }
 
-    completeDeposit(d) {
-        d.active = false;
-        d.respawnAt = this.time + this.respawnDelay;
-        d.strikesLanded = 0;
-        d.cracks = [];
-
+    completeEntity(entity) {
         const rect = this.canvas.getBoundingClientRect();
         const screenPos = {
-            clientX: rect.left + (d.x - this.camera.x),
-            clientY: rect.top + (d.y - this.camera.y)
+            clientX: rect.left + (entity.x - this.camera.x),
+            clientY: rect.top + (entity.y - this.camera.y)
         };
 
-        this.onCollect?.(d, screenPos);
-        this.showToast?.(`${d.label ?? "Deposit"} recovered`);
+        // The scene decides whether this interaction consumes the entity.
+        // Returning false (or omitting a handler) leaves the entity in
+        // place so it can be retried once the scene wires its callback.
+        const consumed = this.onInteract?.(entity, screenPos) !== false;
+
+        if (!consumed) {
+            entity.strikesLanded = 0;
+            entity.cracks = [];
+            return;
+        }
+
+        entity.active = false;
+        entity.respawnAt =
+            entity.respawnSeconds === null
+                ? Infinity
+                : this.time + (entity.respawnSeconds ?? this.respawnDelay);
+        entity.strikesLanded = 0;
+        entity.cracks = [];
+
+        this.showToast?.(`${entity.label ?? "Object"} recovered`);
     }
 
     makeSparkles(tier, radius) {

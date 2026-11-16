@@ -23,18 +23,18 @@ export const FIELD_DEFINITIONS = [
             ],
             scatterDensity: 0.14
         },
-        depositCount: 10,
+        entityCount: 10,
         respawnSeconds: 5,
         world: { width: 1200, height: 900 },
         margin: 80,
         minSpacing: 100,
-        depositRadius: 22,
+        entityRadius: 22,
         strikeCountTable: null,
         sparkleTable: null,
         spawnTable: [
-            { materialId: "sunpetal", weight: 60 },
-            { materialId: "oakLog", weight: 25 },
-            { materialId: "moonbloom", weight: 15 }
+            { type: "gather", materialId: "sunpetal", weight: 60 },
+            { type: "gather", materialId: "oakLog", weight: 25 },
+            { type: "gather", materialId: "moonbloom", weight: 15 }
         ],
         richnessTable: [
             { amount: 1, weight: 70 },
@@ -68,18 +68,18 @@ export const FIELD_DEFINITIONS = [
             scatter: [{ tile: "smallRock", weight: 5 }],
             scatterDensity: 0.09
         },
-        depositCount: 10,
+        entityCount: 10,
         respawnSeconds: 6,
         world: { width: 1200, height: 900 },
         margin: 80,
         minSpacing: 100,
-        depositRadius: 22,
+        entityRadius: 22,
         strikeCountTable: null,
         sparkleTable: null,
         spawnTable: [
-            { materialId: "ironOre", weight: 45 },
-            { materialId: "copperOre", weight: 30 },
-            { materialId: "coal", weight: 25 }
+            { type: "gather", materialId: "ironOre", weight: 45 },
+            { type: "gather", materialId: "copperOre", weight: 30 },
+            { type: "gather", materialId: "coal", weight: 25 }
         ],
         richnessTable: [
             { amount: 1, weight: 55 },
@@ -95,14 +95,16 @@ export function getFieldIconMaterialId(field) {
     if (field.materialId) return field.materialId;
 
     const spawn = [...(field.spawnTable ?? [])]
-        .filter(e => e.weight > 0)
+        .filter(e => (e.type ?? "gather") === "gather" && e.weight > 0)
         .sort((a, b) => b.weight - a.weight)[0];
 
     return spawn?.materialId ?? null;
 }
 
 export function getFieldSpawnBreakdown(field) {
-    const table = field?.spawnTable ?? [];
+    const table = (field?.spawnTable ?? []).filter(
+        e => (e.type ?? "gather") === "gather"
+    );
     const total = table.reduce((s, e) => s + (e.weight > 0 ? e.weight : 0), 0);
     if (total <= 0) return [];
 
