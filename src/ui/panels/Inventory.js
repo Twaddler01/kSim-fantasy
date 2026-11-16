@@ -4,14 +4,14 @@ import { ItemIcon } from "../components/ItemIcon.js";
 import { EQUIPMENT_SLOTS } from "../../data/equipment.js";
 import { getMaterial } from "../../data/materials.js";
 import { getDerivedStats, getPlayerLevel } from "../../systems/character.js";
-import { equipItem, unequipItem } from "../../systems/equipment.js";
 
 export default class Inventory {
-    constructor({ getGame, formatNumber, save, refreshUI }) {
+    constructor({ getGame, formatNumber, save, refreshUI, openItemSheet }) {
         this.getGame = getGame;
         this.formatNumber = formatNumber ?? (value => String(value));
         this.save = save;
         this.refreshUI = refreshUI;
+        this.openItemSheet = openItemSheet ?? (() => {});
 
         this.expanded = false;
         this.values = new Map();
@@ -35,6 +35,11 @@ export default class Inventory {
             e => {
                 if (!this.expanded) return;
                 if (this.element?.contains(e.target)) return;
+
+                // A modal (item sheet, future dialogs) is on top.
+                // It owns its own dismissal — don't collapse underneath it.
+                if (document.body.classList.contains("modal-open")) return;
+
                 this.expanded = false;
                 document.body.classList.remove("inventory-open");
                 this.replaceElement();
@@ -57,7 +62,20 @@ export default class Inventory {
 
     getVisibleItems() {
         const discovered = this.game.inventoryDiscovered ?? {};
-        return inventoryItems.filter(item => discovered[item.id]);
+
+        return inventoryItems.filter(item => {
+            if (!discovered[item.id]) return false;
+
+            // Equippable items disappear from the list when you don't
+            // have any. Equipped items live in the character sheet.
+            if (item.equipment?.slot) {
+                if ((this.game.inventory?.[item.id] ?? 0) === 0) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
     }
 
     getAmount(item) {
@@ -118,11 +136,11 @@ export default class Inventory {
                         equipped ? "is-filled" : "is-empty"
                     ].join(" "),
                     "aria-label": equipped
-                        ? `${slotDef.name}: ${item?.name ?? equipped.id}. Tap to unequip.`
+                        ? `${slotDef.name}: ${item?.name ?? equipped.id}. Tap for details.`
                         : `${slotDef.name}: empty`,
                     onClick: () => {
                         if (!equipped) return;
-                        this.unequip(slotDef.id);
+                        this.openItemSheet(equipped.id);
                     }
                 },
                 [
@@ -173,27 +191,12 @@ export default class Inventory {
         });
         this.detailValues.set(key, value);
 
-        const actions = [];
-
-        if (item.equipment && amount > 0) {
-            actions.push(
-                el("button", {
-                    type: "button",
-                    className: "inventory-equip-btn",
-                    text: "EQUIP",
-                    onClick: event => {
-                        event.stopPropagation();
-                        this.equip(item.id);
-                    }
-                })
-            );
-        }
-
         return el(
             "article",
             {
-                className: "inventory-item",
-                role: "listitem"
+                className: "inventory-item is-tappable",
+                role: "listitem",
+                onClick: () => this.openItemSheet(item.id)
             },
             [
                 this.createItemIcon(item, "inventory-item-icon", 26),
@@ -201,10 +204,7 @@ export default class Inventory {
                     el("strong", { text: item.name }),
                     el("small", { text: item.description })
                 ]),
-                el("div", { className: "inventory-item-actions" }, [
-                    value,
-                    ...actions
-                ])
+                el("div", { className: "inventory-item-actions" }, [value])
             ]
         );
     }
@@ -332,9 +332,8 @@ export default class Inventory {
             return;
         }
 
-        // If any equippable item's count changed, rebuild.
-        // This covers both player-driven equip/unequip AND newly-gained
-        // equippable items — either way the EQUIP button visibility flips.
+        // Equip / unequip changes the count of an equippable item — rebuild
+        // so the character sheet and any conditional UI reflect new state.
         for (const item of items) {
             if (!item.equipment) continue;
             const key = this.getItemKey(item);
@@ -346,7 +345,7 @@ export default class Inventory {
             }
         }
 
-        // Fast path: only amounts changed for non-equippables.
+        // Fast path: only text content changed.
         for (const item of items) {
             const key = this.getItemKey(item);
             const value = this.formatNumber(this.getAmount(item));
@@ -357,31 +356,5 @@ export default class Inventory {
             const detailValue = this.detailValues.get(key);
             if (detailValue) detailValue.textContent = value;
         }
-    }
-
-    // ==================================================
-    // EQUIPMENT ACTIONS
-    // ==================================================
-
-    equip(itemId) {
-        const result = equipItem(this.game, itemId);
-        if (!result.ok) {
-            console.warn("[Inventory] Equip failed:", result.reason);
-            return;
-        }
-        this.replaceElement();
-        this.save?.();
-        this.refreshUI?.({ database: true });
-    }
-
-    unequip(slotId) {
-        const result = unequipItem(this.game, slotId);
-        if (!result.ok) {
-            console.warn("[Inventory] Unequip failed:", result.reason);
-            return;
-        }
-        this.replaceElement();
-        this.save?.();
-        this.refreshUI?.({ database: true });
     }
 }

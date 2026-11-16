@@ -45,6 +45,8 @@ import FieldWorkPanel from "./src/ui/panels/FieldWorkPanel.js";
 import { createFieldIcon } from "./src/ui/fieldIcons.js";
 
 import Inventory from "./src/ui/panels/Inventory.js";
+import ItemDetailSheet from "./src/ui/components/ItemDetailSheet.js";
+import { equipItem, unequipItem } from "./src/systems/equipment.js";
 
 // Components
 import { el } from "./src/ui/components/Element.js";
@@ -809,11 +811,36 @@ function render() {
         })
     ]);
 
+    ui.itemSheet = new ItemDetailSheet({
+        getGame: () => game,
+        onEquip: itemId => {
+            const result = equipItem(game, itemId);
+            if (!result.ok) {
+                console.warn("[Equip] Failed:", result.reason);
+                return false;
+            }
+            save();
+            refreshUI({ database: true });
+            return true;
+        },
+        onUnequip: slotId => {
+            const result = unequipItem(game, slotId);
+            if (!result.ok) {
+                console.warn("[Unequip] Failed:", result.reason);
+                return false;
+            }
+            save();
+            refreshUI({ database: true });
+            return true;
+        }
+    });
+
     ui.inventory = new Inventory({
         getGame: () => game,
         formatNumber,
         save,
-        refreshUI: options => refreshUI(options)
+        refreshUI: options => refreshUI(options),
+        openItemSheet: itemId => ui.itemSheet.show(itemId)
     });
 
     const layout = el("div", { className: "game-layout" }, [
