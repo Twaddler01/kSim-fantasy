@@ -432,8 +432,9 @@ ui.caveModal = new CaveModal({
     getGame: () => game,
     save,
     refreshUI: options => refreshUI(options),
-    onClose: () => {
+    onClose: newlyDiscovered => {
         fieldWorkPanel.update();
+        announceDiscoveriesFrom(newlyDiscovered);
     }
 });
 
