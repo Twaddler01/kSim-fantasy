@@ -579,9 +579,19 @@ export default class FieldCanvas {
         );
         ctx.fill();
 
-        // Entities.
+        // Entities — cull to viewport with a small overscan so
+        // entities straddling the edge don't pop in/out.
+        const CULL_MARGIN = 80;
+        const viewL = cam.x - CULL_MARGIN;
+        const viewT = cam.y - CULL_MARGIN;
+        const viewR = cam.x + w + CULL_MARGIN;
+        const viewB = cam.y + h + CULL_MARGIN;
+
         for (const e of this.entities) {
             if (!e.active) continue;
+            if (e.x < viewL || e.x > viewR || e.y < viewT || e.y > viewB) {
+                continue;
+            }
 
             // Hit shake (unchanged).
             const sinceHit = this.time - (e.hitFlash ?? -999);
@@ -637,9 +647,24 @@ export default class FieldCanvas {
                 ctx.restore();
             } else if (e.icon) {
                 // Cache / cave / POI entities render as emoji when no
-                // sprite is provided. Nearest-neighbor font: multiple
-                // entries on the canvas share the same layout.
+                // sprite is provided.
                 ctx.save();
+
+                // Fallback tinted circle: guarantees the entity is
+                // locatable even if emoji rendering fails on this device.
+                ctx.fillStyle =
+                    ENTITY_FALLBACK_COLORS[e.type] ??
+                    ENTITY_FALLBACK_COLORS.gather;
+                ctx.globalAlpha = 0.25;
+                ctx.beginPath();
+                ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // Emoji on top. fillStyle here is only used if the
+                // device falls back to a monochrome emoji font — in
+                // which case white is visible; colored emoji ignore it.
+                ctx.fillStyle = "#ffffff";
                 ctx.font = `${Math.round(
                     (e.r ?? 22) * 1.6
                 )}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif`;

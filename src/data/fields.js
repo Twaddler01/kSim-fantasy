@@ -31,13 +31,19 @@ export const FIELD_DEFINITIONS = [
         entityRadius: 22,
         strikeCountTable: null,
         sparkleTable: null,
+
+        // Guaranteed spawns — placed first, always present, unaffected by RNG.
+        guaranteedSpawns: [
+            { type: "enemy", enemyId: "meadowWolf", count: 2 },
+            { type: "cache", lootTableId: "meadowCache", count: 1 }
+        ],
+
         spawnTable: [
-            { type: "enemy", enemyId: "meadowWolf", weight: 12 },
-            { type: "gather", materialId: "sunpetal", weight: 40 },
-            { type: "gather", materialId: "oakLog", weight: 20 },
+            { type: "enemy", enemyId: "meadowWolf", weight: 15 },
+            { type: "gather", materialId: "sunpetal", weight: 45 },
+            { type: "gather", materialId: "oakLog", weight: 22 },
             { type: "gather", materialId: "moonbloom", weight: 10 },
-            { type: "cache", lootTableId: "meadowCache", weight: 15 },
-            { type: "cave", dungeonId: "whisperingCave", weight: 3 }
+            { type: "cache", lootTableId: "meadowCache", weight: 8 }
         ],
         richnessTable: [
             { amount: 1, weight: 70 },
@@ -79,10 +85,15 @@ export const FIELD_DEFINITIONS = [
         entityRadius: 22,
         strikeCountTable: null,
         sparkleTable: null,
+
+        // The mine always has at least 3 iron veins. Prevents Quest 2 from
+        // stalling on an unlucky seed.
+        guaranteedSpawns: [{ type: "gather", materialId: "ironOre", count: 3 }],
+
         spawnTable: [
-            { type: "gather", materialId: "ironOre", weight: 45 },
+            { type: "gather", materialId: "ironOre", weight: 35 },
             { type: "gather", materialId: "copperOre", weight: 30 },
-            { type: "gather", materialId: "coal", weight: 25 }
+            { type: "gather", materialId: "coal", weight: 35 }
         ],
         richnessTable: [
             { amount: 1, weight: 55 },
@@ -104,19 +115,46 @@ export function getFieldIconMaterialId(field) {
     return spawn?.materialId ?? null;
 }
 
+/**
+ * Gatherable-material breakdown for the field selector card.
+ * Includes guaranteed gather spawns (e.g. iron veins) so the card
+ * reflects what the player will actually see, not just the weighted
+ * table. Non-gather guaranteed spawns (enemies, caches, caves) are
+ * intentionally excluded — the card shows materials only.
+ */
 export function getFieldSpawnBreakdown(field) {
-    const table = (field?.spawnTable ?? []).filter(
-        e => (e.type ?? "gather") === "gather"
+    const guaranteedGathers = (field.guaranteedSpawns ?? [])
+        .filter(g => g.type === "gather" && g.materialId)
+        .flatMap(g =>
+            Array.from({ length: g.count ?? 0 }, () => ({
+                materialId: g.materialId,
+                weight: 1
+            }))
+        );
+
+    const weightedGathers = (field.spawnTable ?? []).filter(
+        e => (e.type ?? "gather") === "gather" && e.weight > 0
     );
-    const total = table.reduce((s, e) => s + (e.weight > 0 ? e.weight : 0), 0);
+
+    const combined = [...guaranteedGathers, ...weightedGathers];
+    const total = combined.reduce((s, e) => s + e.weight, 0);
     if (total <= 0) return [];
 
-    return table
-        .filter(e => e.weight > 0)
-        .map(e => ({
-            materialId: e.materialId,
-            weight: e.weight,
-            percent: (e.weight / total) * 100
+    // Merge same-material entries (e.g. guaranteed iron + weighted iron)
+    // so the card shows one chip per material, not duplicates.
+    const byMaterial = new Map();
+    for (const entry of combined) {
+        byMaterial.set(
+            entry.materialId,
+            (byMaterial.get(entry.materialId) ?? 0) + entry.weight
+        );
+    }
+
+    return [...byMaterial.entries()]
+        .map(([materialId, weight]) => ({
+            materialId,
+            weight,
+            percent: (weight / total) * 100
         }))
-        .sort((a, b) => b.weight - a.weight);
+        .sort((a, b) => b.percent - a.percent);
 }

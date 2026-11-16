@@ -117,32 +117,71 @@ export default class FieldScene {
     buildInitialEntities() {
         const rand = seededRandom(hashString(this.field.id));
         const list = [];
-        const { margin, minSpacing, entityRadius, entityCount } = this;
-        const ww = this.world.width;
-        const wh = this.world.height;
 
-        for (let i = 0; i < entityCount; i++) {
+        const guaranteed = this.field.guaranteedSpawns ?? [];
+        const guaranteedCount = guaranteed.reduce(
+            (s, g) => s + (g.count ?? 0),
+            0
+        );
+        const weightedCount = Math.max(0, this.entityCount - guaranteedCount);
+
+        let index = 0;
+
+        // 1. Guaranteed spawns are placed first, in declaration order.
+        //    Every field can force presence of key entities (quest mobs,
+        //    guaranteed ore veins, a cache, a cave) regardless of RNG.
+        for (const spec of guaranteed) {
+            const count = spec.count ?? 0;
+            for (let i = 0; i < count; i++) {
+                const spawn = {
+                    type: spec.type,
+                    materialId: spec.materialId,
+                    enemyId: spec.enemyId,
+                    lootTableId: spec.lootTableId,
+                    dungeonId: spec.dungeonId,
+                    respawnSeconds: spec.respawnSeconds,
+                    weight: 1
+                };
+                const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+                this.placeEntity(entity, list, rand);
+                list.push(entity);
+            }
+        }
+
+        // 2. Fill the remaining slots from the weighted spawn table.
+        for (let i = 0; i < weightedCount; i++) {
             const spawn = this.pickSpawn(rand);
-            const entity = this.buildEntityFromSpawn(spawn, rand, i);
-
-            let x,
-                y,
-                attempts = 0;
-            do {
-                x = margin + rand() * (ww - margin * 2);
-                y = margin + rand() * (wh - margin * 2);
-                attempts++;
-            } while (
-                attempts < 40 &&
-                list.some(e => Math.hypot(e.x - x, e.y - y) < minSpacing)
-            );
-
-            entity.x = x;
-            entity.y = y;
+            const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+            this.placeEntity(entity, list, rand);
             list.push(entity);
         }
 
         return list;
+    }
+
+    /**
+     * Place an entity at a random world position, respecting margin and
+     * minimum spacing from already-placed entities. Mutates entity.x / y.
+     */
+    placeEntity(entity, list, rand) {
+        const { margin, minSpacing } = this;
+        const ww = this.world.width;
+        const wh = this.world.height;
+
+        let x,
+            y,
+            attempts = 0;
+        do {
+            x = margin + rand() * (ww - margin * 2);
+            y = margin + rand() * (wh - margin * 2);
+            attempts++;
+        } while (
+            attempts < 40 &&
+            list.some(e => Math.hypot(e.x - x, e.y - y) < minSpacing)
+        );
+
+        entity.x = x;
+        entity.y = y;
     }
 
     buildEntityFromSpawn(spawn, rand, index) {

@@ -756,7 +756,31 @@ window.kSim = {
     render,
     announce: opts => showAnnouncement(opts),
     clearStorage: () => saveManager.clear(),
-    reset: resetGame
+    reset: resetGame,
+    fieldDebug: () => {
+        const fieldId = game.appState.navigation.activeFieldId;
+        if (!fieldId) return { activeField: null, message: "No active field." };
+        const scene = ui.fieldWorkPanel?.fieldViews?.get(fieldId);
+        if (!scene?.canvas?.entities) {
+            return { activeField: fieldId, message: "Field not entered yet." };
+        }
+        const counts = {};
+        for (const e of scene.canvas.entities) {
+            counts[e.type] = (counts[e.type] ?? 0) + 1;
+        }
+        return {
+            activeField: fieldId,
+            counts,
+            total: scene.canvas.entities.length,
+            entities: scene.canvas.entities.map(e => ({
+                type: e.type,
+                icon: e.icon ?? null,
+                active: e.active,
+                x: Math.round(e.x),
+                y: Math.round(e.y)
+            }))
+        };
+    }
 };
 
 // --------------------------------------------------
