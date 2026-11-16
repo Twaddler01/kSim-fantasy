@@ -22,7 +22,7 @@ git commit -m "4.2: entity refactor"
 # ── merge to main + tag + push ─────────────────────
 git switch main
 git merge phase-4-2-entity-refactor
-git tag v0.4.1
+git tag v0.4.2
 git branch -d phase-4-2-entity-refactor
 git push --follow-tags
 
