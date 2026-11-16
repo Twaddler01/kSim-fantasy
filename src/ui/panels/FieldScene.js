@@ -25,6 +25,7 @@
 
 import FieldCanvas from "./FieldCanvas.js";
 import { materials } from "../../data/materials.js";
+import { getEnemy } from "../../data/enemies.js";
 import { getCrumbColors } from "../../assets/icons/materials/materialDrawings.js";
 import { buildBackgroundCache } from "../../data/backgroundCache.js";
 
@@ -188,13 +189,15 @@ export default class FieldScene {
     }
 
     buildEnemyEntity(spawn, rand, index) {
+        const enemy = getEnemy(spawn.enemyId);
         return {
             id: `${this.field.id}-ent-${index}`,
             type: "enemy",
             r: this.entityRadius,
             enemyId: spawn.enemyId,
-            label: spawn.label ?? spawn.enemyId ?? "Enemy",
-            sprite: null, // populated in Phase 4.3 when enemy icons exist
+            label: spawn.label ?? enemy?.name ?? spawn.enemyId ?? "Enemy",
+            icon: enemy?.icon ?? "⚠️",
+            sprite: null,
             strikesRequired: 1,
             sparkleTier: 0,
             rotation: 0,
@@ -211,16 +214,14 @@ export default class FieldScene {
             r: this.entityRadius,
             lootTableId: spawn.lootTableId,
             label: spawn.label ?? "Cache",
-            sprite: null, // Phase 4.7 will add a chest sprite
+            icon: "📦",
+            sprite: null,
             strikesRequired: 1,
             sparkleTier: 0,
             rotation: 0,
             scale: 1,
             crumbs: [],
-            respawnSeconds:
-                spawn.respawnSeconds === undefined
-                    ? null // caches default to one-shot
-                    : spawn.respawnSeconds
+            respawnSeconds: spawn.respawnSeconds ?? 300
         };
     }
 
@@ -231,13 +232,13 @@ export default class FieldScene {
             r: this.entityRadius,
             dungeonId: spawn.dungeonId,
             label: spawn.label ?? "Cave Entrance",
-            sprite: null, // Phase 4.7 will add a cave sprite
+            icon: "🕳️",
+            sprite: null,
             strikesRequired: 1,
             sparkleTier: 0,
             rotation: 0,
             scale: 1,
             crumbs: [],
-            // Caves are POIs: they do not disappear when entered.
             consumeOnInteract: false,
             respawnSeconds: null
         };

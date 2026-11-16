@@ -32,10 +32,12 @@ export const FIELD_DEFINITIONS = [
         strikeCountTable: null,
         sparkleTable: null,
         spawnTable: [
-            { type: "enemy", enemyId: "meadowWolf", weight: 15 },
-            { type: "gather", materialId: "sunpetal", weight: 50 },
-            { type: "gather", materialId: "oakLog", weight: 22 },
-            { type: "gather", materialId: "moonbloom", weight: 13 }
+            { type: "enemy", enemyId: "meadowWolf", weight: 12 },
+            { type: "gather", materialId: "sunpetal", weight: 40 },
+            { type: "gather", materialId: "oakLog", weight: 20 },
+            { type: "gather", materialId: "moonbloom", weight: 10 },
+            { type: "cache", lootTableId: "meadowCache", weight: 15 },
+            { type: "cave", dungeonId: "whisperingCave", weight: 3 }
         ],
         richnessTable: [
             { amount: 1, weight: 70 },

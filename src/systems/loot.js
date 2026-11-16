@@ -1,21 +1,47 @@
 // src/systems/loot.js
 //
-// Reward rolling for battle victories and (later) caches.
-// Every item grant goes through addInventoryItem and checks .success —
-// respects the deferred slot-system contract.
+// Loot rolling. One primitive: rollFromLootTable(game, table). Enemies
+// and non-enemy reward sources (caches, caves, future quest rewards) all
+// funnel through it. Every item grant goes through addInventoryItem and
+// checks .success — respects the deferred slot-system contract.
 
 import { addInventoryItem } from "../data/inventory.js";
 import { getMaterial } from "../data/materials.js";
 import { gainXp } from "./character.js";
 
-export function rollRewards(game, enemy) {
-    // Persist current HP from battle before any level-up heal
-    // (caller sets game.player.hp = battle.playerHp first).
+/**
+ * Roll a percentage-weighted loot table and grant the results.
+ * Returns an array of { itemId, qty, name, failed, newlyDiscovered }.
+ */
+export function rollFromLootTable(game, table) {
+    if (!Array.isArray(table)) return [];
 
-    const gold = rollGold(enemy.goldRange ?? [0, 0]);
-    if (gold > 0) {
-        addInventoryItem(game, "gold", gold);
+    const items = [];
+
+    for (const entry of table) {
+        if (Math.random() * 100 >= (entry.weight ?? 0)) continue;
+
+        const qty = randomInt(entry.minQty ?? 1, entry.maxQty ?? 1);
+        if (qty < 1) continue;
+
+        const addResult = addInventoryItem(game, entry.itemId, qty);
+        const name = getMaterial(entry.itemId)?.name ?? entry.itemId;
+
+        items.push({
+            itemId: entry.itemId,
+            qty,
+            name,
+            failed: !addResult.success,
+            newlyDiscovered: Boolean(addResult.newlyDiscovered)
+        });
     }
+
+    return items;
+}
+
+export function rollRewards(game, enemy) {
+    const gold = rollGold(enemy.goldRange ?? [0, 0]);
+    if (gold > 0) addInventoryItem(game, "gold", gold);
 
     const xp = enemy.xp ?? 0;
     let levelUps = [];
@@ -24,34 +50,7 @@ export function rollRewards(game, enemy) {
         levelUps = result.levelUps ?? [];
     }
 
-    const items = [];
-    for (const entry of enemy.lootTable ?? []) {
-        if (Math.random() * 100 >= entry.weight) continue;
-
-        const qty = randomInt(entry.minQty ?? 1, entry.maxQty ?? 1);
-        if (qty < 1) continue;
-
-        const addResult = addInventoryItem(game, entry.itemId, qty);
-        const name = getMaterial(entry.itemId)?.name ?? entry.itemId;
-
-        if (!addResult.success) {
-            items.push({
-                itemId: entry.itemId,
-                qty,
-                name,
-                failed: true,
-                newlyDiscovered: false
-            });
-        } else {
-            items.push({
-                itemId: entry.itemId,
-                qty,
-                name,
-                failed: false,
-                newlyDiscovered: Boolean(addResult.newlyDiscovered)
-            });
-        }
-    }
+    const items = rollFromLootTable(game, enemy.lootTable ?? []);
 
     return { gold, xp, levelUps, items };
 }
@@ -62,7 +61,7 @@ export function formatRewardsText(rewards) {
     if (rewards.gold > 0) parts.push(`+${rewards.gold} gold`);
     if (rewards.xp > 0) parts.push(`+${rewards.xp} XP`);
 
-    for (const item of rewards.items) {
+    for (const item of rewards.items ?? []) {
         if (item.failed) {
             parts.push(`(bag full: ${item.qty}× ${item.name})`);
         } else {
@@ -74,7 +73,7 @@ export function formatRewardsText(rewards) {
         parts.push(`LEVEL ${rewards.levelUps.join(" → ")}`);
     }
 
-    return parts.length > 0 ? parts.join(" · ") : "No rewards";
+    return parts.length > 0 ? parts.join(" · ") : "Nothing";
 }
 
 function rollGold(range) {

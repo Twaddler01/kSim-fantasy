@@ -627,13 +627,25 @@ export default class FieldCanvas {
                 ctx.globalAlpha = 1;
             }
 
-            // 3. Sprite (rotated + scaled).
+            // 3. Sprite / emoji / fallback color
             if (e.sprite && e.sprite.complete && e.sprite.naturalWidth) {
                 ctx.save();
                 ctx.translate(drawX, drawY);
                 ctx.rotate(rotation);
                 ctx.scale(scale, scale);
                 ctx.drawImage(e.sprite, -s / 2, -s / 2, s, s);
+                ctx.restore();
+            } else if (e.icon) {
+                // Cache / cave / POI entities render as emoji when no
+                // sprite is provided. Nearest-neighbor font: multiple
+                // entries on the canvas share the same layout.
+                ctx.save();
+                ctx.font = `${Math.round(
+                    (e.r ?? 22) * 1.6
+                )}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(e.icon, drawX, drawY);
                 ctx.restore();
             } else {
                 const r = e.r ?? 22;

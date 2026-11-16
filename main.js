@@ -45,6 +45,10 @@ import { tryAdvanceStage, getCurrentStage } from "./src/data/stages.js";
 
 import FieldWorkPanel from "./src/ui/panels/FieldWorkPanel.js";
 import { createFieldIcon } from "./src/ui/fieldIcons.js";
+import LootModal from "./src/ui/panels/LootModal.js";
+import CaveModal from "./src/ui/panels/CaveModal.js";
+import { getLootTable } from "./src/data/lootTables.js";
+import { rollFromLootTable } from "./src/systems/loot.js";
 
 import Inventory from "./src/ui/panels/Inventory.js";
 import ItemDetailSheet from "./src/ui/components/ItemDetailSheet.js";
@@ -332,6 +336,55 @@ function handleFieldEncounter(field, screenPos, { enemyId }) {
     return true;
 }
 
+function handleFieldOpenCache(field, screenPos, { lootTableId }) {
+    const table = getLootTable(lootTableId);
+    if (!table) {
+        showToast("This cache appears empty.");
+        return false;
+    }
+
+    const items = rollFromLootTable(game, table);
+    const rewards = { gold: 0, xp: 0, levelUps: [], items };
+
+    save();
+    refreshUI({ database: true });
+
+    ui.lootModal.show({
+        title: "Cache Opened",
+        icon: "📦",
+        rewards
+    });
+
+    return true; // cache consumed, will respawn after its delay
+}
+
+function handleFieldEnterCave(field, screenPos, { dungeonId }) {
+    fieldWorkPanel.deactivateField?.();
+    ui.caveModal.show(dungeonId);
+    return false; // cave stays — it's a POI
+}
+
+function announceDiscoveriesFrom(items) {
+    for (const item of items ?? []) {
+        if (!item.newlyDiscovered || item.failed) continue;
+        const material = materials.find(m => m.id === item.itemId);
+        if (!material) continue;
+
+        logEvent(game, `NEW MATERIAL DISCOVERED: ${material.name}.`, {
+            category: "important",
+            tab: "log"
+        });
+
+        showAnnouncement({
+            title: "NEW MATERIAL DISCOVERED",
+            message: `${material.name}: ${
+                material.description ??
+                "A new material enters your journal."
+            }`
+        });
+    }
+}
+
 const fieldWorkPanel = new FieldWorkPanel({
     getGame: () => game,
     save,
@@ -349,7 +402,9 @@ const fieldWorkPanel = new FieldWorkPanel({
             getSprites: () => materialSprites,
             getTiles: () => getTileCache(),
             onGather: handleFieldGather,
-            onEncounter: handleFieldEncounter
+            onEncounter: handleFieldEncounter,
+            onOpenCache: handleFieldOpenCache,
+            onEnterCave: handleFieldEnterCave
         })
 });
 
@@ -362,34 +417,25 @@ ui.battleModal = new BattleModal({
     showToast,
     onClose: () => {
         fieldWorkPanel.update();
-        announceBattleDiscoveries();
+        const items = ui.battleModal?.battle?.rewards?.items ?? [];
+        announceDiscoveriesFrom(items);
     }
 });
 
-function announceBattleDiscoveries() {
-    const rewards = ui.battleModal?.battle?.rewards;
-    if (!rewards?.items?.length) return;
-
-    for (const rewardItem of rewards.items) {
-        if (!rewardItem.newlyDiscovered || rewardItem.failed) continue;
-
-        const material = materials.find(m => m.id === rewardItem.itemId);
-        if (!material) continue;
-
-        logEvent(game, `NEW MATERIAL DISCOVERED: ${material.name}.`, {
-            category: "important",
-            tab: "log"
-        });
-
-        showAnnouncement({
-            title: "NEW MATERIAL DISCOVERED",
-            message: `${material.name}: ${
-                material.description ??
-                "A new material enters your journal."
-            }`
-        });
+ui.lootModal = new LootModal({
+    onClose: newlyDiscovered => {
+        announceDiscoveriesFrom(newlyDiscovered);
     }
-}
+});
+
+ui.caveModal = new CaveModal({
+    getGame: () => game,
+    save,
+    refreshUI: options => refreshUI(options),
+    onClose: () => {
+        fieldWorkPanel.update();
+    }
+});
 
 const mainObjective = new MainObjective({
     getGame: () => game,
