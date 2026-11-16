@@ -48,6 +48,16 @@ export default class SaveManager {
                     ...(parsed.upgrades ?? {})
                 },
 
+                player: {
+                    ...(fresh.player ?? {}),
+                    ...(parsed.player ?? {})
+                },
+
+                equipment: {
+                    ...(fresh.equipment ?? {}),
+                    ...(parsed.equipment ?? {})
+                },
+
                 events: {
                     ...(fresh.events ?? {}),
                     ...(parsed.events ?? {})

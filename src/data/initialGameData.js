@@ -1,5 +1,5 @@
 export const initialGameData = {
-    version: 5,
+    version: 6,
     stage: 0,
     clicks: 0,
     inventory: {
@@ -10,6 +10,19 @@ export const initialGameData = {
         fieldTools: 0,
         swordDrills: 0,
         herbalistsKit: 0
+    },
+    player: {
+        level: 1,
+        hp: null
+    },
+    equipment: {
+        head: null,
+        chest: null,
+        legs: null,
+        feet: null,
+        mainHand: null,
+        offHand: null,
+        ring: null
     },
     log: [
         {

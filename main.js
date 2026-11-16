@@ -1,6 +1,5 @@
 // main.js
 
-// WIP
 import FieldScene from "./src/ui/panels/FieldScene.js";
 import { buildMaterialSprites } from "./src/data/materialSprites.js";
 
@@ -87,6 +86,10 @@ import {
 } from "./src/ui/navigation/itemNavigation.js";
 
 import { recoverMaterial } from "./src/systems/MaterialRecovery.js";
+import {
+    ensurePlayerInitialized,
+    getDerivedStats
+} from "./src/systems/character.js";
 
 import UnreadManager from "./src/managers/UnreadManager.js";
 import Announce from "./src/notifications/Announce.js";
@@ -101,6 +104,7 @@ const app = document.getElementById("app");
 
 let game = saveManager.load();
 initializeInventory(game);
+ensurePlayerInitialized(game);
 
 const unlockManager = new UnlockManager(game);
 

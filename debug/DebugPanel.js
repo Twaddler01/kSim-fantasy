@@ -6,6 +6,14 @@ import { Card } from "../src/ui/components/Card.js";
 import { materials } from "../src/data/materials.js";
 import { resourceDefinitions as RESOURCES } from "../src/data/resources.js";
 import { addInventoryItem } from "../src/data/inventory.js";
+import {
+    getDerivedStats,
+    gainXp,
+    computeXpToNext,
+    getXpToNext,
+    getPlayerXp,
+    getPlayerLevel
+} from "../src/systems/character.js";
 
 const GRANT_AMOUNTS = [1, 10, 100, 1000];
 
@@ -27,7 +35,7 @@ export default class DebugPanel {
         this.logEvent = logEvent;
         this.processProgression = processProgression;
         this.actions = [];
-        
+
         this.element = null;
         this.valueDisplays = new Map();
 
@@ -40,6 +48,53 @@ export default class DebugPanel {
 
     addActions() {
         this.actions = [
+            {
+                label: "Show Character",
+                run: () => {
+                    const game = this.getGame();
+                    const stats = getDerivedStats(game);
+                    const player = game.player ?? {};
+                    const equipment = game.equipment ?? {};
+
+                    console.table([
+                        {
+                            level: getPlayerLevel(game),
+                            hp: `${player.hp ?? 0} / ${stats.maxHealth}`,
+                            xp: `${getPlayerXp(game)} / ${getXpToNext(game)}`,
+                            strength: stats.strength,
+                            agility: stats.agility,
+                            vitality: stats.vitality,
+                            attack: stats.attack,
+                            defense: stats.defense,
+                            crit: `${(stats.crit * 100).toFixed(1)}%`
+                        }
+                    ]);
+
+                    console.log(
+                        "Equipped:",
+                        Object.fromEntries(
+                            Object.entries(equipment).map(([slot, item]) => [
+                                slot,
+                                item?.id ?? null
+                            ])
+                        )
+                    );
+
+                    this.showToast("Character stats logged.");
+                }
+            },
+            {
+                label: "Add 50 XP",
+                run: () => {
+                    const result = gainXp(this.getGame(), 50);
+                    const lvl = result.levelUps.length
+                        ? ` · LEVEL ${result.levelUps.join(", ")}`
+                        : "";
+                    this.showToast(`+${result.gained} XP${lvl}`);
+                    this.save?.();
+                    this.refreshUI?.({ database: true });
+                }
+            },
             {
                 label: "Process Progression",
                 run: () => {
@@ -56,7 +111,7 @@ export default class DebugPanel {
                         tab: "log"
                     });
                     this.save?.();
-                    this.showToast("Added test log entry.");
+                    this.showToast("Added log entry.");
                     this.refreshUI({ database: true });
                 }
             },
@@ -71,7 +126,7 @@ export default class DebugPanel {
             }
         ];
     }
-    
+
     createActionSection(title, actions, description = "") {
         const content = [];
 
