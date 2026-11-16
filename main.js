@@ -28,27 +28,20 @@ buildTileSprites()
 // Debug
 import attachDebugPanel from "./debug/attach.js";
 
-// Icons
-import { MaterialIcon } from "./src/assets/icons/materials/MaterialIcon.js";
-
 // Panels
 import SynthesisPanel from "./src/ui/panels/SynthesisPanel.js";
 import UpgradePanel from "./src/ui/panels/UpgradePanel.js";
 import LogPanel from "./src/ui/panels/LogPanel.js";
 import JournalPanel from "./src/ui/panels/journal/JournalPanel.js";
 import BattleModal from "./src/ui/panels/BattleModal.js";
-import { startBattle } from "./src/systems/BattleSystem.js";
 
 import MainObjective from "./src/ui/panels/MainObjective.js";
 import ObjectiveTracker from "./src/ui/panels/ObjectiveTracker.js";
 import { tryAdvanceStage, getCurrentStage } from "./src/data/stages.js";
 
 import FieldWorkPanel from "./src/ui/panels/FieldWorkPanel.js";
-import { createFieldIcon } from "./src/ui/fieldIcons.js";
 import LootModal from "./src/ui/panels/LootModal.js";
 import CaveModal from "./src/ui/panels/CaveModal.js";
-import { getLootTable } from "./src/data/lootTables.js";
-import { rollFromLootTable } from "./src/systems/loot.js";
 
 import Inventory from "./src/ui/panels/Inventory.js";
 import ItemDetailSheet from "./src/ui/components/ItemDetailSheet.js";
@@ -75,7 +68,6 @@ import {
     formatNumber
 } from "./src/functions.js";
 
-import { materials } from "./src/data/materials.js";
 import {
     initializeInventory,
     syncInventoryDiscovery
@@ -93,11 +85,10 @@ import {
     registerPage
 } from "./src/ui/navigation/itemNavigation.js";
 
-import { recoverMaterial } from "./src/systems/MaterialRecovery.js";
-import {
-    ensurePlayerInitialized,
-    getDerivedStats
-} from "./src/systems/character.js";
+import { ensurePlayerInitialized } from "./src/systems/character.js";
+
+import { createFieldHandlers } from "./src/domain/fieldHandlers.js";
+import { createProgressionProcessor } from "./src/domain/progressionProcessing.js";
 
 import UnreadManager from "./src/managers/UnreadManager.js";
 import Announce from "./src/notifications/Announce.js";
@@ -235,41 +226,12 @@ function logEvent(game, message, options = {}) {
     });
 }
 
-function handleFieldUnlock(fieldId, { notify = true } = {}) {
-    if (!unlockManager.unlock(fieldId)) return false;
-
-    const field = FIELD_DEFINITIONS.find(item => item.id === fieldId);
-
-    if (!field) return false;
-
-    if (notify) {
-        notifyUnread("fieldWork", `field-${fieldId}`);
-    }
-
-    logEvent(game, `NEW FIELD AVAILABLE: ${field.name} unlocked.`, {
-        category: "activity",
-        tab: "log"
-    });
-
-    if (notify) {
-        showToast(`${field.name} unlocked!`);
-
-        showAnnouncement({
-            title: "NEW FIELD AVAILABLE",
-            message: `${field.name}: ${field.description}`,
-            symbol: createFieldIcon(field, { size: 44 })
-        });
-    }
-
-    return true;
-}
-
 const synthesisPanel = new SynthesisPanel({
     getGame: () => game,
     save,
     refreshUI: options => refreshUI(options),
     showToast: message => showToast(message),
-    processProgression
+    processProgression: (...args) => processProgression(...args)
 });
 
 const logPanel = new LogPanel({
@@ -283,107 +245,31 @@ const journalPanel = new JournalPanel({
     getGame: () => game
 });
 
-function handleFieldGather(field, event, target) {
-    const result = recoverMaterial(game, target.id, target.richness ?? 1);
+const progression = createProgressionProcessor({
+    getGame: () => game,
+    save,
+    logEvent,
+    showToast: message => showToast(message),
+    notifyUnread,
+    showAnnouncement,
+    unlockManager,
+    eventProcessor,
+    fieldDefinitions: FIELD_DEFINITIONS
+});
 
-    if (!result.ok) {
-        showToast(result.reason);
-        return false;
-    }
+const processProgression = progression.processProgression;
 
-    resourcePopups.show(
-        [
-            {
-                amount: result.amount ?? 1,
-                icon: result.item.icon,
-                materialId: result.item.id
-            }
-        ],
-        event
-    );
-
-    if (result.newlyDiscovered) {
-        logEvent(game, `NEW MATERIAL DISCOVERED: ${result.item.name}.`, {
-            category: "important",
-            tab: "log"
-        });
-
-        showAnnouncement({
-            title: "NEW MATERIAL DISCOVERED",
-            message: `${result.item.name}: ${
-                result.item.description ?? "A new material enters your journal."
-            }`,
-            symbol: MaterialIcon(result.item.id, { size: 44 })
-        });
-    }
-
-    processProgression();
-    save();
-    refreshUI({ database: true });
-    return true;
-}
-
-function handleFieldEncounter(field, screenPos, { enemyId }) {
-    const battle = startBattle(game, enemyId);
-    if (!battle) {
-        showToast("Cannot start battle.");
-        return false;
-    }
-
-    // Pause the field canvas while the battle modal is up.
-    fieldWorkPanel.deactivateField?.();
-    ui.battleModal.show(battle);
-    return true;
-}
-
-function handleFieldOpenCache(field, screenPos, { lootTableId }) {
-    const table = getLootTable(lootTableId);
-    if (!table) {
-        showToast("This cache appears empty.");
-        return false;
-    }
-
-    const items = rollFromLootTable(game, table);
-    const rewards = { gold: 0, xp: 0, levelUps: [], items };
-
-    save();
-    refreshUI({ database: true });
-
-    ui.lootModal.show({
-        title: "Cache Opened",
-        icon: "📦",
-        rewards
-    });
-
-    return true; // cache consumed, will respawn after its delay
-}
-
-function handleFieldEnterCave(field, screenPos, { dungeonId }) {
-    fieldWorkPanel.deactivateField?.();
-    ui.caveModal.show(dungeonId);
-    return false; // cave stays — it's a POI
-}
-
-function announceDiscoveriesFrom(items) {
-    for (const item of items ?? []) {
-        if (!item.newlyDiscovered || item.failed) continue;
-        const material = materials.find(m => m.id === item.itemId);
-        if (!material) continue;
-
-        logEvent(game, `NEW MATERIAL DISCOVERED: ${material.name}.`, {
-            category: "important",
-            tab: "log"
-        });
-
-        showAnnouncement({
-            title: "NEW MATERIAL DISCOVERED",
-            message: `${material.name}: ${
-                material.description ??
-                "A new material enters your journal."
-            }`
-        });
-    }
-}
+const fieldHandlers = createFieldHandlers({
+    getGame: () => game,
+    getUI: () => ui,
+    save,
+    refreshUI: options => refreshUI(options),
+    showToast: message => showToast(message),
+    showAnnouncement,
+    logEvent,
+    processProgression,
+    resourcePopups
+});
 
 const fieldWorkPanel = new FieldWorkPanel({
     getGame: () => game,
@@ -401,10 +287,10 @@ const fieldWorkPanel = new FieldWorkPanel({
             field,
             getSprites: () => materialSprites,
             getTiles: () => getTileCache(),
-            onGather: handleFieldGather,
-            onEncounter: handleFieldEncounter,
-            onOpenCache: handleFieldOpenCache,
-            onEnterCave: handleFieldEnterCave
+            onGather: fieldHandlers.handleGather,
+            onEncounter: fieldHandlers.handleEncounter,
+            onOpenCache: fieldHandlers.handleOpenCache,
+            onEnterCave: fieldHandlers.handleEnterCave
         })
 });
 
@@ -418,13 +304,13 @@ ui.battleModal = new BattleModal({
     onClose: () => {
         fieldWorkPanel.update();
         const items = ui.battleModal?.battle?.rewards?.items ?? [];
-        announceDiscoveriesFrom(items);
+        fieldHandlers.announceDiscoveriesFrom(items);
     }
 });
 
 ui.lootModal = new LootModal({
     onClose: newlyDiscovered => {
-        announceDiscoveriesFrom(newlyDiscovered);
+        fieldHandlers.announceDiscoveriesFrom(newlyDiscovered);
     }
 });
 
@@ -434,7 +320,7 @@ ui.caveModal = new CaveModal({
     refreshUI: options => refreshUI(options),
     onClose: newlyDiscovered => {
         fieldWorkPanel.update();
-        announceDiscoveriesFrom(newlyDiscovered);
+        fieldHandlers.announceDiscoveriesFrom(newlyDiscovered);
     }
 });
 
@@ -607,98 +493,6 @@ const toast = new Toast();
 
 function showToast(message, options) {
     toast.show(message, options);
-}
-
-function processProgression({ notify = true } = {}) {
-    let changed = false;
-    let batch;
-
-    // Process repeatedly because completing one event
-    // can satisfy another event's trigger.
-    do {
-        batch = eventProcessor.process();
-
-        for (const event of batch) {
-            const { id, definition } = event;
-            const content = definition.content;
-
-            // Progression system becomes permanently available.
-            if (id.startsWith("progression:")) {
-                const unlockId = id.slice("progression:".length);
-
-                if (!unlockManager.unlock(unlockId)) continue;
-
-                logEvent(game, `NEW SYSTEM AVAILABLE: ${content.name}.`, {
-                    category: "activity",
-                    tab: "log"
-                });
-
-                if (notify) {
-                    showToast(`${content.name} unlocked!`);
-                }
-
-                changed = true;
-                continue;
-            }
-
-            // Upgrade becomes permanently available.
-            if (id.startsWith("upgrade:")) {
-                const upgradeId = id.slice("upgrade:".length);
-
-                if (!unlockManager.unlock(upgradeId)) {
-                    continue;
-                }
-
-                const upgrade = content;
-
-                if (upgrade) {
-                    if (notify) {
-                        notifyUnread("equipment", upgradeId);
-                    }
-
-                    logEvent(
-                        game,
-                        `NEW EQUIPMENT AVAILABLE: ${upgrade.name}.`,
-                        {
-                            category: "activity",
-                            tab: "equipment"
-                        }
-                    );
-
-                    if (notify) {
-                        showToast(`${upgrade.name} unlocked!`);
-                    }
-                }
-
-                changed = true;
-                continue;
-            }
-
-            // Gathering field becomes permanently available.
-            if (id.startsWith("field:")) {
-                const fieldId = id.slice("field:".length);
-
-                if (handleFieldUnlock(fieldId, { notify })) {
-                    changed = true;
-                }
-            }
-        }
-    } while (batch.length > 0);
-
-    // The remembered field must always remain unlocked.
-    const navigation = game.appState.navigation;
-    const activeFieldId = navigation.activeFieldId;
-
-    if (activeFieldId && !unlockManager.isUnlocked(activeFieldId)) {
-        navigation.activeFieldId = null;
-        changed = true;
-    }
-
-    if (changed) {
-        save();
-    }
-
-    return changed;
 }
 
 // Evaluate conditions already satisfied by the loaded save.
