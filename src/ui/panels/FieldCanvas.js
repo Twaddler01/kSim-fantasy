@@ -137,7 +137,6 @@ export default class FieldCanvas {
 
         this.pendingEntities = entities;
         this.entities = [];
-        this.collected = 0;
         this.time = 0;
 
         // Active pointer state, or null when no pointer is down.
@@ -717,13 +716,6 @@ export default class FieldCanvas {
         ctx.font = "600 15px system-ui, -apple-system, 'Segoe UI', sans-serif";
         ctx.textBaseline = "top";
         ctx.fillText(heading, 12, 12);
-
-        const countText = `Collected: ${this.collected}`;
-        ctx.font = "500 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
-        ctx.fillStyle = "rgba(180,210,240,0.7)";
-        ctx.textAlign = "right";
-        ctx.fillText(countText, this.width - 12, 15);
-        ctx.textAlign = "left";
 
         ctx.fillStyle = "rgba(180,210,240,0.6)";
         ctx.font = "400 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
