@@ -351,10 +351,10 @@ export default class FieldScene {
                     );
                     return false;
                 }
-                this.onEncounter(this.field, screenPos, {
+                const handled = this.onEncounter(this.field, screenPos, {
                     enemyId: entity.enemyId
                 });
-                return true;
+                return handled !== false;
             }
 
             case "cache": {

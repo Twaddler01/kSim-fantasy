@@ -36,6 +36,8 @@ import SynthesisPanel from "./src/ui/panels/SynthesisPanel.js";
 import UpgradePanel from "./src/ui/panels/UpgradePanel.js";
 import LogPanel from "./src/ui/panels/LogPanel.js";
 import JournalPanel from "./src/ui/panels/journal/JournalPanel.js";
+import BattleModal from "./src/ui/panels/BattleModal.js";
+import { startBattle } from "./src/systems/BattleSystem.js";
 
 import MainObjective from "./src/ui/panels/MainObjective.js";
 import ObjectiveTracker from "./src/ui/panels/ObjectiveTracker.js";
@@ -317,6 +319,19 @@ function handleFieldGather(field, event, target) {
     return true;
 }
 
+function handleFieldEncounter(field, screenPos, { enemyId }) {
+    const battle = startBattle(game, enemyId);
+    if (!battle) {
+        showToast("Cannot start battle.");
+        return false;
+    }
+
+    // Pause the field canvas while the battle modal is up.
+    fieldWorkPanel.deactivateField?.();
+    ui.battleModal.show(battle);
+    return true;
+}
+
 const fieldWorkPanel = new FieldWorkPanel({
     getGame: () => game,
     save,
@@ -333,11 +348,48 @@ const fieldWorkPanel = new FieldWorkPanel({
             field,
             getSprites: () => materialSprites,
             getTiles: () => getTileCache(),
-            onGather: handleFieldGather
+            onGather: handleFieldGather,
+            onEncounter: handleFieldEncounter
         })
 });
 
 ui.fieldWorkPanel = fieldWorkPanel;
+
+ui.battleModal = new BattleModal({
+    getGame: () => game,
+    save,
+    refreshUI: options => refreshUI(options),
+    showToast,
+    onClose: () => {
+        fieldWorkPanel.update();
+        announceBattleDiscoveries();
+    }
+});
+
+function announceBattleDiscoveries() {
+    const rewards = ui.battleModal?.battle?.rewards;
+    if (!rewards?.items?.length) return;
+
+    for (const rewardItem of rewards.items) {
+        if (!rewardItem.newlyDiscovered || rewardItem.failed) continue;
+
+        const material = materials.find(m => m.id === rewardItem.itemId);
+        if (!material) continue;
+
+        logEvent(game, `NEW MATERIAL DISCOVERED: ${material.name}.`, {
+            category: "important",
+            tab: "log"
+        });
+
+        showAnnouncement({
+            title: "NEW MATERIAL DISCOVERED",
+            message: `${material.name}: ${
+                material.description ??
+                "A new material enters your journal."
+            }`
+        });
+    }
+}
 
 const mainObjective = new MainObjective({
     getGame: () => game,

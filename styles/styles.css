@@ -3027,7 +3027,7 @@ body:not(.debug-mode) {
    Item Detail Bottom Sheet
    ======================================== */
 
-body.modal-open { 
+body.modal-open {
     overflow: hidden;
 }
 
@@ -3039,12 +3039,23 @@ body.modal-open {
     place-items: end center;
     background: rgba(2, 8, 18, 0);
     pointer-events: none;
-    transition: background 200ms ease;
+
+    /* Hard backstop: invisible unless explicitly shown, regardless of
+       any transition or transform state. */
+    visibility: hidden;
+
+    transition:
+        background 200ms ease,
+        visibility 0s 200ms;
 }
 
 .item-sheet-backdrop.is-visible {
     background: rgba(2, 8, 18, 0.65);
     pointer-events: auto;
+    visibility: visible;
+    transition:
+        background 200ms ease,
+        visibility 0s 0s;
 }
 
 .item-sheet {
@@ -3297,4 +3308,293 @@ body.modal-open {
 
 .inventory-item.is-tappable:active {
     background: rgba(98, 228, 244, 0.04);
+}
+
+/* ========================================
+   Battle Modal
+   ======================================== */
+
+body.battle-open {
+    overflow: hidden;
+}
+
+.battle-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    display: grid;
+    place-items: stretch center;
+    padding: 8px;
+    background: rgba(2, 8, 18, 0);
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+        background 200ms ease,
+        visibility 0s 200ms;
+}
+
+.battle-backdrop.is-visible {
+    background: rgba(2, 8, 18, 0.85);
+    pointer-events: auto;
+    visibility: visible;
+    transition:
+        background 200ms ease,
+        visibility 0s 0s;
+}
+
+.battle-modal {
+    width: 100%;
+    max-width: 520px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(105, 190, 224, 0.28);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #0f2237, #0a1929);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    color: var(--text);
+    overflow: hidden;
+    transform: translateY(24px) scale(0.98);
+    opacity: 0;
+    transition:
+        transform 240ms ease,
+        opacity 240ms ease;
+}
+
+.battle-backdrop.is-visible .battle-modal {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .battle-backdrop,
+    .battle-modal {
+        transition: none;
+    }
+}
+
+/* Enemy */
+
+.battle-enemy {
+    padding: 16px;
+    text-align: center;
+    border-bottom: 1px solid rgba(105, 190, 224, 0.14);
+    background: radial-gradient(
+        circle at 50% 0%,
+        rgba(255, 100, 100, 0.1),
+        transparent 70%
+    );
+    flex-shrink: 0;
+}
+
+.battle-enemy-icon {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.battle-enemy-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffb4b4;
+    letter-spacing: -0.01em;
+}
+
+.battle-enemy-level {
+    margin-top: 2px;
+    font:
+        500 0.65rem "DM Mono",
+        monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.battle-enemy-hp-bar {
+    height: 8px;
+    margin: 12px 0 5px;
+    border-radius: 4px;
+    background: #1a0f14;
+    overflow: hidden;
+}
+
+.battle-enemy-hp-fill {
+    height: 100%;
+    width: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff5555, #ff8888);
+    transition: width 300ms ease;
+}
+
+.battle-enemy-hp-text {
+    font:
+        500 0.72rem "DM Mono",
+        monospace;
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Player */
+
+.battle-player {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(105, 190, 224, 0.14);
+    background: rgba(5, 16, 28, 0.5);
+    flex-shrink: 0;
+}
+
+.battle-player-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.battle-player-stats {
+    margin-top: 2px;
+    font:
+        500 0.68rem "DM Mono",
+        monospace;
+    opacity: 0.7;
+}
+
+.battle-player-hp-bar {
+    height: 8px;
+    margin: 8px 0 5px;
+    border-radius: 4px;
+    background: #0a1a10;
+    overflow: hidden;
+}
+
+.battle-player-hp-fill {
+    height: 100%;
+    width: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #4ade80, #86efac);
+    transition: width 300ms ease;
+}
+
+.battle-player-hp-text {
+    font:
+        500 0.72rem "DM Mono",
+        monospace;
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Log */
+
+.battle-log {
+    flex: 1 1 auto;
+    min-height: 120px;
+    max-height: 40vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: rgba(5, 16, 28, 0.35);
+    font:
+        500 0.75rem/1.5 "DM Mono",
+        monospace;
+}
+
+.battle-log-entry {
+    padding: 2px 0;
+    overflow-wrap: anywhere;
+}
+
+.battle-log-entry.kind-info {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.battle-log-entry.kind-player-attack {
+    color: #a7d4ff;
+}
+
+.battle-log-entry.kind-player-crit {
+    color: #ffdd44;
+    font-weight: 700;
+}
+
+.battle-log-entry.kind-enemy-attack {
+    color: #ffb4b4;
+}
+
+.battle-log-entry.kind-enemy-crit {
+    color: #ff6666;
+    font-weight: 700;
+}
+
+.battle-log-entry.kind-victory {
+    color: #7dffb3;
+    font-weight: 700;
+}
+
+.battle-log-entry.kind-defeat {
+    color: #ff6b6b;
+    font-weight: 700;
+}
+
+.battle-log-entry.kind-rewards {
+    color: #7dffb3;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(125, 255, 179, 0.2);
+    margin-top: 4px;
+}
+
+.battle-log-entry.kind-defeat-penalty {
+    color: #ffb04a;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(255, 176, 74, 0.2);
+    margin-top: 4px;
+}
+
+.battle-log-entry.kind-fled {
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* Actions */
+
+.battle-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0));
+    border-top: 1px solid rgba(105, 190, 224, 0.14);
+    background: rgba(5, 14, 25, 0.6);
+}
+
+.battle-action {
+    flex: 1;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px solid rgba(105, 190, 224, 0.2);
+    border-radius: 8px;
+    background: rgba(120, 160, 190, 0.1);
+    color: var(--text);
+    font:
+        700 0.72rem "DM Mono",
+        monospace;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.battle-action:active {
+    transform: scale(0.98);
+}
+
+.battle-action-primary {
+    flex: 2;
+    border-color: rgba(98, 228, 244, 0.4);
+    background: linear-gradient(135deg, #8af1f7, #59b9f4);
+    color: #05121d;
+}
+
+.battle-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }

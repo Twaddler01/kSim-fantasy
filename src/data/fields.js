@@ -32,9 +32,10 @@ export const FIELD_DEFINITIONS = [
         strikeCountTable: null,
         sparkleTable: null,
         spawnTable: [
-            { type: "gather", materialId: "sunpetal", weight: 60 },
-            { type: "gather", materialId: "oakLog", weight: 25 },
-            { type: "gather", materialId: "moonbloom", weight: 15 }
+            { type: "enemy", enemyId: "meadowWolf", weight: 15 },
+            { type: "gather", materialId: "sunpetal", weight: 50 },
+            { type: "gather", materialId: "oakLog", weight: 22 },
+            { type: "gather", materialId: "moonbloom", weight: 13 }
         ],
         richnessTable: [
             { amount: 1, weight: 70 },
