@@ -21,6 +21,8 @@
 import { getEnemy } from "../data/enemies.js";
 import { getDerivedStats } from "./character.js";
 import { rollRewards, formatRewardsText } from "./loot.js";
+import { getInventoryItem } from "../data/inventory.js";
+import { consumeItem } from "./ConsumableSystem.js";
 
 export function startBattle(game, enemyId) {
     const enemy = getEnemy(enemyId);
@@ -49,6 +51,7 @@ export function startBattle(game, enemyId) {
             defense: stats.defense,
             crit: stats.crit
         },
+        consumablesUsed: {},
         log: [
             {
                 kind: "info",
@@ -62,6 +65,41 @@ export function startBattle(game, enemyId) {
         rewards: null
     };
 }
+
+
+function resolveEnemyTurn(game, battle) {
+    if (battle.finished) return;
+
+    const eRoll = rollDamage(
+        battle.enemy.attack,
+        battle.playerStats.defense,
+        battle.enemy.crit ?? 0.05
+    );
+
+    battle.playerHp = Math.max(0, battle.playerHp - eRoll.damage);
+
+    battle.log.push({
+        kind: eRoll.critical ? "enemy-crit" : "enemy-attack",
+        text: eRoll.critical
+            ? `${battle.enemy.name} critically hits you for ${eRoll.damage}.`
+            : `${battle.enemy.name} hits you for ${eRoll.damage}.`
+    });
+
+    if (battle.playerHp <= 0) {
+        battle.finished = true;
+        battle.victory = false;
+
+        battle.log.push({
+            kind: "defeat",
+            text: "You fall to the ground..."
+        });
+
+        finalizeDefeat(game, battle);
+    }
+
+    battle.turn += 1;
+}
+
 
 export function attackAction(game, battle) {
     if (battle.finished) {
@@ -96,30 +134,8 @@ export function attackAction(game, battle) {
     }
 
     // Enemy attacks
-    const eRoll = rollDamage(
-        battle.enemy.attack,
-        battle.playerStats.defense,
-        battle.enemy.crit ?? 0.05
-    );
-    battle.playerHp = Math.max(0, battle.playerHp - eRoll.damage);
-    battle.log.push({
-        kind: eRoll.critical ? "enemy-crit" : "enemy-attack",
-        text: eRoll.critical
-            ? `${battle.enemy.name} critically hits you for ${eRoll.damage}.`
-            : `${battle.enemy.name} hits you for ${eRoll.damage}.`
-    });
-
-    if (battle.playerHp <= 0) {
-        battle.finished = true;
-        battle.victory = false;
-        battle.log.push({
-            kind: "defeat",
-            text: "You fall to the ground..."
-        });
-        finalizeDefeat(game, battle);
-    }
-
-    battle.turn += 1;
+    resolveEnemyTurn(game, battle);
+    
     return { battle, newEvents: battle.log.slice(prevLen) };
 }
 
@@ -197,4 +213,38 @@ function finalizeDefeat(game, battle) {
                 ? `You wake at camp. ${goldLost} gold missing.`
                 : "You wake at camp."
     });
+}
+
+export function useConsumableAction(game, battle, itemId) {
+    if (!battle || battle.finished) {
+        return { success: false, reason: "battle-finished", newEvents: [] };
+    }
+
+    const prevLen = battle.log.length;
+
+    const result = consumeItem(game, itemId, { battle });
+
+    if (!result.success) {
+        return {
+            ...result,
+            battle,
+            newEvents: []
+        };
+    }
+
+    const item = getInventoryItem(itemId);
+
+    battle.log.push({
+        kind: "player-heal",
+        text: `You use ${item.name} and restore ${result.restored} HP.`
+    });
+
+    // Using a potion consumes the player's turn.
+    resolveEnemyTurn(game, battle);
+
+    return {
+        ...result,
+        battle,
+        newEvents: battle.log.slice(prevLen)
+    };
 }

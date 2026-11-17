@@ -1,0 +1,148 @@
+CODE DUMP
+Project: terminal-capture
+Files selected: 2
+========================================
+
+===== FILE: capture.sh =====
+
+# ===== Terminal Capture Configuration =====
+
+MAX_LINES=5000
+MAX_LOG_FILES=5
+CAPTURE_DIR="$HOME/terminal-capture"
+
+# ===== Capture Setup =====
+
+if [[ $- == *i* ]]; then
+    if [[ -z "${TERM_CAPTURE_ACTIVE:-}" ]]; then
+        export TERM_CAPTURE_ACTIVE=1
+        export TERM_CAPTURE_DIR="$HOME/terminal-capture"
+        export TERM_CAPTURE_MAX_LINES=5000
+        export TERM_CAPTURE_MAX_FILES=5
+
+        mkdir -p "$TERM_CAPTURE_DIR"
+
+        export TERM_CAPTURE_LOG="$TERM_CAPTURE_DIR/session-$(date +%Y%m%d-%H%M%S).log"
+        export TERM_CAPTURE_RAW="$(mktemp "${TMPDIR:-$HOME}/termcap-XXXXXX")"
+
+        # Start recording without recursively loading this startup block.
+        exec script -q -f -c \
+            'bash --norc -i' "$TERM_CAPTURE_RAW"
+    fi
+
+    # Timestamped command prompt.
+    PS1='\n======== \D{%Y-%m-%d %H:%M:%S} ========\n\w \$ '
+
+    # Refresh the readable log while the session runs.
+    if [[ -z "${TERM_CAPTURE_WATCHER_STARTED:-}" ]]; then
+        export TERM_CAPTURE_WATCHER_STARTED=1
+        export TERM_CAPTURE_MARKER="${TERM_CAPTURE_RAW}.active"
+
+        trap 'rm -f "$TERM_CAPTURE_MARKER"' EXIT
+        touch "$TERM_CAPTURE_MARKER"
+
+        (
+            trap 'rm -f "$TERM_CAPTURE_MARKER" "$TERM_CAPTURE_RAW"' EXIT
+
+            while [[ -e "$TERM_CAPTURE_MARKER" ]]; do
+                tail -n "$TERM_CAPTURE_MAX_LINES" "$TERM_CAPTURE_RAW" |
+                    perl -pe '
+                        s/\e\[[0-?]*[ -\/]*[@-~]//g;
+                        s/\e\][^\a]*(?:\a|\e\\)//g;
+                        s/\r//g;
+                    ' > "$TERM_CAPTURE_LOG.tmp" 2>/dev/null
+
+                mv "$TERM_CAPTURE_LOG.tmp" "$TERM_CAPTURE_LOG"
+                sleep 1
+            done
+        ) >/dev/null 2>&1 &
+    fi
+fi
+
+
+===== END FILE =====
+
+===== FILE: run-capture.sh =====
+
+#!/data/data/com.termux/files/usr/bin/bash
+
+# ===== Adjustable Configuration =====
+MAX_LINES=5000
+MAX_LOG_FILES=5
+CAPTURE_DIR="$HOME/terminal-capture"
+
+mkdir -p "$CAPTURE_DIR"
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+LOG="$CAPTURE_DIR/session-$STAMP-$$.log"
+RAW="$(mktemp "$CAPTURE_DIR/raw-XXXXXX")"
+
+echo "Recording terminal session."
+echo "Readable log: $LOG"
+echo "Type 'exit' to finish and save the cleaned log."
+echo
+
+printf -v SHELL_COMMAND 'bash --rcfile %q -i' \
+    "$CAPTURE_DIR/session.bashrc"
+
+# Record the interactive shell.
+script -q -f -c "$SHELL_COMMAND" "$RAW"
+SCRIPT_STATUS=$?
+
+# Clean the transcript using Python (already installed in Termux).
+python - "$RAW" "$LOG.tmp" "$MAX_LINES" <<'PY'
+import re
+import sys
+
+source, destination, max_lines = sys.argv[1], sys.argv[2], int(sys.argv[3])
+
+with open(source, "r", encoding="utf-8", errors="replace") as f:
+    text = f.read()
+
+# Remove common ANSI/terminal control sequences.
+text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+text = re.sub(r'\x1b\][^\x07]*(?:\x07|\x1b\\)', '', text)
+
+# Normalize terminal line endings.
+text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+lines = text.splitlines(keepends=True)
+lines = lines[-max_lines:]
+
+with open(destination, "w", encoding="utf-8") as f:
+    f.writelines(lines)
+PY
+
+CLEAN_STATUS=$?
+
+if [ "$CLEAN_STATUS" -eq 0 ] && [ -f "$LOG.tmp" ]; then
+    mv "$LOG.tmp" "$LOG"
+else
+    echo "Warning: cleanup failed. Raw transcript retained at: $RAW"
+    rm -f "$LOG.tmp"
+fi
+
+# Remove the raw transcript only after successful cleanup.
+if [ "$CLEAN_STATUS" -eq 0 ]; then
+    rm -f "$RAW"
+fi
+
+# Keep only the newest configured number of session logs.
+ls -1t "$CAPTURE_DIR"/session-*.log 2>/dev/null |
+    tail -n "+$((MAX_LOG_FILES + 1))" |
+    while IFS= read -r old_log; do
+        rm -f -- "$old_log"
+    done
+
+echo
+echo "Session saved: $LOG"
+echo "Maximum lines per log: $MAX_LINES"
+echo "Maximum retained session logs: $MAX_LOG_FILES"
+
+exit "$SCRIPT_STATUS"
+
+
+===== END FILE =====
+
+========================================
+END CODE DUMP

@@ -110,6 +110,7 @@ export const materials = [
         icon: "⚙️",
         description: "Iron hardened with coal. Suitable for weapons."
     },
+    /* consumables */
     {
         id: "healingPotion",
         name: "Healing Potion",
@@ -117,7 +118,12 @@ export const materials = [
         subtype: "potion",
         tier: 1,
         icon: "🧪",
-        description: "Restores a modest amount of health when consumed."
+        description: "Restores 40% of your maximum health.",
+        consumable: {
+            effect: "restoreHealth",
+            percentage: 0.4,
+            battleLimitKey: "healing"
+        }
     },
     {
         id: "focusTonic",
@@ -126,7 +132,12 @@ export const materials = [
         subtype: "potion",
         tier: 1,
         icon: "🍶",
-        description: "Sharpens the mind and restores mana."
+        description: "Restores 40% of your maximum mana.",
+        consumable: {
+            effect: "restoreMana",
+            percentage: 0.4,
+            battleLimitKey: 'mana'
+        }
     },
 
     // ==========================================

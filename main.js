@@ -1,8 +1,13 @@
 // main.js
 
-import ZoneScene from "./src/ui/panels/ZoneScene.js";
-import { buildMaterialSprites } from "./src/data/materialSprites.js";
+// ===================================
+// IMPORTS
+// ===================================
 
+import ZoneScene from "./src/ui/panels/ZoneScene.js";
+import TownScene from "./src/ui/panels/TownScene.js";
+
+import { buildMaterialSprites } from "./src/data/materialSprites.js";
 let materialSprites = {};
 buildMaterialSprites()
     .then(sprites => {
@@ -13,17 +18,12 @@ buildMaterialSprites()
     .catch(err => console.error("[sprites] failed:", err));
 
 import { buildTileSprites, getTileCache } from "./src/data/tileSprites.js";
-
 buildTileSprites()
     .then(() => {
         ui.worldPanel?.refreshZoneBackgrounds?.();
         refreshUI();
     })
     .catch(err => console.error("[tiles] failed:", err));
-
-// ===================================
-// IMPORTS
-// ===================================
 
 // Debug
 import attachDebugPanel from "./debug/attach.js";
@@ -46,6 +46,7 @@ import CaveModal from "./src/ui/panels/CaveModal.js";
 import Inventory from "./src/ui/panels/Inventory.js";
 import ItemDetailSheet from "./src/ui/components/ItemDetailSheet.js";
 import { equipItem, unequipItem } from "./src/systems/equipment.js";
+import { consumeItem } from "./src/systems/ConsumableSystem.js";
 
 // Components
 import { el } from "./src/ui/components/Element.js";
@@ -214,6 +215,9 @@ function notifyUnread(tabId, itemId, options = {}) {
 if (unlockManager.unlock("whisperingMeadow")) {
     notifyUnread("world", "zone-whisperingMeadow");
 }
+if (unlockManager.unlock("ashenbrook")) {
+    notifyUnread("world", "zone-ashenbrook");
+}
 // Ironhollow Mine unlocks via its inventoryAmount trigger (5 oak logs).
 
 function logEvent(game, message, options = {}) {
@@ -279,8 +283,15 @@ const worldPanel = new WorldPanel({
     refreshTab: () => ui.tabs?.update({ refreshContent: true }),
     resourcePopups,
 
-    createZone: zone =>
-        new ZoneScene({
+    createZone: zone => {
+        if (zone.type === "town") {
+            return new TownScene({
+                zone,
+                showToast: message => showToast(message)
+            });
+        }
+    
+        return new ZoneScene({
             zone,
             getSprites: () => materialSprites,
             getTiles: () => getTileCache(),
@@ -288,7 +299,8 @@ const worldPanel = new WorldPanel({
             onEncounter: zoneHandlers.handleEncounter,
             onOpenCache: zoneHandlers.handleOpenCache,
             onEnterCave: zoneHandlers.handleEnterCave
-        })
+        });
+    }
 });
 
 ui.worldPanel = worldPanel;
@@ -715,6 +727,31 @@ function render() {
             }
             save();
             refreshUI({ database: true });
+            return true;
+        },
+
+        onUse: itemId => {
+            const result = consumeItem(game, itemId);
+    
+            if (!result.success) {
+                const messages = {
+                    "health-full": "Your health is already full.",
+                    "not-owned": "You don't have this item.",
+                    "not-consumable": "This item cannot be consumed."
+                };
+    
+                showToast(messages[result.reason] ?? "Unable to use item.");
+                return false;
+            }
+    
+            save();
+    
+            showToast(
+                `Restored ${result.restored} HP. (${result.current}/${result.maximum})`
+            );
+    
+            refreshUI({ database: true });
+    
             return true;
         }
     });

@@ -1,0 +1,733 @@
+
+uk() {
+    # ========================================
+    # CONFIGURATION
+    # ========================================
+
+    local project="$HOME/storage/shared/Documents/kSim-fantasy"
+
+    # ========================================
+    # ARGUMENTS
+    # ========================================
+
+    local version=""
+    local description=""
+    local message=""
+
+    # Version mode: uk v0.4.7.6 "Description"
+    if [[ $# -ge 2 && "$1" =~ ^v[0-9]+([.][0-9A-Za-z-]+)*$ ]]; then
+        version="$1"
+        shift
+        description="$*"
+        message="$version - $description"
+
+    # Regular commit mode
+    else
+        message="${*:-update}"
+    fi
+
+    # ========================================
+    # ENTER PROJECT
+    # ========================================
+
+    cd "$project" || {
+        echo "ERROR: Could not enter project directory."
+        return 1
+    }
+
+    # Ensure we're on main
+    if [[ "$(git branch --show-current)" != "main" ]]; then
+        echo "ERROR: Switch to main before updating."
+        return 1
+    fi
+
+    # ========================================
+    # CHECK TAG
+    # ========================================
+
+    if [[ -n "$version" ]] && git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+        echo "ERROR: Tag already exists: $version"
+        return 1
+    fi
+
+    echo
+    echo "================================"
+    echo "       kSim-FANTASY UPDATE"
+    echo "================================"
+    echo
+
+    if [[ -n "$version" ]]; then
+        echo "VERSION:     $version"
+        echo "DESCRIPTION: $description"
+    else
+        echo "UNTAGGED UPDATE"
+    fi
+
+    echo
+
+    # ========================================
+    # STAGE CHANGES
+    # ========================================
+
+    git add -A || {
+        echo "ERROR: Git add failed."
+        return 1
+    }
+
+    if git diff --cached --quiet; then
+        echo "No changes to commit."
+        git status --short --branch
+        return 0
+    fi
+
+    # ========================================
+    # CHANGE SUMMARY
+    # ========================================
+
+    echo "FILES UPDATED"
+    echo "--------------------------------"
+    git diff --cached --name-status
+
+    echo
+    echo "CHANGE SUMMARY"
+    echo "--------------------------------"
+    git diff --cached --stat
+
+    # ========================================
+    # COMMIT
+    # ========================================
+
+    echo
+    echo "COMMITTING: $message"
+    echo "--------------------------------"
+
+    git commit -m "$message" || {
+        echo "ERROR: Git commit failed."
+        return 1
+    }
+
+    # ========================================
+    # CREATE ANNOTATED TAG
+    # ========================================
+
+    if [[ -n "$version" ]]; then
+        echo
+        echo "CREATING TAG: $version"
+        echo "--------------------------------"
+
+        git tag -a "$version" -m "$description" || {
+            echo "ERROR: Tag creation failed."
+            return 1
+        }
+    fi
+
+    # ========================================
+    # PUSH COMMIT
+    # ========================================
+
+    echo
+    echo "PUSHING TO ORIGIN/MAIN..."
+    echo "--------------------------------"
+
+    git push origin main || {
+        echo "ERROR: Push failed. Commit is saved locally."
+        return 1
+    }
+
+    # ========================================
+    # PUSH TAG
+    # ========================================
+
+    if [[ -n "$version" ]]; then
+        echo
+        echo "PUSHING TAG: $version"
+        echo "--------------------------------"
+
+        git push origin "$version" || {
+            echo "ERROR: Tag push failed. Tag remains local."
+            return 1
+        }
+    fi
+
+    # ========================================
+    # FINAL SUMMARY
+    # ========================================
+
+    echo
+    echo "================================"
+    echo "       UPDATE SUCCESSFUL"
+    echo "================================"
+
+    echo
+    echo "LATEST COMMIT:"
+    git log -1 --oneline
+
+    if [[ -n "$version" ]]; then
+        echo
+        echo "LATEST TAG:"
+        git show -s --format='%h %s%nTag message: %N' "$version"
+    fi
+
+    echo
+    echo "REPOSITORY STATUS:"
+    git status --short --branch
+
+    echo
+    echo "================================"
+}
+
+
+
+
+
+
+
+
+
+
+CODE DUMP
+Project: .bash_functions
+Files selected: 4
+========================================
+
+===== FILE: cdk.sh =====
+
+# ========================================
+# KSIM-FANTASY PROJECT
+# ========================================
+
+KSIM_FANTASY_PATH="$HOME/storage/shared/Documents/kSim-fantasy"
+
+# Navigate to project
+cdk() {
+    cd "$KSIM_FANTASY_PATH" || {
+        echo "ERROR: Could not enter kSim-fantasy."
+        return 1
+    }
+}
+
+
+
+
+===== END FILE =====
+
+===== FILE: dirjs.sh =====
+
+
+# dirjs          # Current directory
+# dirjs -r       # Recursive
+# dirjs src      # Specific directory
+# dirjs -r src   # Recursive specific directory
+# dirjs -r src/ui src/data
+
+dirjs() {
+    # ========================================
+    # CONFIGURATION
+    # ========================================
+
+    local -a allowed_extensions=("js" "css" "html")
+    local -a excluded_dirs=("mobile-dev-console" "node_modules")
+
+    # ========================================
+    # SETTINGS
+    # ========================================
+
+    local recursive=false
+    local path dir
+    local -a paths=()
+
+    # ========================================
+    # PARSE ARGUMENTS
+    # ========================================
+
+    for arg in "$@"; do
+        if [[ "$arg" == "-r" ]]; then
+            recursive=true
+        else
+            paths+=("$arg")
+        fi
+    done
+
+    # Default to current directory
+    if [[ ${#paths[@]} -eq 0 ]]; then
+        paths=(".")
+    fi
+
+    # ========================================
+    # BUILD FIND FILTERS
+    # ========================================
+
+    local -a extension_filters=()
+    local -a exclusion_filters=()
+
+    for ext in "${allowed_extensions[@]}"; do
+        extension_filters+=(-o -iname "*.$ext")
+    done
+
+    # Remove leading -o
+    extension_filters=("${extension_filters[@]:1}")
+
+    for dir in "${excluded_dirs[@]}"; do
+        exclusion_filters+=(-o -name "$dir")
+    done
+
+    # Remove leading -o
+    exclusion_filters=("${exclusion_filters[@]:1}")
+
+    # ========================================
+    # LIST FILES
+    # ========================================
+
+    for path in "${paths[@]}"; do
+
+        if [[ ! -d "$path" ]]; then
+            echo "ERROR: Directory not found: $path"
+            continue
+        fi
+
+        echo
+        echo "===== $path ====="
+
+        if [[ "$recursive" == true ]]; then
+            find "$path" \
+                \( -type d \( "${exclusion_filters[@]}" \) -prune \) -o \
+                \( -type f \( "${extension_filters[@]}" \) -print \)
+
+        else
+            find "$path" -maxdepth 1 -type f \
+                \( "${extension_filters[@]}" \) -print
+        fi
+    done
+}
+
+
+
+===== END FILE =====
+
+===== FILE: fc.sh =====
+
+
+fc() {
+    # ========================================
+    # CONFIGURATION
+    # ========================================
+
+    local -a allowed_extensions=("js" "css" "html")
+    local -a excluded_dirs=(".git" "mobile-dev-console")
+
+    # ========================================
+    # SETTINGS / VARIABLES
+    # ========================================
+
+    local save_log=false
+    local copy_clip=false
+    local recursive=false
+    local filename file search_path
+    local failed=0
+    local log_file="$HOME/fc-output.txt"
+    local temp_file
+    local ext folder
+
+    local -a files=()
+    local -a results=()
+    local -a matches=()
+    local -a candidates=()
+    local -a prune_names=()
+
+    # ========================================
+    # HELPER: CHECK FILE FILTERS
+    # ========================================
+
+    is_allowed_file() {
+        local path="${1,,}"
+        local ext="${path##*.}"
+        local allowed=false
+        local folder
+
+        # Check allowed extensions
+        for folder in "${allowed_extensions[@]}"; do
+            if [[ "$ext" == "$folder" ]]; then
+                allowed=true
+                break
+            fi
+        done
+
+        [[ "$allowed" == false ]] && return 1
+
+        # Check excluded directories
+        for folder in "${excluded_dirs[@]}"; do
+            case "/$path/" in
+                *"/${folder,,}/"*)
+                    return 1
+                    ;;
+            esac
+        done
+
+        return 0
+    }
+
+    # ========================================
+    # BUILD DIRECTORY EXCLUSIONS
+    # ========================================
+
+    for folder in "${excluded_dirs[@]}"; do
+        prune_names+=(-iname "$folder" -o)
+    done
+
+    # Remove trailing -o
+    prune_names=("${prune_names[@]:0:${#prune_names[@]}-1}")
+
+    # ========================================
+    # PARSE OPTIONS
+    # ========================================
+
+    for arg in "$@"; do
+        case "$arg" in
+            -log)  save_log=true ;;
+            -clip) copy_clip=true ;;
+            -r)    recursive=true ;;
+            *)     files+=("$arg") ;;
+        esac
+    done
+
+    if [[ ${#files[@]} -eq 0 ]]; then
+        cat <<'EOF'
+Usage: fc [options] filename [...]
+
+Options:
+  -log     Save output to ~/fc-output.txt
+  -clip    Copy output to Android clipboard
+  -r       Include subdirectories when using .
+
+File filters:
+  .js, .css, .html only
+  Excludes .git/
+  Excludes mobile-dev-console/
+  Skips binary files
+
+Examples:
+  fc main.js
+  fc SynthesisEngine
+  fc inventory styles badge
+  fc -clip .
+  fc -r -clip .
+  fc -log -clip .
+EOF
+        return 0
+    fi
+
+    # ========================================
+    # CLIPBOARD REQUIREMENTS
+    # ========================================
+
+    if [[ "$copy_clip" == true ]] &&
+        ! command -v termux-clipboard-set &>/dev/null; then
+
+        echo
+        echo "ERROR: Clipboard support is not installed."
+        echo
+        echo "The -clip option requires:"
+        echo "  1. Termux:API Android app"
+        echo "  2. termux-api package in Termux"
+        echo
+        echo "Install with: pkg install termux-api"
+        echo
+        return 1
+    fi
+
+    temp_file=$(mktemp) || return 1
+
+    # ========================================
+    # SEARCH FILES
+    # ========================================
+
+    {
+        for filename in "${files[@]}"; do
+            matches=()
+            candidates=()
+
+            # --------------------------------
+            # SPECIAL: COLLECT ALL FILES
+            # --------------------------------
+
+            if [[ "$filename" == "." || "$filename" == "./" ]]; then
+
+                if [[ "$recursive" == true ]]; then
+
+                    while IFS= read -r file; do
+                        candidates+=("$file")
+                    done < <(
+                        find . \
+                            \( -type d \( "${prune_names[@]}" \) -prune \) -o \
+                            -type f -print 2>/dev/null
+                    )
+
+                else
+
+                    while IFS= read -r file; do
+                        candidates+=("$file")
+                    done < <(
+                        find . -maxdepth 1 -type f -print 2>/dev/null
+                    )
+
+                fi
+
+            # --------------------------------
+            # DIRECT PATH
+            # --------------------------------
+
+            elif [[ -f "$filename" ]]; then
+                candidates+=("$filename")
+
+            # --------------------------------
+            # EXACT RELATIVE PATH SEARCH
+            # --------------------------------
+
+            elif [[ "$filename" == */* ]]; then
+                search_path="${filename#./}"
+
+                while IFS= read -r file; do
+                    candidates+=("$file")
+                done < <(
+                    find . \
+                        \( -type d \( "${prune_names[@]}" \) -prune \) -o \
+                        -type f -iwholename "./$search_path" -print \
+                        2>/dev/null
+                )
+
+            # --------------------------------
+            # FILENAME SEARCH
+            # --------------------------------
+
+            else
+                while IFS= read -r file; do
+                    candidates+=("$file")
+                done < <(
+                    find . \
+                        \( -type d \( "${prune_names[@]}" \) -prune \) -o \
+                        -type f -iname "$filename" -print \
+                        2>/dev/null
+                )
+            fi
+
+            # =================================
+            # APPLY FILE FILTERS
+            # =================================
+
+            for file in "${candidates[@]}"; do
+                if is_allowed_file "$file"; then
+                    matches+=("$file")
+                fi
+            done
+
+            # =================================
+            # EXTENSION-INDEPENDENT FALLBACK
+            # =================================
+
+            if [[ ${#matches[@]} -eq 0 &&
+                  "$filename" != "." &&
+                  "$filename" != "./" &&
+                  ! -f "$filename" &&
+                  "$filename" != */* ]]; then
+
+                candidates=()
+
+                while IFS= read -r file; do
+                    candidates+=("$file")
+                done < <(
+                    find . \
+                        \( -type d \( "${prune_names[@]}" \) -prune \) -o \
+                        -type f -iname "$filename.*" -print \
+                        2>/dev/null
+                )
+
+                for file in "${candidates[@]}"; do
+                    if is_allowed_file "$file"; then
+                        matches+=("$file")
+                    fi
+                done
+            fi
+
+            # =================================
+            # NOT FOUND
+            # =================================
+
+            if [[ ${#matches[@]} -eq 0 ]]; then
+                echo
+                echo "===== cat $filename"
+                echo
+                echo "[ No matching files found ]"
+
+                results+=("NOT FOUND: $filename")
+                failed=1
+                continue
+            fi
+
+            # =================================
+            # OUTPUT MATCHING FILES
+            # =================================
+
+            for file in "${matches[@]}"; do
+
+                # Skip binary files
+                if [[ -s "$file" ]] &&
+                    ! grep -Iq . "$file" 2>/dev/null; then
+
+                    results+=("SKIPPED (binary): $file")
+                    continue
+                fi
+
+                echo
+                echo "===== cat $file"
+                echo
+
+                if cat -- "$file"; then
+                    results+=("OK: $file")
+                else
+                    results+=("ERROR: $file")
+                    failed=1
+                fi
+
+                echo
+            done
+        done
+    } > "$temp_file"
+
+    # ========================================
+    # DISPLAY OUTPUT
+    # ========================================
+
+    cat "$temp_file"
+
+    # ========================================
+    # SAVE LOG
+    # ========================================
+
+    if [[ "$save_log" == true ]]; then
+        if cp "$temp_file" "$log_file"; then
+            echo "Saved: $log_file" >&2
+        else
+            echo "ERROR: Could not save log." >&2
+            failed=1
+        fi
+    fi
+
+    # ========================================
+    # CLIPBOARD
+    # ========================================
+
+    if [[ "$copy_clip" == true ]]; then
+        if termux-clipboard-set < "$temp_file"; then
+            echo "Copied to Android clipboard." >&2
+        else
+            echo "ERROR: Clipboard operation failed." >&2
+            echo "Check Termux:API Android app." >&2
+            failed=1
+        fi
+    fi
+
+    rm -f "$temp_file"
+
+    # ========================================
+    # RESULTS
+    # ========================================
+
+    echo
+    echo "========== RESULTS =========="
+
+    for file in "${results[@]}"; do
+        echo "$file"
+    done
+
+    echo "============================="
+
+    return "$failed"
+}
+
+
+
+===== END FILE =====
+
+===== FILE: uk.sh =====
+
+
+uk() {
+    local message="${*:-update}"
+
+    cd ~/projects/kSim-mobile || {
+        echo "ERROR: Could not enter project directory."
+        return 1
+    }
+
+    echo
+    echo "================================"
+    echo "       kSim GIT UPDATE"
+    echo "================================"
+    echo
+
+    # Stage all changes
+    git add -A || {
+        echo "ERROR: Git add failed."
+        return 1
+    }
+
+    # Check for changes
+    if git diff --cached --quiet; then
+        echo "No changes to commit."
+        echo
+        git status --short --branch
+        return 0
+    fi
+
+    # Show changed files
+    echo "FILES UPDATED"
+    echo "--------------------------------"
+    git diff --cached --name-status
+
+    echo
+    echo "CHANGE SUMMARY"
+    echo "--------------------------------"
+    git diff --cached --stat
+
+    # Commit
+    echo
+    echo "COMMITTING: $message"
+    echo "--------------------------------"
+
+    git commit -m "$message" || {
+        echo "ERROR: Git commit failed."
+        return 1
+    }
+
+    # Push
+    echo
+    echo "PUSHING TO ORIGIN/MAIN..."
+    echo "--------------------------------"
+
+    git push origin main || {
+        echo "ERROR: Push failed. Commit is still saved locally."
+        return 1
+    }
+
+    # Final summary
+    echo
+    echo "================================"
+    echo "       UPDATE SUCCESSFUL"
+    echo "================================"
+    echo
+    echo "LATEST COMMIT:"
+    git log -1 --oneline
+
+    echo
+    echo "REPOSITORY STATUS:"
+    git status --short --branch
+
+    echo
+    echo "================================"
+}
+
+
+===== END FILE =====
+
+========================================
+END CODE DUMP

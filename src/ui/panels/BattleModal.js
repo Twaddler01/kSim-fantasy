@@ -6,7 +6,11 @@
 // shows VICTORY / DEFEAT / FLED.
 
 import { el } from "../components/Element.js";
-import { attackAction, fleeAction } from "../../systems/BattleSystem.js";
+import {
+    attackAction,
+    fleeAction,
+    useConsumableAction
+} from "../../systems/BattleSystem.js";
 
 export default class BattleModal {
     constructor({ getGame, save, refreshUI, showToast, onClose } = {}) {
@@ -108,6 +112,27 @@ export default class BattleModal {
     doFlee() {
         if (!this.battle || this.battle.finished) return;
         fleeAction(this.game, this.battle);
+        this.render();
+    }
+
+    doUseItem(itemId) {
+        if (!this.battle || this.battle.finished) return;
+
+        const result = useConsumableAction(this.game, this.battle, itemId);
+
+        if (!result.success) {
+            const messages = {
+                "health-full": "Your health is already full.",
+                "battle-limit":
+                    "You've already used a healing potion this battle.",
+                "not-owned": "You don't have this potion."
+            };
+
+            this.showToast(messages[result.reason] ?? "Unable to use item.");
+
+            return;
+        }
+
         this.render();
     }
 
@@ -229,6 +254,24 @@ export default class BattleModal {
             return footer;
         }
 
+        const potionCount = this.game.inventory?.healingPotion ?? 0;
+        const potionUsed = Boolean(battle.consumablesUsed?.healing);
+        
+        if (potionCount > 0 || potionUsed) {
+            footer.append(
+                el("button", {
+                    type: "button",
+                    className: "battle-action",
+                    text: potionUsed ? "POTION USED" : "USE POTION",
+                    disabled:
+                        potionUsed ||
+                        potionCount < 1 ||
+                        battle.playerHp >= battle.playerMaxHp,
+                    onClick: () => this.doUseItem("healingPotion")
+                })
+            );
+        }
+        
         footer.append(
             el("button", {
                 type: "button",

@@ -103,7 +103,19 @@ export const ZONE_DEFINITIONS = [
             { amount: 3, weight: 15 },
             { amount: 5, weight: 5 }
         ]
-    }
+    },
+    {
+        id: "ashenbrook",
+        name: "Ashenbrook",
+        type: "town",
+        townId: "ashenbrook",
+        visualVariant: "town",
+        icon: "🏘️",
+        mapPosition: { x: 52, y: 52 },
+        description:
+            "A small settlement nestled in the valley. A welcome refuge for travelers.",
+        unlockTrigger: null
+    },
 ];
 
 export function getZoneIconMaterialId(zone) {

@@ -27,7 +27,7 @@ import {
 } from "../../utils/itemMeta.js";
 
 export default class ItemDetailSheet {
-    constructor({ getGame, onEquip, onUnequip } = {}) {
+    constructor({ getGame, onEquip, onUnequip, onUse } = {}) {
         if (typeof getGame !== "function") {
             throw new Error("ItemDetailSheet requires getGame().");
         }
@@ -47,6 +47,8 @@ export default class ItemDetailSheet {
             if (event.key === "Escape") this.hide();
         };
         document.addEventListener("keydown", this.onKeyDown);
+
+        this.onUse = onUse ?? (() => false);
     }
 
     get game() {
@@ -215,9 +217,25 @@ export default class ItemDetailSheet {
 
         // Footer / action
         this.footer.replaceChildren();
-        this.footer.hidden = !slotId;
-
-        if (slotId && isEquipped) {
+        this.footer.hidden = true;
+        
+        const amount = game.inventory?.[item.id] ?? 0;
+        
+        if (item.consumable) {
+            this.footer.hidden = false;
+        
+            this.footer.append(
+                el("button", {
+                    type: "button",
+                    className: "item-sheet-action",
+                    text: "USE",
+                    disabled: amount < 1,
+                    onClick: () => this.handleUse(item.id)
+                })
+            );
+        } else if (slotId && isEquipped) {
+            this.footer.hidden = false;
+        
             this.footer.append(
                 el("button", {
                     type: "button",
@@ -227,6 +245,8 @@ export default class ItemDetailSheet {
                 })
             );
         } else if (slotId) {
+            this.footer.hidden = false;
+        
             this.footer.append(
                 el("button", {
                     type: "button",
@@ -307,6 +327,11 @@ export default class ItemDetailSheet {
 
     handleUnequip(slotId) {
         this.onUnequip(slotId);
+        this.hide();
+    }
+
+    handleUse(itemId) {
+        this.onUse(itemId);
         this.hide();
     }
 }

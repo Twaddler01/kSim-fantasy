@@ -1,0 +1,18 @@
+
+# source all scriptcs in /.bash_functions
+for file in "$HOME"/.bash_functions/*.sh; do
+    [[ -f "$file" ]] && source "$file"
+done
+
+alias c='clear'
+alias capture='bash "$HOME/terminal-capture/run-capture.sh"'
+
+ACODE_PATH_FILE="$HOME/storage/shared/.acode-next-path"
+if [ -f "$ACODE_PATH_FILE" ]; then
+    IFS= read -r target < "$ACODE_PATH_FILE"
+    rm -f "$ACODE_PATH_FILE"
+
+    if [ -d "$target" ]; then
+        cd -- "$target"
+    fi
+fi
