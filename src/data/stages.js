@@ -16,7 +16,7 @@ export const stageDefinitions = [
         requirements: {
             inventory: { oakLog: 10, sunpetal: 5 }
         },
-        cass: "The valley is quiet. Gather what you need before the light fades.",
+        reflection: "The valley is quiet. Gather what you need before the light fades.",
         originEntry: {
             title: "ORIGIN LOG — 01",
             body:
@@ -43,7 +43,7 @@ export const stageDefinitions = [
         requirements: {
             inventory: { ironIngot: 3 }
         },
-        cass: "Iron in the hills, coal in the cut. The rest is fire and patience.",
+        reflection: "Iron in the hills, coal in the cut. The rest is fire and patience.",
         originEntry: {
             title: "ORIGIN LOG — 02",
             body:
@@ -69,7 +69,7 @@ export const stageDefinitions = [
         requirements: {
             inventory: { wolfHide: 3, ironDagger: 1 }
         },
-        cass: "Wolves don't come this close without a reason. Be ready for the wrong reason.",
+        reflection: "Wolves don't come this close without a reason. Be ready for the wrong reason.",
         originEntry: {
             title: "ORIGIN LOG — 03",
             body:

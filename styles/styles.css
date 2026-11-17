@@ -1921,40 +1921,34 @@ body:not(.debug-mode) {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
-.main-objective__cass {
+.main-objective__reflection {
     display: flex;
     gap: 10px;
     align-items: flex-start;
+    padding: 6px 0 12px;
+    border-bottom: 1px solid rgba(120, 200, 255, 0.12);
+    margin-bottom: 10px;
 }
 
-.main-objective__cass-badge {
+.main-objective__reflection-quote {
     flex-shrink: 0;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #9ddcff, #4a6a9a);
-    color: #0b0f14;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 15px;
-    box-shadow: 0 0 12px rgba(120, 200, 255, 0.4);
-}
-
-.main-objective__cass-name {
-    font-size: 11px;
-    letter-spacing: 0.08em;
     color: #7cc8ff;
-    font-weight: 600;
-    margin-bottom: 2px;
+    font-size: 1.6rem;
+    line-height: 1;
+    font-family: Georgia, "Times New Roman", serif;
+    opacity: 0.55;
+    padding-top: 2px;
+    user-select: none;
 }
 
-.main-objective__cass-line {
-    font-size: 13.5px;
-    line-height: 1.4;
+.main-objective__reflection-text {
+    flex: 1;
+    margin: 0;
     color: #d6e6f2;
+    font-size: 0.88rem;
+    line-height: 1.55;
     font-style: italic;
+    font-family: Georgia, "Times New Roman", serif;
 }
 
 .main-objective__body {

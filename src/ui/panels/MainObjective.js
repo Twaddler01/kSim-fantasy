@@ -50,7 +50,7 @@ export default class MainObjective {
         const trackerEnabled = Boolean(game.appState?.trackerEnabled);
 
         this.element.replaceChildren(
-            this.renderCass(stage),
+            this.renderReflection(stage),
             this.renderObjective(stage, progress),
             this.renderOriginLog(game),
             this.renderTrackerToggle(trackerEnabled)
@@ -59,45 +59,45 @@ export default class MainObjective {
         return this;
     }
 
-    renderCass(stage) {
-        return el("div", { className: "main-objective__cass" }, [
-            el("div", { className: "main-objective__cass-badge", text: "◈" }),
-            el("div", { className: "main-objective__cass-body" }, [
-                el("div", {
-                    className: "main-objective__cass-name",
-                    text: "CASS"
-                }),
-                el("div", {
-                    className: "main-objective__cass-line",
-                    text: `"${stage.cass}"`
-                })
-            ])
+    renderReflection(stage) {
+        return el("div", { className: "main-objective__reflection" }, [
+            el("div", {
+                className: "main-objective__reflection-quote",
+                text: "❝",
+                "aria-hidden": "true"
+            }),
+            el("p", {
+                className: "main-objective__reflection-text",
+                text: stage.reflection
+            })
         ]);
     }
 
     renderObjective(stage, progress) {
-        const rows = Object.entries(progress).map(([itemId, { have, need }]) => {
-            const capped = Math.min(have, need);
-            const pct = Math.min(100, Math.round((have / need) * 100));
-            const done = have >= need;
-    
-            const fill = el("div", {
-                className: `req-bar__fill${done ? " is-done" : ""}`
-            });
-            fill.style.width = `${pct}%`;
-    
-            return el("div", { className: "req-row" }, [
-                el("span", {
-                    className: `req-label${done ? " is-done" : ""}`,
-                    text: this.formatItemName(itemId)
-                }),
-                el("div", { className: "req-bar" }, [fill]),
-                el("span", {
-                    className: `req-amount${done ? " is-done" : ""}`,
-                    text: `${capped}/${need}`   // ← was `${have}/${need}`
-                })
-            ]);
-        });
+        const rows = Object.entries(progress).map(
+            ([itemId, { have, need }]) => {
+                const capped = Math.min(have, need);
+                const pct = Math.min(100, Math.round((have / need) * 100));
+                const done = have >= need;
+
+                const fill = el("div", {
+                    className: `req-bar__fill${done ? " is-done" : ""}`
+                });
+                fill.style.width = `${pct}%`;
+
+                return el("div", { className: "req-row" }, [
+                    el("span", {
+                        className: `req-label${done ? " is-done" : ""}`,
+                        text: this.formatItemName(itemId)
+                    }),
+                    el("div", { className: "req-bar" }, [fill]),
+                    el("span", {
+                        className: `req-amount${done ? " is-done" : ""}`,
+                        text: `${capped}/${need}` // ← was `${have}/${need}`
+                    })
+                ]);
+            }
+        );
 
         return el("div", { className: "main-objective__body" }, [
             el("div", {
