@@ -1,5 +1,21 @@
 
 # === kSim-fantasy ===
+uk v0.4.7.6 "Renamed fields to zones"
+
+# scripted HOW-TO
+# regular commit: "update"
+uk
+# update commit only
+uk "small update"
+# update with tagging
+uk v0.4.7.6 "Renamed fields to zones"
+# update latest push to tag
+uktag v0.4.7.6 "Renamed fields to zones"
+
+
+
+
+
 # regular push
 cd /data/data/com.termux/files/home/storage/shared/Documents/kSim-fantasy
 git add .

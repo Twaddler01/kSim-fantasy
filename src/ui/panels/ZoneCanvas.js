@@ -5,8 +5,12 @@
 //   · Tap  = walk player to world position under finger
 //   · Drag = pan camera (does not move player)
 //   · Interactable entities live in the world; each may respawn after
-//     being consumed. Entity types ("gather", "enemy", "cache", "cave")
-//     are handled by ZoneScene via the onInteract callback.
+//     being consumed. Entity types ("gather", "enemy", "cache", "cave",
+//     "poi") are handled by ZoneScene via the onInteract callback.
+//   · Entities with `showInteractionIndicator: true` render a green
+//     ring over their interaction point — the universal "tap here" cue
+//     shared by town doors, future NPCs, and any POI that otherwise
+//     blends into the background.
 
 const INTERACT_REACH = 12; // px beyond touching that counts as "in reach"
 const TAP_HIT_RADIUS = 1.6; // tap hit detection, × entity.r
@@ -78,14 +82,16 @@ const ENTITY_FALLBACK_COLORS = {
     gather: "rgba(120,255,180,0.75)",
     enemy: "rgba(255,100,100,0.75)",
     cache: "rgba(255,200,80,0.75)",
-    cave: "rgba(120,140,255,0.75)"
+    cave: "rgba(120,140,255,0.75)",
+    poi: "rgba(150,140,200,0.75)"
 };
 
 const ENTITY_MINIMAP_COLORS = {
     gather: "rgba(120,255,180,0.9)",
     enemy: "rgba(255,120,120,0.9)",
     cache: "rgba(255,200,80,0.9)",
-    cave: "rgba(120,140,255,0.9)"
+    cave: "rgba(120,140,255,0.9)",
+    poi: "rgba(200,180,255,0.9)"
 };
 
 export default class ZoneCanvas {
@@ -593,7 +599,7 @@ export default class ZoneCanvas {
                 continue;
             }
 
-            // Hit shake (unchanged).
+            // Hit shake.
             const sinceHit = this.time - (e.hitFlash ?? -999);
             const shakeAmt = sinceHit < 0.12 ? (1 - sinceHit / 0.12) * 3 : 0;
             const drawX =
@@ -646,24 +652,23 @@ export default class ZoneCanvas {
                 ctx.drawImage(e.sprite, -s / 2, -s / 2, s, s);
                 ctx.restore();
             } else if (e.icon) {
-                // Cache / cave / POI entities render as emoji when no
-                // sprite is provided.
                 ctx.save();
 
-                // Fallback tinted circle: guarantees the entity is
-                // locatable even if emoji rendering fails on this device.
-                ctx.fillStyle =
-                    ENTITY_FALLBACK_COLORS[e.type] ??
-                    ENTITY_FALLBACK_COLORS.gather;
-                ctx.globalAlpha = 0.25;
-                ctx.beginPath();
-                ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
+                // Fallback tinted circle. Skipped when the interaction
+                // indicator is present — the green ring already anchors
+                // the entity, so a second colored disc is visual noise.
+                if (!e.showInteractionIndicator) {
+                    ctx.fillStyle =
+                        ENTITY_FALLBACK_COLORS[e.type] ??
+                        ENTITY_FALLBACK_COLORS.gather;
+                    ctx.globalAlpha = 0.25;
+                    ctx.beginPath();
+                    ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
 
-                // Emoji on top. fillStyle here is only used if the
-                // device falls back to a monochrome emoji font — in
-                // which case white is visible; colored emoji ignore it.
+                // Emoji on top.
                 ctx.fillStyle = "#ffffff";
                 ctx.font = `${Math.round(
                     (e.r ?? 22) * 1.6
@@ -681,6 +686,10 @@ export default class ZoneCanvas {
                 ctx.arc(drawX, drawY, r * scale, 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            // 4. Interaction indicator — the universal "tap here" ring.
+            //    Only entities with showInteractionIndicator render it.
+            this.drawInteractionIndicator(ctx, e, drawX, drawY);
 
             // Cracks (gather only; enemies never add them).
             if (e.cracks && e.cracks.length > 0) {
@@ -744,6 +753,42 @@ export default class ZoneCanvas {
         ctx.restore();
     }
 
+    /**
+     * Universal interaction indicator.
+     * A subtle green ring drawn over any entity with
+     * `showInteractionIndicator: true`. Anchor point is the entity's
+     * (drawX, drawY) — callers pass those so the ring follows shake
+     * offsets together with the sprite.
+     */
+    drawInteractionIndicator(ctx, entity, drawX, drawY) {
+        if (!entity.showInteractionIndicator) return;
+
+        const radius =
+            entity.indicatorRadius ?? entity.r ?? 20;
+
+        // Very subtle pulse: oscillates the stroke alpha between
+        // 0.6 and 0.9 over ~4 seconds. Never fully invisible.
+        const pulse = 0.75 + 0.15 * Math.sin(this.time * 1.5);
+        const strokeAlpha = Math.round(pulse * 100) / 100;
+
+        ctx.save();
+
+        // Transparent green fill.
+        ctx.fillStyle = "rgba(65, 220, 115, 0.18)";
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Visible green outline.
+        ctx.strokeStyle = `rgba(90, 255, 145, ${strokeAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
     drawHUD() {
         const ctx = this.ctx;
 
@@ -756,11 +801,7 @@ export default class ZoneCanvas {
 
         ctx.fillStyle = "rgba(180,210,240,0.6)";
         ctx.font = "400 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
-        ctx.fillText(
-            "Tap to move · drag to pan · tap a resource to gather",
-            12,
-            32
-        );
+        ctx.fillText("Tap to move · drag to pan", 12, 32);
     }
 
     drawMinimap() {
@@ -858,8 +899,8 @@ export default class ZoneCanvas {
         entity.strikesLanded++;
         entity.hitFlash = this.time;
 
-        // Cracks are a gather-specific visual. Enemies / caches / caves
-        // skip them.
+        // Cracks are a gather-specific visual. Enemies / caches / caves /
+        // POIs skip them.
         if (entity.type === "gather") {
             entity.cracks.push(this.makeCrack(entity));
         }
