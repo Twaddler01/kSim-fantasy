@@ -75,7 +75,7 @@ export default class Announce {
     show({
         title = "NOTICE",
         message = "",
-        eyebrow = "⚠ FIELD ALERT",
+        eyebrow = "⚠ ZONE ALERT",
         symbol = "◉",
         actionLabel = "",
         onClose = null,

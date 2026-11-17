@@ -62,7 +62,7 @@ export const initialGameData = {
     },
     unlocks: {},
     appState: {
-        navigation: { activeFieldId: null },
+        navigation: { activeZoneId: null },
         trackerEnabled: false
     },
     progression: {

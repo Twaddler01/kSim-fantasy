@@ -1,7 +1,7 @@
 // src/data/journal/catalog.js
 
 import { locations } from "../locations.js";
-import { FIELD_DEFINITIONS } from "../fields.js";
+import { ZONE_DEFINITIONS } from "../zones.js";
 import { materials } from "../materials.js";
 
 import { refinementRecipes } from "../recipes/refinement.js";
@@ -41,8 +41,8 @@ const locationEntries = locations.map(location =>
     createEntry(location, "location", "locations")
 );
 
-const fieldEntries = FIELD_DEFINITIONS.map(field =>
-    createEntry(field, "field", "fields")
+const zoneEntries = ZONE_DEFINITIONS.map(zone =>
+    createEntry(zone, "zone", "zones")
 );
 
 const materialEntries = materials.map(material => {
@@ -81,7 +81,7 @@ const resourceEntries = resourceDefinitions.map(resource =>
 
 export const journalCatalog = [
     ...locationEntries,
-    ...fieldEntries,
+    ...zoneEntries,
     ...resourceEntries,
     ...materialEntries,
     ...recipeEntries

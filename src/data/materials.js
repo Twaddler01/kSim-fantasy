@@ -2,7 +2,7 @@
 
 export const materials = [
     // ==========================================
-    // RAW — gathered from fields or dropped
+    // RAW — gathered from zones or dropped
     // ==========================================
     {
         id: "ironOre",
@@ -75,7 +75,7 @@ export const materials = [
         tier: 1,
         icon: "🐺",
         description: "A rough pelt, still smelling of pine and blood.",
-        // Not mined from a field — dropped by creatures in battle.
+        // Not mined from a zone — dropped by creatures in battle.
         mining: { strikesBase: 1, sparkleBase: 0 }
     },
     {
@@ -207,6 +207,6 @@ export function getMaterialsByTier(tier) {
     return materials.filter(material => material.tier === tier);
 }
 
-export function getFieldMaterials(fieldId) {
-    return materials.filter(material => material.field?.id === fieldId);
+export function getZoneMaterials(zoneId) {
+    return materials.filter(material => material.zone?.id === zoneId);
 }

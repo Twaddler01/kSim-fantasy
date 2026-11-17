@@ -11,7 +11,7 @@ export function createJournalIcon(
         materialId = entry.id;
     }
 
-    if (entry.type === "field") {
+    if (entry.type === "zone") {
         materialId =
             entry.source?.materialId ??
             entry.source?.spawnTable?.[0]?.materialId ??

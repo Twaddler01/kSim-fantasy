@@ -1,14 +1,14 @@
 // src/domain/progressionProcessing.js
 //
 // Event-driven progression: unlock processing, batch handling, and the
-// "field unlocked" notification fanout.
+// "zone unlocked" notification fanout.
 //
 // processProgression() is idempotent and reentrant-safe: it processes
 // events in batches, since completing one trigger can satisfy another
 // (chain: forgeMastery requires 3 iron ingots; if you smelt the 3rd
 // during a batch, the event processor picks it up on the next loop).
 
-import { createFieldIcon } from "../ui/fieldIcons.js";
+import { createZoneIcon } from "../ui/zoneIcons.js";
 
 export function createProgressionProcessor({
     getGame,
@@ -19,32 +19,32 @@ export function createProgressionProcessor({
     showAnnouncement,
     unlockManager,
     eventProcessor,
-    fieldDefinitions
+    zoneDefinitions
 }) {
     const game = () => getGame();
 
-    function handleFieldUnlock(fieldId, { notify = true } = {}) {
-        if (!unlockManager.unlock(fieldId)) return false;
+    function handleZoneUnlock(zoneId, { notify = true } = {}) {
+        if (!unlockManager.unlock(zoneId)) return false;
 
-        const field = fieldDefinitions.find(item => item.id === fieldId);
-        if (!field) return false;
+        const zone = zoneDefinitions.find(item => item.id === zoneId);
+        if (!zone) return false;
 
         if (notify) {
-            notifyUnread("fieldWork", `field-${fieldId}`);
+            notifyUnread("world", `zone-${zoneId}`);
         }
 
-        logEvent(game(), `NEW FIELD AVAILABLE: ${field.name} unlocked.`, {
+        logEvent(game(), `NEW ZONE DISCOVERED: ${zone.name} unlocked.`, {
             category: "activity",
             tab: "log"
         });
 
         if (notify) {
-            showToast(`${field.name} unlocked!`);
+            showToast(`${zone.name} unlocked!`);
 
             showAnnouncement({
-                title: "NEW FIELD AVAILABLE",
-                message: `${field.name}: ${field.description}`,
-                symbol: createFieldIcon(field, { size: 44 })
+                title: "NEW ZONE DISCOVERED",
+                message: `${zone.name}: ${zone.description}`,
+                symbol: createZoneIcon(zone, { size: 44 })
             });
         }
 
@@ -112,22 +112,22 @@ export function createProgressionProcessor({
                     continue;
                 }
 
-                // Gathering field becomes permanently available.
-                if (id.startsWith("field:")) {
-                    const fieldId = id.slice("field:".length);
-                    if (handleFieldUnlock(fieldId, { notify })) {
+                // Gathering zone becomes permanently available.
+                if (id.startsWith("zone:")) {
+                    const zoneId = id.slice("zone:".length);
+                    if (handleZoneUnlock(zoneId, { notify })) {
                         changed = true;
                     }
                 }
             }
         } while (batch.length > 0);
 
-        // The remembered field must always remain unlocked.
+        // The remembered zone must always remain unlocked.
         const navigation = game().appState.navigation;
-        const activeFieldId = navigation.activeFieldId;
+        const activeZoneId = navigation.activeZoneId;
 
-        if (activeFieldId && !unlockManager.isUnlocked(activeFieldId)) {
-            navigation.activeFieldId = null;
+        if (activeZoneId && !unlockManager.isUnlocked(activeZoneId)) {
+            navigation.activeZoneId = null;
             changed = true;
         }
 
@@ -138,5 +138,5 @@ export function createProgressionProcessor({
         return changed;
     }
 
-    return { processProgression, handleFieldUnlock };
+    return { processProgression, handleZoneUnlock };
 }

@@ -3,11 +3,11 @@ import { getDrawing } from "../assets/icons/materials/materialDrawings.js";
 import { materials } from "./materials.js";
 import { svgToImage } from "./svgToImage.js";
 
-const DEFAULT_VARIANTS = ["field", "core"];
+const DEFAULT_VARIANTS = ["zone", "core"];
 const DEFAULT_SIZE = 64;
 
 /**
- * Returns { [materialId]: { core?: Image, field?: Image } }.
+ * Returns { [materialId]: { core?: Image, zone?: Image } }.
  *
  * Every raw material is guaranteed to receive both variants —
  * getDrawing() always resolves through the generic subtype fallback

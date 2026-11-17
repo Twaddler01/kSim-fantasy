@@ -304,8 +304,8 @@ function drawCopperCore(svg) {
     addShapes(svg, shapes);
 }
 
-// FIELD VARIANTS
-function drawStoneField(svg) {
+// ZONE VARIANTS
+function drawStoneZone(svg) {
     addShapes(svg, [
         // Boulder body — rounder than the octagonal core
         {
@@ -367,7 +367,7 @@ function drawStoneField(svg) {
     ]);
 }
 
-function drawQuartzField(svg) {
+function drawQuartzZone(svg) {
     addShapes(svg, [
         // Rock base
         {
@@ -449,7 +449,7 @@ function drawQuartzField(svg) {
     ]);
 }
 
-function drawCopperField(svg) {
+function drawCopperZone(svg) {
     addShapes(svg, [
         // Rock body (grayish base, not pure copper)
         {
@@ -1131,17 +1131,17 @@ function drawGenericFallback(svg) {
 export const materialDrawings = {
     stone: {
         core: drawStoneCore,
-        field: drawStoneField,
+        zone: drawStoneZone,
         crumbs: ["#5a6370", "#6b7480", "#aeb7c2"]
     },
     quartz: {
         core: drawQuartzCore,
-        field: drawQuartzField,
+        zone: drawQuartzZone,
         crumbs: ["#8892a0", "#B8D9FF", "#c5cdd6"]
     },
     copper: {
         core: drawCopperCore,
-        field: drawCopperField,
+        zone: drawCopperZone,
         crumbs: ["#5a5450", "#c87950", "#a95c3d"]
     }
 };
@@ -1149,82 +1149,82 @@ export const materialDrawings = {
 const genericDrawings = {
     mineral: {
         core: drawGenericMineral,
-        field: drawGenericMineral,
+        zone: drawGenericMineral,
         crumbs: ["#8892a0", "#a3adb8", "#c5cdd6"]
     },
     ore: {
         core: drawGenericOre,
-        field: drawGenericOre,
+        zone: drawGenericOre,
         crumbs: ["#5a5450", "#8a8280", "#d08a50"]
     },
     anomalous: {
         core: drawGenericAnomalous,
-        field: drawGenericAnomalous,
+        zone: drawGenericAnomalous,
         crumbs: ["#4a2a6a", "#8a7aa0", "#d090ff"]
     },
     herb: {
         core: drawGenericHerb,
-        field: drawGenericHerb,
+        zone: drawGenericHerb,
         crumbs: ["#4a7a3a", "#7ab85a", "#e0c060"]
     },
     wood: {
         core: drawGenericWood,
-        field: drawGenericWood,
+        zone: drawGenericWood,
         crumbs: ["#3a2510", "#6a4a2a", "#a07a5a"]
     },
     hide: {
         core: drawGenericHide,
-        field: drawGenericHide,
+        zone: drawGenericHide,
         crumbs: ["#5a3a20", "#a07850", "#d0a880"]
     },
     potion: {
         core: drawGenericPotion,
-        field: drawGenericPotion,
+        zone: drawGenericPotion,
         crumbs: ["#8aa8b8", "#d05060", "#d0e8f0"]
     },
     metal: {
         core: drawGenericMetal,
-        field: drawGenericMetal,
+        zone: drawGenericMetal,
         crumbs: ["#8a929c", "#b0bac5", "#e0e6ec"]
     },
     alloy: {
         core: drawGenericMetal,
-        field: drawGenericMetal,
+        zone: drawGenericMetal,
         crumbs: ["#8a929c", "#b0bac5", "#e0e6ec"]
     },
     ceramic: {
         core: drawGenericCeramic,
-        field: drawGenericCeramic,
+        zone: drawGenericCeramic,
         crumbs: ["#a3c0d6", "#e0f0ff"]
     },
     chemical: {
         core: drawGenericChemical,
-        field: drawGenericChemical,
+        zone: drawGenericChemical,
         crumbs: ["#88e0b0", "#4ac090"]
     },
     advanced: {
         core: drawGenericAdvanced,
-        field: drawGenericAdvanced,
+        zone: drawGenericAdvanced,
         crumbs: ["#b0d0ff", "#8ea8e0"]
     },
     component: {
         core: drawGenericComponent,
-        field: drawGenericComponent,
+        zone: drawGenericComponent,
         crumbs: ["#3a4453", "#7cc8ff", "#aeb7c2"]
     },
     assembly: {
         core: drawGenericAssembly,
-        field: drawGenericAssembly,
+        zone: drawGenericAssembly,
         crumbs: ["#3a4453", "#7cc8ff"]
     },
     equipment: {
         core: drawGenericAssembly,
-        field: drawGenericAssembly,
+        zone: drawGenericAssembly,
         crumbs: ["#3a4453", "#7cc8ff"]
     },
     fallback: {
         core: drawGenericFallback,
-        field: drawGenericFallback,
+        zone: drawGenericFallback,
         crumbs: ["#586378", "#aeb7c2"]
     }
 };

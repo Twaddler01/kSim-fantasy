@@ -1,19 +1,19 @@
 import { createSvgElement } from "../assets/icons/svgHelpers.js";
 import { MaterialIcon } from "../assets/icons/materials/MaterialIcon.js";
-import { getFieldDrawing } from "../assets/icons/fields/fieldDrawings.js";
-import { getFieldIconMaterialId } from "../data/fields.js";
+import { getZoneDrawing } from "../assets/icons/zones/zoneDrawings.js";
+import { getZoneIconMaterialId } from "../data/zones.js";
 
 /**
  * Resolution chain:
- *   1. fieldDrawings[field.id][variant]  — authored place icon
- *   2. material `field` variant          — dominant-material fallback
- *   3. field.icon (emoji)                — last-resort for legacy
+ *   1. zoneDrawings[zone.id][variant]  — authored place icon
+ *   2. material `zone` variant          — dominant-material fallback
+ *   3. zone.icon (emoji)                — last-resort for legacy
  */
-export function createFieldIcon(
-    field,
+export function createZoneIcon(
+    zone,
     { size = 32, className = "", variant = "default" } = {}
 ) {
-    const draw = getFieldDrawing(field.id, variant);
+    const draw = getZoneDrawing(zone.id, variant);
 
     if (draw) {
         const svg = createSvgElement("svg", {
@@ -24,26 +24,26 @@ export function createFieldIcon(
             preserveAspectRatio: "xMidYMid meet",
             "aria-hidden": "true",
             focusable: "false",
-            class: ["field-icon", className].filter(Boolean).join(" ")
+            class: ["zone-icon", className].filter(Boolean).join(" ")
         });
         draw(svg);
         return svg;
     }
 
-    const materialId = getFieldIconMaterialId(field);
+    const materialId = getZoneIconMaterialId(zone);
     if (materialId) {
         return MaterialIcon(materialId, {
             size,
-            variant: "field",
-            className: ["field-icon", className].filter(Boolean).join(" ")
+            variant: "zone",
+            className: ["zone-icon", className].filter(Boolean).join(" ")
         });
     }
 
     const span = document.createElement("span");
-    span.className = ["field-icon", "field-icon--fallback", className]
+    span.className = ["zone-icon", "zone-icon--fallback", className]
         .filter(Boolean)
         .join(" ");
     span.setAttribute("aria-hidden", "true");
-    span.textContent = field.icon ?? "◈";
+    span.textContent = zone.icon ?? "◈";
     return span;
 }

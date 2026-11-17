@@ -2,7 +2,7 @@
 //
 // Cave definitions. A cave is a POI: tapping it opens a narrative modal.
 // v1 caves are single-room: narrative + a one-time loot search per session.
-// Multi-room dungeons (replacing the modal with a nested FieldScene) come
+// Multi-room dungeons (replacing the modal with a nested ZoneScene) come
 // in a later phase — the data shape here is designed to accommodate that
 // without changing how caves are spawned or interacted with.
 

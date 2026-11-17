@@ -74,14 +74,14 @@ export function getRecipeOutputs(recipeId) {
 }
 
 // --------------------------------------------------
-// FIELD LOOKUPS
+// ZONE LOOKUPS
 // --------------------------------------------------
 
-export function getFieldMaterials(fieldId) {
-    const field = getJournalEntry(fieldId, "field");
-    if (!field) return [];
+export function getZoneMaterials(zoneId) {
+    const zone = getJournalEntry(zoneId, "zone");
+    if (!zone) return [];
 
-    const spawnTable = field.source.spawnTable ?? [];
+    const spawnTable = zone.source.spawnTable ?? [];
 
     return spawnTable.map(({ materialId, weight }) => ({
         material: getJournalEntry(materialId, "material"),
@@ -90,19 +90,19 @@ export function getFieldMaterials(fieldId) {
     }));
 }
 
-export function getMaterialField(materialId) {
+export function getMaterialZone(materialId) {
     const material = getJournalEntry(materialId, "material");
     if (!material) return null;
 
-    const fieldId = material.source.field?.id;
-    if (!fieldId) return null;
+    const zoneId = material.source.zone?.id;
+    if (!zoneId) return null;
 
-    return getJournalEntry(fieldId, "field");
+    return getJournalEntry(zoneId, "zone");
 }
 
-export function getFieldUnlock(fieldId) {
-    const field = getJournalEntry(fieldId, "field");
-    if (!field) return null;
+export function getZoneUnlock(zoneId) {
+    const zone = getJournalEntry(zoneId, "zone");
+    if (!zone) return null;
 
-    return field.source.unlockTrigger ?? null;
+    return zone.source.unlockTrigger ?? null;
 }

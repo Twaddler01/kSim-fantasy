@@ -2,21 +2,21 @@ import { el } from "../components/Element.js";
 import { Button } from "../components/Button.js";
 import Badge from "../components/Badge.js";
 import NewBadge from "../../notifications/NewBadge.js";
-import { createFieldIcon } from "../fieldIcons.js";
+import { createZoneIcon } from "../zoneIcons.js";
 import { materials } from "../../data/materials.js";
-import { getFieldSpawnBreakdown } from "../../data/fields.js";
+import { getZoneSpawnBreakdown } from "../../data/zones.js";
 import { MaterialIcon } from "../../assets/icons/materials/MaterialIcon.js";
 import WorldMapPanel from "./WorldMapPanel.js";
 
-export default class FieldWorkPanel {
+export default class WorldPanel {
     constructor({
         getGame,
         save,
         unlockManager,
         unreadManager,
-        fieldDefinitions,
+        zoneDefinitions,
         navigateTo,
-        createField,
+        createZone,
         refreshTab,
         showToast
     }) {
@@ -24,58 +24,58 @@ export default class FieldWorkPanel {
         this.save = save;
         this.unlockManager = unlockManager;
         this.unreadManager = unreadManager;
-        this.fieldDefinitions = fieldDefinitions;
+        this.zoneDefinitions = zoneDefinitions;
         this.navigateTo = navigateTo;
         this.refreshTab = refreshTab;
         this.showToast = showToast ?? (() => {});
 
         this._viewKey = null;
         this.view = "map"; // default view
-        this.fieldViews = new Map();
+        this.zoneViews = new Map();
         this.badges = new Map();
         this.worldMap = null;
 
         this.element = null;
-        this.fieldCards = null;
-        this.fieldSelectionButton = null;
+        this.zoneCards = null;
+        this.zoneSelectionButton = null;
 
-        if (typeof createField !== "function") {
+        if (typeof createZone !== "function") {
             throw new Error(
-                "FieldWorkPanel requires a createField(field) factory. " +
+                "WorldPanel requires a createZone(zone) factory. " +
                     "It must return an object with getElement() and update() " +
                     "(optionally deactivate() and refreshSprites())."
             );
         }
-        this.createField = createField;
+        this.createZone = createZone;
     }
 
     // --- navigation entry points ---------------------------------------
     showMap() {
-        this.deactivateField();
+        this.deactivateZone();
         this.view = "map";
-        this.fieldSelectionButton = null;
+        this.zoneSelectionButton = null;
         this.refreshTab();
         return true;
     }
 
     showList() {
-        this.deactivateField();
+        this.deactivateZone();
         this.view = "list";
-        this.fieldSelectionButton = null;
+        this.zoneSelectionButton = null;
         this.refreshTab();
         return true;
     }
 
-    showField(fieldId) {
-        if (!this.unlockManager.isUnlocked(fieldId)) return false;
-        if (this.view === "field" && this.activeFieldId() !== fieldId) {
-            this.deactivateField();
+    showZone(zoneId) {
+        if (!this.unlockManager.isUnlocked(zoneId)) return false;
+        if (this.view === "zone" && this.activeZoneId() !== zoneId) {
+            this.deactivateZone();
         }
 
         const game = this.getGame();
-        game.appState.navigation.activeFieldId = fieldId;
-        this.view = "field";
-        this.unreadManager.markRead("fieldWork", `field-${fieldId}`);
+        game.appState.navigation.activeZoneId = zoneId;
+        this.view = "zone";
+        this.unreadManager.markRead("world", `zone-${zoneId}`);
         this.save();
         this.refreshTab();
         return true;
@@ -85,7 +85,7 @@ export default class FieldWorkPanel {
 
     getElement() {
         if (!this.element) {
-            this.element = el("div", { className: "field-work-content" });
+            this.element = el("div", { className: "zone-work-content" });
         }
         this.update();
         return this.element;
@@ -94,22 +94,22 @@ export default class FieldWorkPanel {
     update() {
         if (!this.element) return this;
 
-        const fieldId = this.view === "field" ? this.activeFieldId() : null;
-        const viewKey = fieldId ? `field:${fieldId}` : `view:${this.view}`;
+        const zoneId = this.view === "zone" ? this.activeZoneId() : null;
+        const viewKey = zoneId ? `zone:${zoneId}` : `view:${this.view}`;
 
         // Skip rebuild if the view hasn't changed. Rebuilding would detach
         // and re-attach the canvas, losing pointer capture mid-gesture.
         if (this._viewKey === viewKey) {
-            if (fieldId) this.getFieldView(fieldId)?.update?.();
+            if (zoneId) this.getZoneView(zoneId)?.update?.();
             else if (this.view === "map") this.worldMap?.update?.();
             return this;
         }
 
         this._viewKey = viewKey;
 
-        if (fieldId) {
-            this.element.replaceChildren(this.renderActiveField());
-            this.getFieldView(fieldId)?.update?.();
+        if (zoneId) {
+            this.element.replaceChildren(this.renderActiveZone());
+            this.getZoneView(zoneId)?.update?.();
         } else if (this.view === "map") {
             this.element.replaceChildren(this.renderMap());
             this.worldMap?.update?.();
@@ -122,16 +122,16 @@ export default class FieldWorkPanel {
 
     // --- internal -------------------------------------------------------
 
-    getFieldView(fieldId) {
-        if (!this.fieldViews.has(fieldId)) {
-            const field = this.fieldDefinitions.find(f => f.id === fieldId);
-            this.fieldViews.set(fieldId, this.createField(field));
+    getZoneView(zoneId) {
+        if (!this.zoneViews.has(zoneId)) {
+            const zone = this.zoneDefinitions.find(f => f.id === zoneId);
+            this.zoneViews.set(zoneId, this.createZone(zone));
         }
-        return this.fieldViews.get(fieldId);
+        return this.zoneViews.get(zoneId);
     }
 
-    activeFieldId() {
-        return this.getGame().appState.navigation.activeFieldId;
+    activeZoneId() {
+        return this.getGame().appState.navigation.activeZoneId;
     }
 
     // --- MAP VIEW -------------------------------------------------------
@@ -142,8 +142,8 @@ export default class FieldWorkPanel {
                 getGame: this.getGame,
                 unlockManager: this.unlockManager,
                 unreadManager: this.unreadManager,
-                fieldDefinitions: this.fieldDefinitions,
-                onSelectField: fieldId => this.showField(fieldId),
+                zoneDefinitions: this.zoneDefinitions,
+                onSelectZone: zoneId => this.showZone(zoneId),
                 showToast: message => this.showToast(message)
             });
         }
@@ -158,7 +158,7 @@ export default class FieldWorkPanel {
                     type: "button",
                     className: "world-map-list-toggle",
                     text: "☰ LIST",
-                    "aria-label": "Show field list",
+                    "aria-label": "Show zone list",
                     onClick: () => this.showList()
                 })
             ]),
@@ -171,15 +171,15 @@ export default class FieldWorkPanel {
     renderList() {
         const section = el(
             "section",
-            { className: "field-selection-section" },
+            { className: "zone-selection-section" },
             [
                 el("div", { className: "world-map-header" }, [
                     el("div", {}, [
                         el("div", {
                             className: "eyebrow",
-                            text: "GATHERING LOCATIONS"
+                            text: "ZONES"
                         }),
-                        el("h2", { text: "All Fields" })
+                        el("h2", { text: "All Zones" })
                     ]),
                     el("button", {
                         type: "button",
@@ -191,108 +191,108 @@ export default class FieldWorkPanel {
                 ]),
                 el("p", {
                     className: "muted",
-                    text: "Choose a field, then enter it when you're ready."
+                    text: "Choose a zone, then enter it when you're ready."
                 }),
-                (this.fieldCards = el("div", {
-                    className: "field-selection-list"
+                (this.zoneCards = el("div", {
+                    className: "zone-selection-list"
                 }))
             ]
         );
 
-        this.updateFieldCards();
+        this.updateZoneCards();
         return section;
     }
 
-    // --- FIELD VIEW -----------------------------------------------------
+    // --- ZONE VIEW -----------------------------------------------------
 
-    renderActiveField() {
-        const fieldId = this.activeFieldId();
-        if (!fieldId) {
+    renderActiveZone() {
+        const zoneId = this.activeZoneId();
+        if (!zoneId) {
             this.view = "map";
-            this.fieldSelectionButton = null;
+            this.zoneSelectionButton = null;
             return this.renderMap();
         }
 
-        const fieldView = this.getFieldView(fieldId);
+        const zoneView = this.getZoneView(zoneId);
 
         const back = Button("← MAP", () => this.showMap(), {
             variant: "secondary-button"
         });
-        this.fieldSelectionButton = back;
-        this.updateFieldSelectionBadge();
+        this.zoneSelectionButton = back;
+        this.updateZoneSelectionBadge();
 
-        return el("div", { className: "field-work-active-view" }, [
-            el("div", { className: "field-work-toolbar" }, [back]),
-            fieldView.getElement()
+        return el("div", { className: "zone-work-active-view" }, [
+            el("div", { className: "zone-work-toolbar" }, [back]),
+            zoneView.getElement()
         ]);
     }
 
-    // --- FIELD CARDS (list view only) ----------------------------------
+    // --- ZONE CARDS (list view only) ----------------------------------
 
-    updateFieldCards() {
-        if (!this.fieldCards) return;
+    updateZoneCards() {
+        if (!this.zoneCards) return;
 
         const game = this.getGame();
 
-        const cards = this.fieldDefinitions.map(field => {
-            const unlocked = this.unlockManager.isUnlocked(field.id);
-            const active = this.activeFieldId() === field.id;
+        const cards = this.zoneDefinitions.map(zone => {
+            const unlocked = this.unlockManager.isUnlocked(zone.id);
+            const active = this.activeZoneId() === zone.id;
 
             const selectButton = el(
                 "button",
                 {
                     type: "button",
-                    className: "field-selection-card__main",
+                    className: "zone-selection-card__main",
                     disabled: !unlocked,
                     "aria-label": unlocked
-                        ? `Select ${field.name}`
-                        : `${field.name}, locked`,
+                        ? `Select ${zone.name}`
+                        : `${zone.name}, locked`,
                     onClick: () => {
                         if (!unlocked) return;
-                        game.appState.navigation.activeFieldId = field.id;
+                        game.appState.navigation.activeZoneId = zone.id;
                         this.save();
-                        this.updateFieldCards();
+                        this.updateZoneCards();
                     }
                 },
                 [
-                    el("span", { className: "field-selection-card__icon" }, [
-                        createFieldIcon(field, {
+                    el("span", { className: "zone-selection-card__icon" }, [
+                        createZoneIcon(zone, {
                             size: 32,
-                            className: "field-selection-card__icon-svg"
+                            className: "zone-selection-card__icon-svg"
                         })
                     ]),
-                    el("span", { className: "field-selection-card__copy" }, [
+                    el("span", { className: "zone-selection-card__copy" }, [
                         el(
                             "span",
                             {
-                                className: "field-selection-card__title",
-                                dataset: { fieldTitle: field.id }
+                                className: "zone-selection-card__title",
+                                dataset: { zoneTitle: zone.id }
                             },
-                            [el("strong", { text: field.name })]
+                            [el("strong", { text: zone.name })]
                         ),
                         el("span", {
-                            className: "field-selection-card__description",
+                            className: "zone-selection-card__description",
                             text: unlocked
-                                ? field.description
-                                : `Requires ${field.unlockTrigger?.amount ?? 0} ${
+                                ? zone.description
+                                : `Requires ${zone.unlockTrigger?.amount ?? 0} ${
                                       this.materialName(
-                                          field.unlockTrigger?.item
+                                          zone.unlockTrigger?.item
                                       ) ??
-                                      field.unlockTrigger?.item ??
+                                      zone.unlockTrigger?.item ??
                                       "resources"
                                   } Samples`
                         }),
-                        unlocked ? this.renderFieldMaterials(field) : null
+                        unlocked ? this.renderZoneMaterials(zone) : null
                     ])
                 ]
             );
 
             const actions = el(
                 "span",
-                { className: "field-selection-card__actions" },
+                { className: "zone-selection-card__actions" },
                 [
                     el("span", {
-                        className: "field-selection-card__status",
+                        className: "zone-selection-card__status",
                         text: !unlocked
                             ? "LOCKED"
                             : active
@@ -305,8 +305,8 @@ export default class FieldWorkPanel {
                                   "GO",
                                   () => {
                                       this.navigateTo({
-                                          tab: "fieldWork",
-                                          pageId: field.id
+                                          tab: "world",
+                                          pageId: zone.id
                                       });
                                   },
                                   { variant: "primary-button" }
@@ -320,7 +320,7 @@ export default class FieldWorkPanel {
                 "div",
                 {
                     className: [
-                        "field-selection-card",
+                        "zone-selection-card",
                         unlocked ? "is-unlocked" : "is-locked",
                         active ? "is-active" : ""
                     ]
@@ -331,35 +331,35 @@ export default class FieldWorkPanel {
             );
         });
 
-        this.fieldCards.replaceChildren(...cards);
+        this.zoneCards.replaceChildren(...cards);
         this.refreshBadges();
     }
 
-    getBadge(fieldId) {
-        if (!this.badges.has(fieldId)) {
+    getBadge(zoneId) {
+        if (!this.badges.has(zoneId)) {
             this.badges.set(
-                fieldId,
+                zoneId,
                 new NewBadge({
                     unreadManager: this.unreadManager,
-                    tabId: "fieldWork",
-                    itemId: `field-${fieldId}`,
+                    tabId: "world",
+                    itemId: `zone-${zoneId}`,
                     getElement: () =>
                         [
-                            ...(this.fieldCards?.querySelectorAll(
-                                "[data-field-title]"
+                            ...(this.zoneCards?.querySelectorAll(
+                                "[data-zone-title]"
                             ) ?? [])
-                        ].find(el => el.dataset.fieldTitle === fieldId),
+                        ].find(el => el.dataset.zoneTitle === zoneId),
                     placement: "inline",
-                    ariaLabel: "New field"
+                    ariaLabel: "New zone"
                 })
             );
         }
-        return this.badges.get(fieldId);
+        return this.badges.get(zoneId);
     }
 
     refreshBadges() {
-        for (const field of this.fieldDefinitions) {
-            this.getBadge(field.id).refresh();
+        for (const zone of this.zoneDefinitions) {
+            this.getBadge(zone.id).refresh();
         }
         // Map pins render unread state directly; refresh them too.
         if (this.view === "map") {
@@ -368,46 +368,46 @@ export default class FieldWorkPanel {
     }
 
     hasUnread() {
-        return this.fieldDefinitions.some(field =>
-            this.unreadManager.isUnread("fieldWork", `field-${field.id}`)
+        return this.zoneDefinitions.some(zone =>
+            this.unreadManager.isUnread("world", `zone-${zone.id}`)
         );
     }
 
-    updateFieldSelectionBadge() {
-        const button = this.fieldSelectionButton;
+    updateZoneSelectionBadge() {
+        const button = this.zoneSelectionButton;
         if (!button) return;
-        button.querySelector(".field-selection-button__badge")?.remove();
+        button.querySelector(".zone-selection-button__badge")?.remove();
         if (!this.hasUnread()) return;
         button.append(
             Badge({
                 text: "NEW",
                 variant: "new",
-                className: "field-selection-button__badge",
-                ariaLabel: "New field content"
+                className: "zone-selection-button__badge",
+                ariaLabel: "New zone content"
             })
         );
     }
 
-    refreshFieldSprites() {
-        for (const view of this.fieldViews.values()) {
+    refreshZoneSprites() {
+        for (const view of this.zoneViews.values()) {
             view.refreshSprites?.();
         }
     }
 
-    deactivateField() {
-        for (const view of this.fieldViews.values()) {
+    deactivateZone() {
+        for (const view of this.zoneViews.values()) {
             view.deactivate?.();
         }
     }
 
-    refreshFieldBackgrounds() {
-        for (const view of this.fieldViews.values()) {
+    refreshZoneBackgrounds() {
+        for (const view of this.zoneViews.values()) {
             view.refreshBackground?.();
         }
     }
 
-    renderFieldMaterials(field) {
-        const breakdown = getFieldSpawnBreakdown(field);
+    renderZoneMaterials(zone) {
+        const breakdown = getZoneSpawnBreakdown(zone);
         if (breakdown.length === 0) return null;
 
         const top = breakdown.slice(0, 3);
@@ -415,8 +415,8 @@ export default class FieldWorkPanel {
         return el(
             "span",
             {
-                className: "field-selection-card__materials",
-                "aria-label": `Field materials: ${top
+                className: "zone-selection-card__materials",
+                "aria-label": `Zone materials: ${top
                     .map(
                         b =>
                             `${this.materialName(b.materialId)} ${Math.round(b.percent)}%`
@@ -430,17 +430,17 @@ export default class FieldWorkPanel {
                 return el(
                     "span",
                     {
-                        className: "field-selection-card__chip",
+                        className: "zone-selection-card__chip",
                         title: `${name} · ${pct}%`
                     },
                     [
                         MaterialIcon(spawn.materialId, {
                             size: 14,
                             variant: "core",
-                            className: "field-selection-card__chip-icon"
+                            className: "zone-selection-card__chip-icon"
                         }),
                         el("span", {
-                            className: "field-selection-card__chip-label",
+                            className: "zone-selection-card__chip-label",
                             text: `${pct}%`
                         })
                     ]

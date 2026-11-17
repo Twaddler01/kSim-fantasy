@@ -8,14 +8,14 @@ import {
     getRecipesProducing,
     getRecipeInputs,
     getRecipeOutputs,
-    getFieldMaterials,
-    getMaterialField
+    getZoneMaterials,
+    getMaterialZone
 } from "../../../data/journal/relationships.js";
 import { ItemIcon } from "../../components/ItemIcon.js";
 
 const CATEGORIES = [
     { id: "locations", label: "Locations" },
-    { id: "fields", label: "Fields" },
+    { id: "zones", label: "Zones" },
     { id: "resources", label: "Resources" },
     { id: "rawMaterials", label: "Raw Materials" },
     { id: "processedMaterials", label: "Processed Materials" },
@@ -262,8 +262,8 @@ export default class CategoryBrowser {
                 this.renderMaterialRelationships(entry);
                 break;
 
-            case "field":
-                this.renderFieldRelationships(entry);
+            case "zone":
+                this.renderZoneRelationships(entry);
                 break;
 
             case "recipe":
@@ -277,12 +277,12 @@ export default class CategoryBrowser {
     }
 
     renderMaterialRelationships(entry) {
-        const field = getMaterialField(entry.id);
+        const zone = getMaterialZone(entry.id);
         const usedBy = getRecipesUsing(entry.id);
         const producedBy = getRecipesProducing(entry.id);
 
-        if (field) {
-            this.renderRelationshipSection("Found in", [field]);
+        if (zone) {
+            this.renderRelationshipSection("Found in", [zone]);
         }
 
         if (producedBy.length) {
@@ -294,8 +294,8 @@ export default class CategoryBrowser {
         }
     }
 
-    renderFieldRelationships(entry) {
-        const materials = getFieldMaterials(entry.id);
+    renderZoneRelationships(entry) {
+        const materials = getZoneMaterials(entry.id);
 
         if (materials.length) {
             this.renderRelationshipSection("Gatherable materials", materials);

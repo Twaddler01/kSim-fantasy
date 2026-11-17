@@ -4,7 +4,7 @@
 // per session (tracked via a session-local Set — no persistence, resets
 // on page reload).
 //
-// Future: replace with a nested FieldScene for multi-room dungeons. The
+// Future: replace with a nested ZoneScene for multi-room dungeons. The
 // shape of show(caveId) and the loot reward flow stay the same.
 
 import { el } from "../components/Element.js";

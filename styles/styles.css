@@ -716,7 +716,7 @@ body:not(.debug-mode) {
 }
 
 .camp-intro,
-.field-panel,
+.zone-panel,
 .database-view {
     min-width: 0;
     padding: 13px;
@@ -1228,7 +1228,7 @@ body:not(.debug-mode) {
     }
 }
 
-.secondary-button.has-new-field-selection {
+.secondary-button.has-new-zone-selection {
     border-color: var(--accent);
     color: var(--accent);
     box-shadow: 0 0 12px rgba(56, 230, 203, 0.28);
@@ -1298,19 +1298,19 @@ body:not(.debug-mode) {
     margin-bottom: 0;
 }
 
-/* FIELD WORK upgrade-card test layout */
-.field-upgrade-grid {
+/* WORLD upgrade-card test layout */
+.zone-upgrade-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     margin-top: 12px;
 }
 
-.field-upgrade-grid .card {
+.zone-upgrade-grid .card {
     min-width: 0;
 }
 
-.field-upgrade-grid .card-body p {
+.zone-upgrade-grid .card-body p {
     margin-bottom: 0;
 }
 
@@ -2321,15 +2321,15 @@ body:not(.debug-mode) {
     transform: translate(-50%, -50%);
 }
 
-/* ---------- Field icons ---------- */
-.field-icon {
+/* ---------- Zone icons ---------- */
+.zone-icon {
     display: block;
     width: 100%;
     height: 100%;
     overflow: visible;
 }
 
-.field-icon--fallback {
+.zone-icon--fallback {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2340,7 +2340,7 @@ body:not(.debug-mode) {
 }
 
 /* ---------- Selector card icon slot ---------- */
-.field-selection-card__icon {
+.zone-selection-card__icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2353,20 +2353,20 @@ body:not(.debug-mode) {
     overflow: hidden;
 }
 
-.field-selection-card__icon .field-icon {
+.zone-selection-card__icon .zone-icon {
     width: 32px;
     height: 32px;
 }
 
 /* ---------- Material chips under description ---------- */
-.field-selection-card__materials {
+.zone-selection-card__materials {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     margin-top: 6px;
 }
 
-.field-selection-card__chip {
+.zone-selection-card__chip {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -2381,26 +2381,26 @@ body:not(.debug-mode) {
     line-height: 1;
 }
 
-.field-selection-card__chip-icon {
+.zone-selection-card__chip-icon {
     display: block;
     width: 14px;
     height: 14px;
     flex-shrink: 0;
 }
 
-.field-selection-card__chip-label {
+.zone-selection-card__chip-label {
     color: var(--muted);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
 }
 
 /* Locked cards shouldn't show chip colour emphasis */
-.field-selection-card.is-locked .field-selection-card__chip {
+.zone-selection-card.is-locked .zone-selection-card__chip {
     opacity: 0.55;
 }
 
 /* ---------- Announcement symbol ---------- */
-.ksim-announce__symbol > .field-icon {
+.ksim-announce__symbol > .zone-icon {
     display: block;
     width: 44px;
     height: 44px;
@@ -3263,7 +3263,7 @@ body.battle-open {
 }
 
 /* ========================================
-GATHERING FIELD
+GATHERING ZONE
 ======================================== */
 
 .gathering-panel {
@@ -3284,7 +3284,7 @@ GATHERING FIELD
     margin: 8px 0 0;
 }
 
-.gathering-field {
+.gathering-zone {
     position: relative;
     width: 100%;
     aspect-ratio: 12 / 8;
@@ -3387,24 +3387,24 @@ INVENTORY
 }
 
 /* ========================================
-FIELD
+ZONE
 ======================================== */
 
-.field-selection-section {
+.zone-selection-section {
     margin-bottom: 1rem;
 }
 
-.field-selection-section h2 {
+.zone-selection-section h2 {
     margin: 0.35rem 0;
 }
 
-.field-selection-list {
+.zone-selection-list {
     display: grid;
     gap: 0.65rem;
     margin-top: 0.85rem;
 }
 
-.field-selection-card {
+.zone-selection-card {
     display: flex;
     align-items: center;
     gap: 0.8rem;
@@ -3419,38 +3419,38 @@ FIELD
     cursor: pointer;
 }
 
-.field-selection-card:disabled {
+.zone-selection-card:disabled {
     opacity: 0.48;
     cursor: not-allowed;
 }
 
-.field-selection-card.is-active {
+.zone-selection-card.is-active {
     border-color: var(--accent-color, #72b8d9);
 }
 
-.field-selection-card.is-unread {
+.zone-selection-card.is-unread {
     border-color: var(--accent-color, #72b8d9);
     box-shadow: inset 3px 0 0 var(--accent-color, #72b8d9);
 }
 
-.field-selection-card__icon {
+.zone-selection-card__icon {
     flex: 0 0 auto;
     font-size: 1.6rem;
 }
 
-.field-selection-card__copy {
+.zone-selection-card__copy {
     display: grid;
     flex: 1;
     gap: 0.25rem;
     min-width: 0;
 }
 
-.field-selection-card__description {
+.zone-selection-card__description {
     font-size: 0.85rem;
     opacity: 0.75;
 }
 
-.field-selection-card__status {
+.zone-selection-card__status {
     flex: 0 0 auto;
     font-size: 0.7rem;
     font-weight: 700;
@@ -3458,11 +3458,11 @@ FIELD
     opacity: 0.8;
 }
 
-.field-selection-card.is-active {
+.zone-selection-card.is-active {
     border-color: var(--success-color, #4ade80);
 }
 
-.field-selection-card__actions {
+.zone-selection-card__actions {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3471,25 +3471,25 @@ FIELD
     flex-shrink: 0;
 }
 
-.field-selection-card__status {
+.zone-selection-card__status {
     line-height: 1.2;
 }
 
-.field-selection-card__actions .primary-button {
+.zone-selection-card__actions .primary-button {
     padding: 6px 12px;
     min-height: 0;
     font-size: 0.75rem;
     line-height: 1.2;
 }
 
-.field-selection-card {
+.zone-selection-card {
     display: flex;
     align-items: stretch;
     justify-content: space-between;
     gap: 12px;
 }
 
-.field-selection-card__main {
+.zone-selection-card__main {
     display: flex;
     flex: 1;
     min-width: 0;
@@ -3503,11 +3503,11 @@ FIELD
     text-align: left;
 }
 
-.field-selection-card__main:disabled {
+.zone-selection-card__main:disabled {
     opacity: 0.65;
 }
 
-.field-selection-card__actions {
+.zone-selection-card__actions {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3517,36 +3517,36 @@ FIELD
     padding: 8px 12px 8px 0;
 }
 
-.field-selection-card__status {
+.zone-selection-card__status {
     line-height: 1.2;
 }
 
-.field-selection-card__actions .primary-button {
+.zone-selection-card__actions .primary-button {
     padding: 6px 12px;
     min-height: 0;
     font-size: 0.75rem;
     line-height: 1.2;
 }
 
-.field-selection-card__title {
+.zone-selection-card__title {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
 }
 
-.field-selection-button__badge {
+.zone-selection-button__badge {
     margin-left: 8px;
 }
 
-.field-work-toolbar {
+.world-toolbar {
     display: flex;
     justify-content: flex-start;
     margin-bottom: 12px;
 }
 
-/* FIELD WORK announcement overlay */
-.field-work-content {
+/* WORLD announcement overlay */
+.world-content {
     position: relative;
     min-width: 0;
 }
@@ -3764,7 +3764,7 @@ FIELD
    ======================================== */
 
 .world-map-section,
-.field-selection-section {
+.zone-selection-section {
     display: flex;
     flex-direction: column;
     gap: 10px;

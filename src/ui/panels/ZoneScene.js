@@ -1,14 +1,14 @@
-// src/ui/panels/FieldScene.js
+// src/ui/panels/ZoneScene.js
 //
-// Adapter between a field definition and FieldCanvas.
+// Adapter between a zone definition and ZoneCanvas.
 //
-// FieldScene owns:
-//   · Initial entity spawning (mixed by type via field.spawnTable)
+// ZoneScene owns:
+//   · Initial entity spawning (mixed by type via zone.spawnTable)
 //   · Respawn logic per entity type
 //   · Dispatch of interactions to the appropriate scene callback
 //     (onGather, onEncounter, onOpenCache, onEnterCave)
 //
-// FieldCanvas owns:
+// ZoneCanvas owns:
 //   · Rendering, camera, input, tap-to-move, auto-approach
 //   · Per-entity strike counting (strikesRequired / strikesLanded)
 //   · Deactivation and respawn timing
@@ -19,17 +19,17 @@
 //   "cache"   → tap opens a loot cache (Phase 4.7)
 //   "cave"    → tap enters a dungeon / POI (Phase 4.7)
 //
-// Fields can mix types in one spawnTable. Entities that have no
+// Zones can mix types in one spawnTable. Entities that have no
 // corresponding scene callback stay in place when tapped (they do not
 // disappear) and log a one-time warning to the dev console.
 
-import FieldCanvas from "./FieldCanvas.js";
+import ZoneCanvas from "./ZoneCanvas.js";
 import { materials } from "../../data/materials.js";
 import { getEnemy } from "../../data/enemies.js";
 import { getCrumbColors } from "../../assets/icons/materials/materialDrawings.js";
 import { buildBackgroundCache } from "../../data/backgroundCache.js";
 
-// Deterministic per-field RNG so a field looks the same across renders.
+// Deterministic per-zone RNG so a zone looks the same across renders.
 function seededRandom(seed) {
     let s = seed >>> 0;
     return () => {
@@ -47,9 +47,9 @@ function hashString(str) {
     return h >>> 0;
 }
 
-export default class FieldScene {
+export default class ZoneScene {
     constructor({
-        field,
+        zone,
         onGather,
         onEncounter,
         onOpenCache,
@@ -57,7 +57,7 @@ export default class FieldScene {
         getSprites = () => ({}),
         getTiles = () => null
     }) {
-        this.field = field;
+        this.zone = zone;
         this.onGather = onGather;
         this.onEncounter = onEncounter;
         this.onOpenCache = onOpenCache;
@@ -66,29 +66,29 @@ export default class FieldScene {
         this.getTiles = getTiles;
         this.rawMaterials = materials.filter(m => m.category === "raw");
 
-        // Resolve tuning from the field, with legacy field names as fallbacks.
+        // Resolve tuning from the zone, with legacy zone names as fallbacks.
         this.world = {
-            width: field.world?.width ?? 1200,
-            height: field.world?.height ?? 900
+            width: zone.world?.width ?? 1200,
+            height: zone.world?.height ?? 900
         };
-        this.entityCount = field.entityCount ?? field.depositCount ?? 10;
-        this.entityRadius = field.entityRadius ?? field.depositRadius ?? 22;
-        this.respawnDelay = field.respawnSeconds ?? 3;
-        this.margin = field.margin ?? 80;
-        this.minSpacing = field.minSpacing ?? 100;
+        this.entityCount = zone.entityCount ?? zone.depositCount ?? 10;
+        this.entityRadius = zone.entityRadius ?? zone.depositRadius ?? 22;
+        this.respawnDelay = zone.respawnSeconds ?? 3;
+        this.margin = zone.margin ?? 80;
+        this.minSpacing = zone.minSpacing ?? 100;
 
         this.backgroundCanvas = buildBackgroundCache(
-            this.field,
+            this.zone,
             this.world.width,
             this.world.height
         );
 
-        this.canvas = new FieldCanvas({
+        this.canvas = new ZoneCanvas({
             entities: this.buildInitialEntities(),
             world: this.world,
             respawnDelay: this.respawnDelay,
             backgroundCanvas: this.backgroundCanvas,
-            title: this.field.name,
+            title: this.zone.name,
             onInteract: (entity, screenPos) =>
                 this.handleInteract(entity, screenPos),
             onRespawn: entity => this.buildRespawn(entity),
@@ -115,10 +115,10 @@ export default class FieldScene {
     // -----------------------------------------------------------------
 
     buildInitialEntities() {
-        const rand = seededRandom(hashString(this.field.id));
+        const rand = seededRandom(hashString(this.zone.id));
         const list = [];
 
-        const guaranteed = this.field.guaranteedSpawns ?? [];
+        const guaranteed = this.zone.guaranteedSpawns ?? [];
         const guaranteedCount = guaranteed.reduce(
             (s, g) => s + (g.count ?? 0),
             0
@@ -128,7 +128,7 @@ export default class FieldScene {
         let index = 0;
 
         // 1. Guaranteed spawns are placed first, in declaration order.
-        //    Every field can force presence of key entities (quest mobs,
+        //    Every zone can force presence of key entities (quest mobs,
         //    guaranteed ore veins, a cache, a cave) regardless of RNG.
         for (const spec of guaranteed) {
             const count = spec.count ?? 0;
@@ -211,7 +211,7 @@ export default class FieldScene {
         const crumbs = this.makeCrumbs(rand, material.id, this.entityRadius);
 
         return {
-            id: `${this.field.id}-ent-${index}`,
+            id: `${this.zone.id}-ent-${index}`,
             type: "gather",
             r: this.entityRadius,
             materialId: material.id,
@@ -230,7 +230,7 @@ export default class FieldScene {
     buildEnemyEntity(spawn, rand, index) {
         const enemy = getEnemy(spawn.enemyId);
         return {
-            id: `${this.field.id}-ent-${index}`,
+            id: `${this.zone.id}-ent-${index}`,
             type: "enemy",
             r: this.entityRadius,
             enemyId: spawn.enemyId,
@@ -248,7 +248,7 @@ export default class FieldScene {
 
     buildCacheEntity(spawn, rand, index) {
         return {
-            id: `${this.field.id}-ent-${index}`,
+            id: `${this.zone.id}-ent-${index}`,
             type: "cache",
             r: this.entityRadius,
             lootTableId: spawn.lootTableId,
@@ -266,7 +266,7 @@ export default class FieldScene {
 
     buildCaveEntity(spawn, rand, index) {
         return {
-            id: `${this.field.id}-ent-${index}`,
+            id: `${this.zone.id}-ent-${index}`,
             type: "cave",
             r: this.entityRadius,
             dungeonId: spawn.dungeonId,
@@ -314,14 +314,14 @@ export default class FieldScene {
     // -----------------------------------------------------------------
 
     pickSpawn(rand = Math.random) {
-        const table = this.field.spawnTable ?? [];
+        const table = this.zone.spawnTable ?? [];
         const valid = table.filter(
             entry => entry.weight > 0 && this.isValidSpawn(entry)
         );
 
         if (valid.length === 0) {
-            // Legacy fallback: field declares a single materialId.
-            const m = materials.find(m => m.id === this.field.materialId);
+            // Legacy fallback: zone declares a single materialId.
+            const m = materials.find(m => m.id === this.zone.materialId);
             return {
                 type: "gather",
                 materialId: m?.id ?? this.rawMaterials[0]?.id,
@@ -362,7 +362,7 @@ export default class FieldScene {
     // -----------------------------------------------------------------
 
     /**
-     * Returns true if the interaction consumed the entity (FieldCanvas
+     * Returns true if the interaction consumed the entity (ZoneCanvas
      * will deactivate and schedule a respawn). Returns false to leave
      * the entity in place — e.g. when a handler is not wired yet.
      */
@@ -371,12 +371,12 @@ export default class FieldScene {
             case "gather": {
                 if (!this.onGather) {
                     console.warn(
-                        "[FieldScene] No onGather handler; entity not processed:",
+                        "[ZoneScene] No onGather handler; entity not processed:",
                         entity.materialId
                     );
                     return false;
                 }
-                const ok = this.onGather(this.field, screenPos, {
+                const ok = this.onGather(this.zone, screenPos, {
                     id: entity.materialId,
                     richness: entity.richness
                 });
@@ -386,12 +386,12 @@ export default class FieldScene {
             case "enemy": {
                 if (!this.onEncounter) {
                     console.warn(
-                        "[FieldScene] No onEncounter handler; enemy not processed:",
+                        "[ZoneScene] No onEncounter handler; enemy not processed:",
                         entity.enemyId
                     );
                     return false;
                 }
-                const handled = this.onEncounter(this.field, screenPos, {
+                const handled = this.onEncounter(this.zone, screenPos, {
                     enemyId: entity.enemyId
                 });
                 return handled !== false;
@@ -400,12 +400,12 @@ export default class FieldScene {
             case "cache": {
                 if (!this.onOpenCache) {
                     console.warn(
-                        "[FieldScene] No onOpenCache handler; cache not processed:",
+                        "[ZoneScene] No onOpenCache handler; cache not processed:",
                         entity.lootTableId
                     );
                     return false;
                 }
-                this.onOpenCache(this.field, screenPos, {
+                this.onOpenCache(this.zone, screenPos, {
                     lootTableId: entity.lootTableId
                 });
                 return true;
@@ -414,12 +414,12 @@ export default class FieldScene {
             case "cave": {
                 if (!this.onEnterCave) {
                     console.warn(
-                        "[FieldScene] No onEnterCave handler; cave not processed:",
+                        "[ZoneScene] No onEnterCave handler; cave not processed:",
                         entity.dungeonId
                     );
                     return false;
                 }
-                this.onEnterCave(this.field, screenPos, {
+                this.onEnterCave(this.zone, screenPos, {
                     dungeonId: entity.dungeonId
                 });
                 // Caves are POIs: even with a handler, keep them present.
@@ -435,14 +435,14 @@ export default class FieldScene {
     // Sprites and background
     // -----------------------------------------------------------------
 
-    getSpriteFor(materialId, variant = "field") {
+    getSpriteFor(materialId, variant = "zone") {
         const entry = this.getSprites()[materialId];
         if (!entry) return null;
 
         // Legacy flat cache: { stone: Image }
-        if (!entry.core && !entry.field) return entry;
+        if (!entry.core && !entry.zone) return entry;
 
-        // Nested cache: { stone: { core, field } }
+        // Nested cache: { stone: { core, zone } }
         return entry[variant] ?? entry.core ?? null;
     }
 
@@ -454,9 +454,9 @@ export default class FieldScene {
     }
 
     refreshBackground() {
-        if (!this.field.background) return;
+        if (!this.zone.background) return;
         const cache = buildBackgroundCache(
-            this.field,
+            this.zone,
             this.world.width,
             this.world.height
         );
@@ -470,7 +470,7 @@ export default class FieldScene {
     // -----------------------------------------------------------------
 
     selectRichness(rand = Math.random) {
-        const table = this.field.richnessTable ?? [{ amount: 1, weight: 1 }];
+        const table = this.zone.richnessTable ?? [{ amount: 1, weight: 1 }];
 
         const valid = table.filter(
             e =>
@@ -492,8 +492,8 @@ export default class FieldScene {
     }
 
     selectStrikes(richness, materialId) {
-        // 1. Field override (opt-in)
-        const table = this.field.strikeCountTable;
+        // 1. Zone override (opt-in)
+        const table = this.zone.strikeCountTable;
         if (Array.isArray(table)) {
             const entry = table.find(e => e.richness === richness);
             if (entry && Number.isFinite(entry.strikes)) {
@@ -508,8 +508,8 @@ export default class FieldScene {
     }
 
     selectSparkleTier(richness, materialId) {
-        // 1. Field override (opt-in)
-        const table = this.field.sparkleTable;
+        // 1. Zone override (opt-in)
+        const table = this.zone.sparkleTable;
         if (Array.isArray(table)) {
             const entry = table.find(e => e.richness === richness);
             if (entry && Number.isFinite(entry.tier)) {

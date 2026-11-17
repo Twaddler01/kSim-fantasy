@@ -29,7 +29,6 @@ export default class SaveManager {
                 console.warn(
                     `Save version mismatch: saved v${parsed.version}, expected v${this.initialData.version}.`
                 );
-                // TODO: per-version migrations here
             }
             const fresh = this.freshGame();
             const savedData = parsed;
@@ -46,16 +45,6 @@ export default class SaveManager {
                 upgrades: {
                     ...fresh.upgrades,
                     ...(parsed.upgrades ?? {})
-                },
-
-                player: {
-                    ...(fresh.player ?? {}),
-                    ...(parsed.player ?? {})
-                },
-
-                equipment: {
-                    ...(fresh.equipment ?? {}),
-                    ...(parsed.equipment ?? {})
                 },
 
                 events: {
@@ -107,7 +96,7 @@ export default class SaveManager {
                 }
             };
         } catch (error) {
-            console.warn("Could not load save:", error);
+            console.warn("Could not load Wild Realms save:", error);
             return this.freshGame();
         }
     }
@@ -117,7 +106,7 @@ export default class SaveManager {
             localStorage.setItem(this.key, JSON.stringify(game));
             return true;
         } catch (error) {
-            console.warn("Could not save:", error);
+            console.warn("Could not save Wild Realms:", error);
             return false;
         }
     }

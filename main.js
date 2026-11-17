@@ -1,13 +1,13 @@
 // main.js
 
-import FieldScene from "./src/ui/panels/FieldScene.js";
+import ZoneScene from "./src/ui/panels/ZoneScene.js";
 import { buildMaterialSprites } from "./src/data/materialSprites.js";
 
 let materialSprites = {};
 buildMaterialSprites()
     .then(sprites => {
         materialSprites = sprites;
-        ui.fieldWorkPanel?.refreshFieldSprites?.();
+        ui.worldPanel?.refreshZoneSprites?.();
         refreshUI();
     })
     .catch(err => console.error("[sprites] failed:", err));
@@ -16,7 +16,7 @@ import { buildTileSprites, getTileCache } from "./src/data/tileSprites.js";
 
 buildTileSprites()
     .then(() => {
-        ui.fieldWorkPanel?.refreshFieldBackgrounds?.();
+        ui.worldPanel?.refreshZoneBackgrounds?.();
         refreshUI();
     })
     .catch(err => console.error("[tiles] failed:", err));
@@ -39,7 +39,7 @@ import MainObjective from "./src/ui/panels/MainObjective.js";
 import ObjectiveTracker from "./src/ui/panels/ObjectiveTracker.js";
 import { tryAdvanceStage, getCurrentStage } from "./src/data/stages.js";
 
-import FieldWorkPanel from "./src/ui/panels/FieldWorkPanel.js";
+import WorldPanel from "./src/ui/panels/WorldPanel.js";
 import LootModal from "./src/ui/panels/LootModal.js";
 import CaveModal from "./src/ui/panels/CaveModal.js";
 
@@ -50,7 +50,7 @@ import { equipItem, unequipItem } from "./src/systems/equipment.js";
 // Components
 import { el } from "./src/ui/components/Element.js";
 import { Button } from "./src/ui/components/Button.js";
-// Nvigation
+// Navigation
 import { Tabs } from "./src/ui/navigation/Tabs/Tabs.js";
 
 ////
@@ -58,7 +58,7 @@ import { Tabs } from "./src/ui/navigation/Tabs/Tabs.js";
 import { initialGameData } from "./src/data/initialGameData.js";
 import { resourceDefinitions } from "./src/data/resources.js";
 import { upgradeDefinitions } from "./src/data/upgrades.js";
-import { FIELD_DEFINITIONS } from "./src/data/fields.js";
+import { ZONE_DEFINITIONS } from "./src/data/zones.js";
 import {
     addLog,
     buyUpgrade,
@@ -87,7 +87,7 @@ import {
 
 import { ensurePlayerInitialized } from "./src/systems/character.js";
 
-import { createFieldHandlers } from "./src/domain/fieldHandlers.js";
+import { createZoneHandlers } from "./src/domain/zoneHandlers.js";
 import { createProgressionProcessor } from "./src/domain/progressionProcessing.js";
 
 import UnreadManager from "./src/managers/UnreadManager.js";
@@ -95,7 +95,7 @@ import Announce from "./src/notifications/Announce.js";
 import Toast from "./src/notifications/Toast.js";
 
 const saveManager = new SaveManager({
-    key: "ksim-fantasy-v1",
+    key: "ksim-fantasy-v2",
     initialData: initialGameData
 });
 
@@ -110,24 +110,24 @@ const unlockManager = new UnlockManager(game);
 // Application and domain-system state.
 game.appState ??= {};
 game.appState.navigation ??= {};
-game.appState.navigation.activeFieldId ??= null;
+game.appState.navigation.activeZoneId ??= null;
 game.appState.trackerEnabled ??= false;
 game.progression ??= { currentStage: 1 };
 
 const eventProcessor = new EventProcessor(game);
 
-// Permanent gathering-field unlock definitions.
-for (const field of FIELD_DEFINITIONS) {
+// Permanent zone unlock definitions.
+for (const zone of ZONE_DEFINITIONS) {
     unlockManager.registerUnlock({
-        id: field.id,
+        id: zone.id,
         initialUnlocked: false
     });
 
-    if (field.unlockTrigger) {
+    if (zone.unlockTrigger) {
         eventProcessor.registerEvent({
-            id: `field:${field.id}`,
-            trigger: field.unlockTrigger,
-            content: field
+            id: `zone:${zone.id}`,
+            trigger: zone.unlockTrigger,
+            content: zone
         });
     }
 }
@@ -186,15 +186,12 @@ function save() {
 function resetGame() {
     const fresh = saveManager.freshGame();
 
-    // Persist the fresh game before changing the active session.
     if (!saveManager.save(fresh)) {
         alert("Could not reset the game because the new save failed.");
         return;
     }
 
     game = fresh;
-
-    // Rebuild all UI and in-memory state from the saved fresh game.
     window.location.reload();
 }
 
@@ -203,8 +200,8 @@ const unreadManager = new UnreadManager({
     save,
     onChange: () => {
         ui.tabs?.update({ refreshContent: false });
-        ui.fieldWorkPanel?.updateFieldSelectionBadge?.();
-        ui.fieldWorkPanel?.refreshBadges?.();
+        ui.worldPanel?.updateZoneSelectionBadge?.();
+        ui.worldPanel?.refreshBadges?.();
     },
     isTabActive: tabId => activeTab === tabId
 });
@@ -215,7 +212,7 @@ function notifyUnread(tabId, itemId, options = {}) {
 
 // Starting conditions
 if (unlockManager.unlock("whisperingMeadow")) {
-    notifyUnread("fieldWork", "field-whisperingMeadow");
+    notifyUnread("world", "zone-whisperingMeadow");
 }
 // Ironhollow Mine unlocks via its inventoryAmount trigger (5 oak logs).
 
@@ -254,12 +251,12 @@ const progression = createProgressionProcessor({
     showAnnouncement,
     unlockManager,
     eventProcessor,
-    fieldDefinitions: FIELD_DEFINITIONS
+    zoneDefinitions: ZONE_DEFINITIONS
 });
 
 const processProgression = progression.processProgression;
 
-const fieldHandlers = createFieldHandlers({
+const zoneHandlers = createZoneHandlers({
     getGame: () => game,
     getUI: () => ui,
     save,
@@ -271,30 +268,30 @@ const fieldHandlers = createFieldHandlers({
     resourcePopups
 });
 
-const fieldWorkPanel = new FieldWorkPanel({
+const worldPanel = new WorldPanel({
     getGame: () => game,
     save,
     unlockManager,
     unreadManager,
-    fieldDefinitions: FIELD_DEFINITIONS,
+    zoneDefinitions: ZONE_DEFINITIONS,
     navigateTo: target => navigateTo(target),
     showToast: message => showToast(message),
     refreshTab: () => ui.tabs?.update({ refreshContent: true }),
     resourcePopups,
 
-    createField: field =>
-        new FieldScene({
-            field,
+    createZone: zone =>
+        new ZoneScene({
+            zone,
             getSprites: () => materialSprites,
             getTiles: () => getTileCache(),
-            onGather: fieldHandlers.handleGather,
-            onEncounter: fieldHandlers.handleEncounter,
-            onOpenCache: fieldHandlers.handleOpenCache,
-            onEnterCave: fieldHandlers.handleEnterCave
+            onGather: zoneHandlers.handleGather,
+            onEncounter: zoneHandlers.handleEncounter,
+            onOpenCache: zoneHandlers.handleOpenCache,
+            onEnterCave: zoneHandlers.handleEnterCave
         })
 });
 
-ui.fieldWorkPanel = fieldWorkPanel;
+ui.worldPanel = worldPanel;
 
 ui.battleModal = new BattleModal({
     getGame: () => game,
@@ -302,15 +299,15 @@ ui.battleModal = new BattleModal({
     refreshUI: options => refreshUI(options),
     showToast,
     onClose: () => {
-        fieldWorkPanel.update();
+        worldPanel.update();
         const items = ui.battleModal?.battle?.rewards?.items ?? [];
-        fieldHandlers.announceDiscoveriesFrom(items);
+        zoneHandlers.announceDiscoveriesFrom(items);
     }
 });
 
 ui.lootModal = new LootModal({
     onClose: newlyDiscovered => {
-        fieldHandlers.announceDiscoveriesFrom(newlyDiscovered);
+        zoneHandlers.announceDiscoveriesFrom(newlyDiscovered);
     }
 });
 
@@ -319,8 +316,8 @@ ui.caveModal = new CaveModal({
     save,
     refreshUI: options => refreshUI(options),
     onClose: newlyDiscovered => {
-        fieldWorkPanel.update();
-        fieldHandlers.announceDiscoveriesFrom(newlyDiscovered);
+        worldPanel.update();
+        zoneHandlers.announceDiscoveriesFrom(newlyDiscovered);
     }
 });
 
@@ -340,15 +337,12 @@ const objectiveTracker = new ObjectiveTracker({
 
 // Navigation — still registered in main because it's global,
 // but delegating to the panel:
-registerPage("fieldWork", "map", {
-    activate: () => fieldWorkPanel.showMap()
+registerPage("world", "selector", {
+    activate: () => worldPanel.showSelector()
 });
-registerPage("fieldWork", "list", {
-    activate: () => fieldWorkPanel.showList()
-});
-for (const field of FIELD_DEFINITIONS) {
-    registerPage("fieldWork", field.id, {
-        activate: () => fieldWorkPanel.showField(field.id)
+for (const zone of ZONE_DEFINITIONS) {
+    registerPage("world", zone.id, {
+        activate: () => worldPanel.showZone(zone.id)
     });
 }
 
@@ -398,8 +392,8 @@ function renderCampTab() {
     return ui.campContent;
 }
 
-function renderFieldWorkTab() {
-    return fieldWorkPanel.getElement();
+function renderWorldTab() {
+    return worldPanel.getElement();
 }
 
 function renderSynthesisTab() {
@@ -447,9 +441,9 @@ function renderTabContent() {
             render: renderCampTab
         },
         {
-            id: "fieldWork",
-            label: "FIELD WORK",
-            render: renderFieldWorkTab
+            id: "world",
+            label: "WORLD",
+            render: renderWorldTab
         },
         {
             id: "synthesis",
@@ -479,7 +473,7 @@ function renderTabContent() {
         unreadManager,
         tabs: tabDefinitions.map(tab => ({
             ...tab,
-            unread: ["camp", "fieldWork", "equipment", "log"].includes(tab.id)
+            unread: ["camp", "world", "equipment", "log"].includes(tab.id)
         })),
         onChange: id => {
             activeTab = id;
@@ -499,13 +493,12 @@ function showToast(message, options) {
 }
 
 // Evaluate conditions already satisfied by the loaded save.
-// Suppress transient notifications during initial startup.
 processProgression({ notify: false });
 
 function updateActiveTabUI() {
-    // Stop the canvas loop when we're not on the fieldWork tab.
-    if (activeTab !== "fieldWork") {
-        fieldWorkPanel.deactivateField?.();
+    // Stop the canvas loop when we're not on the world tab.
+    if (activeTab !== "world") {
+        worldPanel.deactivateZone?.();
     }
 
     if (activeTab === "camp") {
@@ -522,22 +515,18 @@ function updateActiveTabUI() {
         case "camp":
             updateCampTab();
             break;
-        case "fieldWork":
-            updateFieldWorkTab();
+        case "world":
+            updateWorldTab();
             break;
-
         case "synthesis":
             synthesisPanel.update();
             break;
-
         case "equipment":
             updateEquipmentTab();
             break;
-
         case "log":
             updateLogTab();
             break;
-
         case "journal":
             updateJournalTab();
             break;
@@ -548,8 +537,8 @@ function updateCampTab() {
     mainObjective?.update?.();
 }
 
-function updateFieldWorkTab() {
-    fieldWorkPanel.update();
+function updateWorldTab() {
+    worldPanel.update();
 }
 
 function updateEquipmentTab() {
@@ -586,7 +575,6 @@ function refreshUI({ database = false } = {}) {
         save();
         if (result.to) {
             showToast(`Objective complete. New objective: ${result.to.name}.`);
-            // Fire the CAMP tab badge so the player knows to check in.
             notifyUnread("camp", `objective-${result.to.id}`);
         } else {
             showToast("Objective chain complete.");
@@ -652,7 +640,7 @@ function render() {
         el("div", {
             className: "camp-warning",
             text:
-                "⚠ FIELD NOTE: Anything you carry out of the valley " +
+                "⚠ IMPORTANT: Anything you carry out of the valley " +
                 "has to come from somewhere."
         })
     ]);
@@ -760,19 +748,19 @@ window.kSim = {
     announce: opts => showAnnouncement(opts),
     clearStorage: () => saveManager.clear(),
     reset: resetGame,
-    fieldDebug: () => {
-        const fieldId = game.appState.navigation.activeFieldId;
-        if (!fieldId) return { activeField: null, message: "No active field." };
-        const scene = ui.fieldWorkPanel?.fieldViews?.get(fieldId);
+    zoneDebug: () => {
+        const zoneId = game.appState.navigation.activeZoneId;
+        if (!zoneId) return { activeZone: null, message: "No active zone." };
+        const scene = ui.worldPanel?.zoneViews?.get(zoneId);
         if (!scene?.canvas?.entities) {
-            return { activeField: fieldId, message: "Field not entered yet." };
+            return { activeZone: zoneId, message: "Zone not entered yet." };
         }
         const counts = {};
         for (const e of scene.canvas.entities) {
             counts[e.type] = (counts[e.type] ?? 0) + 1;
         }
         return {
-            activeField: fieldId,
+            activeZone: zoneId,
             counts,
             total: scene.canvas.entities.length,
             entities: scene.canvas.entities.map(e => ({

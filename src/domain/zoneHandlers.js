@@ -1,7 +1,7 @@
-// src/domain/fieldHandlers.js
+// src/domain/zoneHandlers.js
 //
-// Field interaction handlers. Cohesive: every "player tapped something
-// in the field" path funnels through this module. Handles gather, battle
+// Zone interaction handlers. Cohesive: every "player tapped something
+// in the zone" path funnels through this module. Handles gather, battle
 // initiation, cache opening, cave entry, and deferred first-time
 // discovery announcements.
 //
@@ -16,7 +16,7 @@ import { rollFromLootTable } from "../systems/loot.js";
 import { materials } from "../data/materials.js";
 import { MaterialIcon } from "../assets/icons/materials/MaterialIcon.js";
 
-export function createFieldHandlers({
+export function createZoneHandlers({
     getGame,
     getUI,
     save,
@@ -30,7 +30,7 @@ export function createFieldHandlers({
     const game = () => getGame();
     const ui = () => getUI();
 
-    function handleGather(field, event, target) {
+    function handleGather(zone, event, target) {
         const result = recoverMaterial(game(), target.id, target.richness ?? 1);
 
         if (!result.ok) {
@@ -71,19 +71,19 @@ export function createFieldHandlers({
         return true;
     }
 
-    function handleEncounter(field, screenPos, { enemyId }) {
+    function handleEncounter(zone, screenPos, { enemyId }) {
         const battle = startBattle(game(), enemyId);
         if (!battle) {
             showToast("Cannot start battle.");
             return false;
         }
 
-        ui().fieldWorkPanel?.deactivateField?.();
+        ui().worldPanel?.deactivateZone?.();
         ui().battleModal.show(battle);
         return true;
     }
 
-    function handleOpenCache(field, screenPos, { lootTableId }) {
+    function handleOpenCache(zone, screenPos, { lootTableId }) {
         const table = getLootTable(lootTableId);
         if (!table) {
             showToast("This cache appears empty.");
@@ -105,8 +105,8 @@ export function createFieldHandlers({
         return true;
     }
 
-    function handleEnterCave(field, screenPos, { dungeonId }) {
-        ui().fieldWorkPanel?.deactivateField?.();
+    function handleEnterCave(zone, screenPos, { dungeonId }) {
+        ui().worldPanel?.deactivateZone?.();
         ui().caveModal.show(dungeonId);
         return false;
     }

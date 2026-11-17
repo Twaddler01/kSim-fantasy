@@ -29,17 +29,17 @@ function pickWeighted(entries, rand) {
 
 /**
  * Returns an offscreen HTMLCanvasElement at world size, or null if
- * tiles aren't ready / field has no background config.
+ * tiles aren't ready / zone has no background config.
  */
-export function buildBackgroundCache(field, worldW, worldH) {
-    const bg = field.background;
+export function buildBackgroundCache(zone, worldW, worldH) {
+    const bg = zone.background;
     if (!bg) return null;
 
     const tileImages = getTileCache()?.[bg.tileset];
     if (!tileImages) return null;
 
     const tileSize = bg.tileSize ?? 40;
-    const rand = seededRandom(hashString(field.id + ":bg"));
+    const rand = seededRandom(hashString(zone.id + ":bg"));
 
     const canvas = document.createElement("canvas");
     canvas.width = worldW;

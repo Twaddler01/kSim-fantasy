@@ -1,4 +1,4 @@
-// src/ui/panels/FieldCanvas.js
+// src/ui/panels/ZoneCanvas.js
 //
 // Top-down exploration canvas.
 //   · Camera pans over a world larger than the viewport
@@ -6,7 +6,7 @@
 //   · Drag = pan camera (does not move player)
 //   · Interactable entities live in the world; each may respawn after
 //     being consumed. Entity types ("gather", "enemy", "cache", "cave")
-//     are handled by FieldScene via the onInteract callback.
+//     are handled by ZoneScene via the onInteract callback.
 
 const INTERACT_REACH = 12; // px beyond touching that counts as "in reach"
 const TAP_HIT_RADIUS = 1.6; // tap hit detection, × entity.r
@@ -88,7 +88,7 @@ const ENTITY_MINIMAP_COLORS = {
     cave: "rgba(120,140,255,0.9)"
 };
 
-export default class FieldCanvas {
+export default class ZoneCanvas {
     constructor({
         entities = [],
         world = { width: 1200, height: 900 },
@@ -468,7 +468,7 @@ export default class FieldCanvas {
                 });
                 e.sparkles = this.makeSparkles(e.sparkleTier ?? 0, e.r ?? 22);
             }
-            // If onRespawn returns null, entity stays gone (finite field).
+            // If onRespawn returns null, entity stays gone (finite zone).
         }
 
         // Animate pulses.
@@ -747,7 +747,7 @@ export default class FieldCanvas {
     drawHUD() {
         const ctx = this.ctx;
 
-        const heading = this.title ?? "Field";
+        const heading = this.title ?? "Zone";
 
         ctx.fillStyle = "#e8f4ff";
         ctx.font = "600 15px system-ui, -apple-system, 'Segoe UI', sans-serif";

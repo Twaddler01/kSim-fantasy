@@ -1,4 +1,4 @@
-export const FIELD_DEFINITIONS = [
+export const ZONE_DEFINITIONS = [
     {
         id: "whisperingMeadow",
         name: "Whispering Meadow",
@@ -106,11 +106,11 @@ export const FIELD_DEFINITIONS = [
     }
 ];
 
-export function getFieldIconMaterialId(field) {
-    if (!field) return null;
-    if (field.materialId) return field.materialId;
+export function getZoneIconMaterialId(zone) {
+    if (!zone) return null;
+    if (zone.materialId) return zone.materialId;
 
-    const spawn = [...(field.spawnTable ?? [])]
+    const spawn = [...(zone.spawnTable ?? [])]
         .filter(e => (e.type ?? "gather") === "gather" && e.weight > 0)
         .sort((a, b) => b.weight - a.weight)[0];
 
@@ -118,14 +118,14 @@ export function getFieldIconMaterialId(field) {
 }
 
 /**
- * Gatherable-material breakdown for the field selector card.
+ * Gatherable-material breakdown for the zone selector card.
  * Includes guaranteed gather spawns (e.g. iron veins) so the card
  * reflects what the player will actually see, not just the weighted
  * table. Non-gather guaranteed spawns (enemies, caches, caves) are
  * intentionally excluded — the card shows materials only.
  */
-export function getFieldSpawnBreakdown(field) {
-    const guaranteedGathers = (field.guaranteedSpawns ?? [])
+export function getZoneSpawnBreakdown(zone) {
+    const guaranteedGathers = (zone.guaranteedSpawns ?? [])
         .filter(g => g.type === "gather" && g.materialId)
         .flatMap(g =>
             Array.from({ length: g.count ?? 0 }, () => ({
@@ -134,7 +134,7 @@ export function getFieldSpawnBreakdown(field) {
             }))
         );
 
-    const weightedGathers = (field.spawnTable ?? []).filter(
+    const weightedGathers = (zone.spawnTable ?? []).filter(
         e => (e.type ?? "gather") === "gather" && e.weight > 0
     );
 

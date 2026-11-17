@@ -1,7 +1,7 @@
 export const upgradeDefinitions = [
     {
         id: "fieldTools",
-        name: "Field Tools",
+        name: "Zone Tools",
         icon: "🔨",
         description: "+1 bonus sample per successful gather, per level.",
         baseCost: { gold: 50 },
@@ -29,6 +29,6 @@ export const upgradeDefinitions = [
             match: "any"
         },
         unlockDescription:
-            "Requires at least one level of Field Tools or Sword Drills."
+            "Requires at least one level of Zone Tools or Sword Drills."
     }
 ];

@@ -1,6 +1,6 @@
 
 // fields.js
-export const FIELD_DEFINITIONS = [
+export const ZONE_DEFINITIONS = [
     {
         id: "labValley",
         name: "Lab Valley",
@@ -31,7 +31,7 @@ export const FIELD_DEFINITIONS = [
             { amount: 5, weight: 1 }
         ],
 
-        // --- optional per-field overrides (null = derive from material + code default) ---
+        // --- optional per-zone overrides (null = derive from material + code default) ---
         strikeCountTable: null,      // e.g. [{ richness: 1, strikes: 2 }, ...]
         sparkleTable: null,          // e.g. [{ richness: 1, tier: 0 }, ...]
 
@@ -52,14 +52,14 @@ const materials = [
         subtype: "mineral",
         tier: 1,
         icon: "🪨",
-        description: "A rough fragment of common stone recovered from the field.",
+        description: "A rough fragment of common stone recovered from the zone.",
     
         mining: {
             strikesBase: 2,     // base strikes at richness 1, no tool bonus
             sparkleBase: 0      // base sparkle tier (0–3) — stone is dull
         }
     
-        // field: { id, dropChance }   ← DELETE — dead, superseded by spawnTable
+        // zone: { id, dropChance }   ← DELETE — dead, superseded by spawnTable
     },
     {
         id: "quartz",

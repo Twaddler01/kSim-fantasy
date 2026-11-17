@@ -1,15 +1,15 @@
 // src/ui/panels/WorldMapPanel.js
 //
-// Stylized world map for FIELD WORK. Replaces the field card list as the
+// Stylized world map for WORLD. Replaces the zone card list as the
 // default navigation view. Pins are DOM buttons absolutely positioned by
 // percentage on top of a static SVG background.
 //
-// Tap an unlocked pin → enters the field (immediately, no intermediate
-// info screen — the field view has all the detail). Tap a locked pin →
+// Tap an unlocked pin → enters the zone (immediately, no intermediate
+// info screen — the zone view has all the detail). Tap a locked pin →
 // toast with the unlock requirement.
 
 import { el } from "../components/Element.js";
-import { createFieldIcon } from "../fieldIcons.js";
+import { createZoneIcon } from "../zoneIcons.js";
 import { createSvgElement } from "../../assets/icons/svgHelpers.js";
 import { getWorldDrawing } from "../../assets/icons/world/worldMap.js";
 import { getMaterial } from "../../data/materials.js";
@@ -21,15 +21,15 @@ export default class WorldMapPanel {
         getGame,
         unlockManager,
         unreadManager,
-        fieldDefinitions,
-        onSelectField,
+        zoneDefinitions,
+        onSelectZone,
         showToast
     }) {
         this.getGame = getGame;
         this.unlockManager = unlockManager;
         this.unreadManager = unreadManager;
-        this.fieldDefinitions = fieldDefinitions;
-        this.onSelectField = onSelectField ?? (() => {});
+        this.zoneDefinitions = zoneDefinitions;
+        this.onSelectZone = onSelectZone ?? (() => {});
         this.showToast = showToast ?? (() => {});
 
         this.element = null;
@@ -79,25 +79,25 @@ export default class WorldMapPanel {
     update() {
         if (!this.pinLayer) return this;
 
-        const activeFieldId = this.game?.appState?.navigation?.activeFieldId;
+        const activeZoneId = this.game?.appState?.navigation?.activeZoneId;
 
         this.pinLayer.replaceChildren(
-            ...this.fieldDefinitions.map(field =>
-                this.renderPin(field, { activeFieldId })
+            ...this.zoneDefinitions.map(zone =>
+                this.renderPin(zone, { activeZoneId })
             )
         );
 
         return this;
     }
 
-    renderPin(field, { activeFieldId }) {
-        const unlocked = this.unlockManager.isUnlocked(field.id);
+    renderPin(zone, { activeZoneId }) {
+        const unlocked = this.unlockManager.isUnlocked(zone.id);
         const unread = this.unreadManager.isUnread(
-            "fieldWork",
-            `field-${field.id}`
+            "world",
+            `zone-${zone.id}`
         );
-        const active = activeFieldId === field.id;
-        const pos = field.mapPosition ?? FALLBACK_POSITION;
+        const active = activeZoneId === zone.id;
+        const pos = zone.mapPosition ?? FALLBACK_POSITION;
 
         const button = el(
             "button",
@@ -114,22 +114,22 @@ export default class WorldMapPanel {
                     left: `${pos.x}%`,
                     top: `${pos.y}%`
                 },
-                dataset: { fieldId: field.id },
+                dataset: { zoneId: zone.id },
                 "aria-label": unlocked
-                    ? `Enter ${field.name}`
-                    : `${field.name} (locked)`,
-                onClick: () => this.handlePinClick(field, unlocked)
+                    ? `Enter ${zone.name}`
+                    : `${zone.name} (locked)`,
+                onClick: () => this.handlePinClick(zone, unlocked)
             },
             [
                 el("span", { className: "world-map-pin-icon" }, [
-                    createFieldIcon(field, {
+                    createZoneIcon(zone, {
                         size: 26,
                         className: "world-map-pin-icon-svg"
                     })
                 ]),
                 el("span", {
                     className: "world-map-pin-label",
-                    text: field.name
+                    text: zone.name
                 }),
                 unlocked
                     ? null
@@ -154,25 +154,25 @@ export default class WorldMapPanel {
     // ACTIONS
     // ==================================================
 
-    handlePinClick(field, unlocked) {
+    handlePinClick(zone, unlocked) {
         if (!unlocked) {
-            this.showToast(this.getLockMessage(field));
+            this.showToast(this.getLockMessage(zone));
             return;
         }
 
-        this.onSelectField(field.id);
+        this.onSelectZone(zone.id);
     }
 
-    getLockMessage(field) {
-        const req = field.unlockTrigger;
-        if (!req) return `${field.name} is locked.`;
+    getLockMessage(zone) {
+        const req = zone.unlockTrigger;
+        if (!req) return `${zone.name} is locked.`;
 
         if (req.type === "inventoryAmount" && req.item) {
             const material = getMaterial(req.item);
             const itemName = material?.name ?? req.item;
-            return `${field.name} — requires ${req.amount} ${itemName}.`;
+            return `${zone.name} — requires ${req.amount} ${itemName}.`;
         }
 
-        return `${field.name} is locked.`;
+        return `${zone.name} is locked.`;
     }
 }

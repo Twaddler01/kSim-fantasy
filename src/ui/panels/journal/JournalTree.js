@@ -3,8 +3,8 @@ import { el } from "../../components/Element.js";
 import { getJournalEntriesByCategory } from "../../../data/journal/catalog.js";
 
 import {
-    getFieldMaterials,
-    getMaterialField,
+    getZoneMaterials,
+    getMaterialZone,
     getRecipesUsing,
     getRecipesProducing,
     getRecipeInputs,
@@ -19,8 +19,8 @@ const TREE_SECTIONS = [
         icon: "📍"
     },
     {
-        id: "fields",
-        label: "GATHERING FIELDS",
+        id: "zones",
+        label: "ZONES",
         icon: "🌎"
     },
     {
@@ -74,7 +74,7 @@ export default class JournalTree {
         this.selectedEntryId = null;
         this.selectedEntryType = null;
 
-        this.expanded = new Set(["locations", "fields", "synthesis"]);
+        this.expanded = new Set(["locations", "zones", "synthesis"]);
 
         this.element = el("div", {
             className: "journal-tree-layout"
@@ -163,13 +163,13 @@ export default class JournalTree {
             this.expanded.add(`synthesis:${category}`);
         }
 
-        // If this is a material found in a field,
-        // expand that field branch as well.
+        // If this is a material found in a zone,
+        // expand that zone branch as well.
         if (entry.type === "material") {
-            const field = getMaterialField(entry.id);
+            const zone = getMaterialZone(entry.id);
 
-            if (field) {
-                this.expanded.add(`field:${field.id}`);
+            if (zone) {
+                this.expanded.add(`zone:${zone.id}`);
             }
         }
 
@@ -336,9 +336,9 @@ export default class JournalTree {
         return this.renderCategoryEntries("locations");
     }
 
-    renderFields() {
-        return this.getEntries("fields").map(field => {
-            const materials = getFieldMaterials(field.id);
+    renderZones() {
+        return this.getEntries("zones").map(zone => {
+            const materials = getZoneMaterials(zone.id);
 
             const children = [];
 
@@ -357,7 +357,7 @@ export default class JournalTree {
                 );
             }
 
-            return this.createEntryBranch(field, children, `field:${field.id}`);
+            return this.createEntryBranch(zone, children, `zone:${zone.id}`);
         });
     }
 
@@ -404,8 +404,8 @@ export default class JournalTree {
 
         if (section.id === "locations") {
             children = this.renderLocations();
-        } else if (section.id === "fields") {
-            children = this.renderFields();
+        } else if (section.id === "zones") {
+            children = this.renderZones();
         } else if (section.id === "synthesis") {
             children = this.renderSynthesis();
         } else {
@@ -486,8 +486,8 @@ export default class JournalTree {
     }
 
     renderRelationships(container, entry) {
-        if (entry.type === "field") {
-            const materials = getFieldMaterials(entry.id)
+        if (entry.type === "zone") {
+            const materials = getZoneMaterials(entry.id)
                 .filter(item => item.material)
                 .map(item => item.material);
 
@@ -495,10 +495,10 @@ export default class JournalTree {
         }
 
         if (entry.type === "material") {
-            const field = getMaterialField(entry.id);
+            const zone = getMaterialZone(entry.id);
 
-            if (field) {
-                this.renderRelatedSection(container, "FOUND IN FIELD", [field]);
+            if (zone) {
+                this.renderRelatedSection(container, "FOUND IN ZONE", [zone]);
             }
 
             const usedIn = getRecipesUsing(entry.id);
