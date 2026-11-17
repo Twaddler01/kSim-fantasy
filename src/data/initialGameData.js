@@ -7,7 +7,7 @@ export const initialGameData = {
         experience: 0
     },
     upgrades: {
-        fieldTools: 0,
+        zoneTools: 0,
         swordDrills: 0,
         herbalistsKit: 0
     },

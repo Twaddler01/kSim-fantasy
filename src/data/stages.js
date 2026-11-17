@@ -2,7 +2,7 @@
 //
 // Quest spine for the valley. Each stage is one primary objective that
 // pulls the whole game forward. Requirements are checked against
-// game.inventory and game.discoveries after every refreshUI().
+// game.inventory after every refreshUI().
 
 export const stageDefinitions = [
     {

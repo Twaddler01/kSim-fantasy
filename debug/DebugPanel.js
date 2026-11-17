@@ -49,24 +49,23 @@ export default class DebugPanel {
     addActions() {
         this.actions = [
             {
-    label: "Queue 3 Announcements",
-    run: () => {
-        for (let i = 1; i <= 3; i++) {
-            this.showAnnouncement({
-                title: `Announcement ${i}`,
-                message: `Queued test message ${i}.`
-            });
-        }
-        this.showToast("3 announcements queued.");
-    }
-},
+                label: "Queue 3 Announcements",
+                run: () => {
+                    for (let i = 1; i <= 3; i++) {
+                        this.showAnnouncement({
+                            title: `Announcement ${i}`,
+                            message: `Queued test message ${i}.`
+                        });
+                    }
+                    this.showToast("3 announcements queued.");
+                }
+            },
             {
-                label: 'TEST',
-                run: async () => {
-                    const { addInventoryItem } = await import("../src/data/inventory.js");
-addInventoryItem(kSim.data, "ironSword", 1);
-addInventoryItem(kSim.data, "leatherVest", 1);
-kSim.render();
+                label: "Grant Starter Equipment",
+                run: () => {
+                    addInventoryItem(this.getGame(), "ironSword", 1);
+                    addInventoryItem(this.getGame(), "leatherVest", 1);
+                    this.finishGrant("Starter equipment");
                 }
             },
             {

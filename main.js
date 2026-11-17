@@ -136,7 +136,7 @@ for (const zone of ZONE_DEFINITIONS) {
 for (const upgrade of upgradeDefinitions) {
     unlockManager.registerUnlock({
         id: upgrade.id,
-        initialUnlocked: ["fieldTools", "swordDrills"].includes(upgrade.id)
+        initialUnlocked: ["zoneTools", "swordDrills"].includes(upgrade.id)
     });
 
     if (upgrade.trigger) {

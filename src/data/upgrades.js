@@ -1,6 +1,6 @@
 export const upgradeDefinitions = [
     {
-        id: "fieldTools",
+        id: "zoneTools",
         name: "Zone Tools",
         icon: "🔨",
         description: "+1 bonus sample per successful gather, per level.",
@@ -24,7 +24,7 @@ export const upgradeDefinitions = [
         maxLevel: 3,
         trigger: {
             type: "upgradeLevel",
-            upgradeIds: ["fieldTools", "swordDrills"],
+            upgradeIds: ["zoneTools", "swordDrills"],
             minLevel: 1,
             match: "any"
         },
