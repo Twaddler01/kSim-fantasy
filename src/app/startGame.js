@@ -38,8 +38,6 @@ import { Button } from "../ui/components/Button.js";
 // Navigation
 import { Tabs } from "../ui/navigation/Tabs/Tabs.js";
 
-////
-
 import { initialGameData } from "../data/initialGameData.js";
 import { resourceDefinitions } from "../data/resources.js";
 import { upgradeDefinitions } from "../data/upgrades.js";
@@ -72,7 +70,7 @@ import {
 
 import { ensurePlayerInitialized } from "../systems/character.js";
 
-import { createZoneHandlers } from "../domain/zoneHandlers.js";
+import ZoneActions from "./actions/ZoneActions.js";
 import { createProgressionProcessor } from "../domain/progressionProcessing.js";
 
 import UnreadManager from "../managers/UnreadManager.js";
@@ -261,19 +259,38 @@ export function startGame() {
 
     const processProgression = progression.processProgression;
 
-    const zoneHandlers = createZoneHandlers({
+
+
+
+
+// UI references used by the presentation adapter.
+// WorldPanel creates zones lazily, so these are initialized
+// before any zone interaction can occur.
+
+let worldPanel;
+let battleModal;
+    let lootModal;
+    let caveModal;
+    
+    const zoneActions = new ZoneActions({
         getGame: () => game,
-        getUI: () => ui,
         save,
         refreshUI: options => refreshUI(options),
         showToast: message => showToast(message),
         showAnnouncement,
         logEvent,
         processProgression,
-        resourcePopups
+        resourcePopups,
+    
+        presentation: {
+            deactivateZone: () => worldPanel?.deactivateZone?.(),
+            showBattle: battle => battleModal.show(battle),
+            showLoot: rewards => lootModal.show(rewards),
+            showCave: dungeonId => caveModal.show(dungeonId)
+        }
     });
 
-    const worldPanel = new WorldPanel({
+    worldPanel = new WorldPanel({
         getGame: () => game,
         save,
         unlockManager,
@@ -296,17 +313,17 @@ export function startGame() {
                 zone,
                 getSprites: () => materialSprites,
                 getTiles: () => getTileCache(),
-                onGather: zoneHandlers.handleGather,
-                onEncounter: zoneHandlers.handleEncounter,
-                onOpenCache: zoneHandlers.handleOpenCache,
-                onEnterCave: zoneHandlers.handleEnterCave
+                onGather: zoneActions.handleGather,
+                onEncounter: zoneActions.handleEncounter,
+                onOpenCache: zoneActions.handleOpenCache,
+                onEnterCave: zoneActions.handleEnterCave
             });
         }
     });
 
     ui.worldPanel = worldPanel;
 
-    ui.battleModal = new BattleModal({
+    battleModal = new BattleModal({
         getGame: () => game,
         save,
         refreshUI: options => refreshUI(options),
@@ -314,26 +331,39 @@ export function startGame() {
         onClose: () => {
             worldPanel.update();
             const items = ui.battleModal?.battle?.rewards?.items ?? [];
-            zoneHandlers.announceDiscoveriesFrom(items);
+            zoneActions.announceDiscoveriesFrom(items);
         }
     });
 
-    ui.lootModal = new LootModal({
+    ui.battleModal = battleModal;
+
+    lootModal = new LootModal({
         onClose: newlyDiscovered => {
-            zoneHandlers.announceDiscoveriesFrom(newlyDiscovered);
+            zoneActions.announceDiscoveriesFrom(newlyDiscovered);
         }
     });
 
-    ui.caveModal = new CaveModal({
+    ui.lootModal = lootModal;
+
+    caveModal = new CaveModal({
         getGame: () => game,
         save,
         refreshUI: options => refreshUI(options),
         onClose: newlyDiscovered => {
             worldPanel.update();
-            zoneHandlers.announceDiscoveriesFrom(newlyDiscovered);
+            zoneActions.announceDiscoveriesFrom(newlyDiscovered);
         }
     });
 
+    ui.caveModal = caveModal;
+
+
+
+
+
+
+
+    
     const mainObjective = new MainObjective({
         getGame: () => game,
         onToggleTracker: enabled => {
