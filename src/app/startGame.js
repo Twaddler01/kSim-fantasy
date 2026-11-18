@@ -71,7 +71,8 @@ import {
 import { ensurePlayerInitialized } from "../systems/character.js";
 
 import ZoneActions from "./actions/ZoneActions.js";
-import { createProgressionProcessor } from "../domain/progressionProcessing.js";
+import ProgressionProcessor from "../domain/progressionProcessing.js";
+import { createZoneIcon } from "../ui/zoneIcons.js";
 
 import UnreadManager from "../managers/UnreadManager.js";
 import Announce from "../notifications/Announce.js";
@@ -245,7 +246,7 @@ export function startGame() {
         getGame: () => game
     });
 
-    const progression = createProgressionProcessor({
+    const progression = new ProgressionProcessor({
         getGame: () => game,
         save,
         logEvent,
@@ -254,21 +255,18 @@ export function startGame() {
         showAnnouncement,
         unlockManager,
         eventProcessor,
-        zoneDefinitions: ZONE_DEFINITIONS
+        zoneDefinitions: ZONE_DEFINITIONS,
+        createZoneSymbol: createZoneIcon
     });
-
+    
     const processProgression = progression.processProgression;
-
-
-
-
-
-// UI references used by the presentation adapter.
-// WorldPanel creates zones lazily, so these are initialized
-// before any zone interaction can occur.
-
-let worldPanel;
-let battleModal;
+    
+    // UI references used by the presentation adapter.
+    // WorldPanel creates zones lazily, so these are initialized
+    // before any zone interaction can occur.
+    
+    let worldPanel;
+    let battleModal;
     let lootModal;
     let caveModal;
     

@@ -1,64 +1,87 @@
+
 // src/domain/progressionProcessing.js
 //
-// Event-driven progression: unlock processing, batch handling, and the
-// "zone unlocked" notification fanout.
+// Event-driven progression: unlock processing, batch handling, and
+// zone-unlocked notification fanout.
 //
-// processProgression() is idempotent and reentrant-safe: it processes
-// events in batches, since completing one trigger can satisfy another
-// (chain: forgeMastery requires 3 iron ingots; if you smelt the 3rd
-// during a batch, the event processor picks it up on the next loop).
+// Processes events repeatedly because one completed trigger may
+// satisfy another trigger in the same progression cycle.
 
-import { createZoneIcon } from "../ui/zoneIcons.js";
+export default class ProgressionProcessor {
+    constructor({
+        getGame,
+        save,
+        logEvent,
+        showToast,
+        notifyUnread,
+        showAnnouncement,
+        unlockManager,
+        eventProcessor,
+        zoneDefinitions,
+        createZoneSymbol
+    }) {
+        this.getGame = getGame;
+        this.save = save;
+        this.logEvent = logEvent;
+        this.showToast = showToast;
+        this.notifyUnread = notifyUnread;
+        this.showAnnouncement = showAnnouncement;
+        this.unlockManager = unlockManager;
+        this.eventProcessor = eventProcessor;
+        this.zoneDefinitions = zoneDefinitions;
+        this.createZoneSymbol = createZoneSymbol;
 
-export function createProgressionProcessor({
-    getGame,
-    save,
-    logEvent,
-    showToast,
-    notifyUnread,
-    showAnnouncement,
-    unlockManager,
-    eventProcessor,
-    zoneDefinitions
-}) {
-    const game = () => getGame();
+        // These methods are passed around as callbacks.
+        this.processProgression =
+            this.processProgression.bind(this);
 
-    function handleZoneUnlock(zoneId, { notify = true } = {}) {
-        if (!unlockManager.unlock(zoneId)) return false;
+        this.handleZoneUnlock =
+            this.handleZoneUnlock.bind(this);
+    }
 
-        const zone = zoneDefinitions.find(item => item.id === zoneId);
+    handleZoneUnlock(zoneId, { notify = true } = {}) {
+        if (!this.unlockManager.unlock(zoneId)) return false;
+
+        const zone = this.zoneDefinitions.find(
+            item => item.id === zoneId
+        );
+
         if (!zone) return false;
 
         if (notify) {
-            notifyUnread("world", `zone-${zoneId}`);
+            this.notifyUnread("world", `zone-${zoneId}`);
         }
 
-        logEvent(game(), `NEW ZONE DISCOVERED: ${zone.name} unlocked.`, {
-            category: "activity",
-            tab: "log"
-        });
+        this.logEvent(
+            this.getGame(),
+            `NEW ZONE DISCOVERED: ${zone.name} unlocked.`,
+            {
+                category: "activity",
+                tab: "log"
+            }
+        );
 
         if (notify) {
-            showToast(`${zone.name} unlocked!`);
+            this.showToast(`${zone.name} unlocked!`);
 
-            showAnnouncement({
+            this.showAnnouncement({
                 title: "NEW ZONE DISCOVERED",
                 message: `${zone.name}: ${zone.description}`,
-                symbol: createZoneIcon(zone, { size: 44 })
+                symbol: this.createZoneSymbol(zone, { size: 44 })
             });
         }
 
         return true;
     }
 
-    function processProgression({ notify = true } = {}) {
+    processProgression({ notify = true } = {}) {
         let changed = false;
         let batch;
 
         // Process repeatedly because completing one event
         // can satisfy another event's trigger.
         do {
-            batch = eventProcessor.process();
+            batch = this.eventProcessor.process();
 
             for (const event of batch) {
                 const { id, definition } = event;
@@ -67,15 +90,22 @@ export function createProgressionProcessor({
                 // Progression system becomes permanently available.
                 if (id.startsWith("progression:")) {
                     const unlockId = id.slice("progression:".length);
-                    if (!unlockManager.unlock(unlockId)) continue;
 
-                    logEvent(game(), `NEW SYSTEM AVAILABLE: ${content.name}.`, {
-                        category: "activity",
-                        tab: "log"
-                    });
+                    if (!this.unlockManager.unlock(unlockId)) {
+                        continue;
+                    }
+
+                    this.logEvent(
+                        this.getGame(),
+                        `NEW SYSTEM AVAILABLE: ${content.name}.`,
+                        {
+                            category: "activity",
+                            tab: "log"
+                        }
+                    );
 
                     if (notify) {
-                        showToast(`${content.name} unlocked!`);
+                        this.showToast(`${content.name} unlocked!`);
                     }
 
                     changed = true;
@@ -85,17 +115,20 @@ export function createProgressionProcessor({
                 // Upgrade becomes permanently available.
                 if (id.startsWith("upgrade:")) {
                     const upgradeId = id.slice("upgrade:".length);
-                    if (!unlockManager.unlock(upgradeId)) continue;
+
+                    if (!this.unlockManager.unlock(upgradeId)) {
+                        continue;
+                    }
 
                     const upgrade = content;
 
                     if (upgrade) {
                         if (notify) {
-                            notifyUnread("equipment", upgradeId);
+                            this.notifyUnread("equipment", upgradeId);
                         }
 
-                        logEvent(
-                            game(),
+                        this.logEvent(
+                            this.getGame(),
                             `NEW EQUIPMENT AVAILABLE: ${upgrade.name}.`,
                             {
                                 category: "activity",
@@ -104,7 +137,7 @@ export function createProgressionProcessor({
                         );
 
                         if (notify) {
-                            showToast(`${upgrade.name} unlocked!`);
+                            this.showToast(`${upgrade.name} unlocked!`);
                         }
                     }
 
@@ -115,7 +148,8 @@ export function createProgressionProcessor({
                 // Gathering zone becomes permanently available.
                 if (id.startsWith("zone:")) {
                     const zoneId = id.slice("zone:".length);
-                    if (handleZoneUnlock(zoneId, { notify })) {
+
+                    if (this.handleZoneUnlock(zoneId, { notify })) {
                         changed = true;
                     }
                 }
@@ -123,20 +157,21 @@ export function createProgressionProcessor({
         } while (batch.length > 0);
 
         // The remembered zone must always remain unlocked.
-        const navigation = game().appState.navigation;
+        const navigation = this.getGame().appState.navigation;
         const activeZoneId = navigation.activeZoneId;
 
-        if (activeZoneId && !unlockManager.isUnlocked(activeZoneId)) {
+        if (
+            activeZoneId &&
+            !this.unlockManager.isUnlocked(activeZoneId)
+        ) {
             navigation.activeZoneId = null;
             changed = true;
         }
 
         if (changed) {
-            save();
+            this.save();
         }
 
         return changed;
     }
-
-    return { processProgression, handleZoneUnlock };
 }
