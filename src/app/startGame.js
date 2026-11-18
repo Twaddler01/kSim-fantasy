@@ -35,8 +35,9 @@ import { consumeItem } from "../systems/ConsumableSystem.js";
 // Components
 import { el } from "../ui/components/Element.js";
 import { Button } from "../ui/components/Button.js";
+
 // Navigation
-import { Tabs } from "../ui/navigation/Tabs/Tabs.js";
+import GameUI from "../ui/GameUI.js";
 
 import { initialGameData } from "../data/initialGameData.js";
 import { resourceDefinitions } from "../data/resources.js";
@@ -148,7 +149,7 @@ export function startGame() {
         });
     }
 
-    let activeTab = "camp";
+    let gameUI = null;
     let ui = {};
 
     let materialSprites = {};
@@ -201,10 +202,10 @@ export function startGame() {
         getGame: () => game,
         save,
         onChange: () => {
-            ui.tabs?.update({ refreshContent: false });
+            gameUI?.tabs?.update({ refreshContent: false });
             ui.worldPanel?.refreshUnreadIndicators?.();
         },
-        isTabActive: tabId => activeTab === tabId
+        isTabActive: tabId => (gameUI?.activeTab ?? "camp") === tabId
     });
 
     function notifyUnread(tabId, itemId, options = {}) {
@@ -258,18 +259,18 @@ export function startGame() {
         zoneDefinitions: ZONE_DEFINITIONS,
         createZoneSymbol: createZoneIcon
     });
-    
+
     const processProgression = progression.processProgression;
-    
+
     // UI references used by the presentation adapter.
     // WorldPanel creates zones lazily, so these are initialized
     // before any zone interaction can occur.
-    
+
     let worldPanel;
     let battleModal;
     let lootModal;
     let caveModal;
-    
+
     const zoneActions = new ZoneActions({
         getGame: () => game,
         save,
@@ -279,7 +280,7 @@ export function startGame() {
         logEvent,
         processProgression,
         resourcePopups,
-    
+
         presentation: {
             deactivateZone: () => worldPanel?.deactivateZone?.(),
             showBattle: battle => battleModal.show(battle),
@@ -345,7 +346,7 @@ export function startGame() {
         save,
         refreshUI: options => refreshUI(options)
     });
-    
+
     caveModal = new CaveModal({
         getGame: () => game,
         searchCave: caveId => caveSearch.search(caveId),
@@ -355,16 +356,9 @@ export function startGame() {
             zoneActions.announceDiscoveriesFrom(newlyDiscovered);
         }
     });
-    
+
     ui.caveModal = caveModal;
 
-
-
-
-
-
-
-    
     const mainObjective = new MainObjective({
         getGame: () => game,
         onToggleTracker: enabled => {
@@ -395,139 +389,11 @@ export function startGame() {
     }
 
     function navigateTo(target = {}) {
-        return coordinateNavigation(ui.tabs, target);
+        return coordinateNavigation(gameUI?.tabs, target);
     }
 
     function navigateToItem(target) {
-        return navigateTabToItem(ui.tabs, target);
-    }
-
-    function renderDatabasePanel(title, count, content) {
-        return el("section", { className: "database-view" }, [
-            el("div", { className: "section-heading" }, [
-                el("div", {}, [
-                    el("div", { className: "eyebrow", text: "DATABASE" }),
-                    el("h2", { text: title })
-                ]),
-                el("span", {
-                    className: "count-pill",
-                    text: count
-                })
-            ]),
-            content
-        ]);
-    }
-
-    function updateActiveDatabaseCount(count) {
-        const countPill = ui.tabs?.panel?.querySelector(
-            ".database-view .count-pill"
-        );
-
-        if (countPill) {
-            countPill.textContent = count;
-        }
-    }
-
-    // ========================================
-    // TAB CONTENT RENDERERS
-    // ========================================
-
-    function renderCampTab() {
-        return ui.campContent;
-    }
-
-    function renderWorldTab() {
-        return worldPanel.getElement();
-    }
-
-    function renderSynthesisTab() {
-        return synthesisPanel.getElement();
-    }
-
-    function renderEquipmentTab() {
-        return renderDatabasePanel(
-            "Equipment",
-            `${Object.values(game.upgrades).reduce((a, b) => a + b, 0)} levels`,
-            upgradePanel.render()
-        );
-    }
-
-    function renderLogTab() {
-        return renderDatabasePanel(
-            "Journey",
-            `${game.log.length} entries`,
-            logPanel.render()
-        );
-    }
-
-    function renderJournalTab() {
-        return journalPanel.getElement();
-    }
-
-    function renderDebugTab() {
-        return debugPanel.getElement();
-    }
-
-    // ========================================
-    // TAB REGISTRATION
-    // ========================================
-
-    function renderTabContent() {
-        const tabDefinitions = [
-            {
-                id: "debug",
-                label: "DEBUG",
-                render: renderDebugTab
-            },
-            {
-                id: "camp",
-                label: "CAMP",
-                render: renderCampTab
-            },
-            {
-                id: "world",
-                label: "WORLD",
-                render: renderWorldTab
-            },
-            {
-                id: "synthesis",
-                label: "SYNTHESIS",
-                render: renderSynthesisTab
-            },
-            {
-                id: "equipment",
-                label: "EQUIPMENT",
-                render: renderEquipmentTab
-            },
-            {
-                id: "log",
-                label: "LOG",
-                render: renderLogTab
-            },
-            {
-                id: "journal",
-                label: "JOURNAL",
-                render: renderJournalTab
-            }
-        ];
-
-        const tabs = new Tabs({
-            activeId: activeTab,
-            label: "Sections",
-            unreadManager,
-            tabs: tabDefinitions.map(tab => ({
-                ...tab,
-                unread: ["camp", "world", "equipment", "log"].includes(tab.id)
-            })),
-            onChange: id => {
-                activeTab = id;
-                updateActiveTabUI();
-            }
-        });
-
-        ui.tabs = tabs;
-
-        return tabs.element;
+        return navigateTabToItem(gameUI?.tabs, target);
     }
 
     const toast = new Toast();
@@ -538,70 +404,6 @@ export function startGame() {
 
     // Evaluate conditions already satisfied by the loaded save.
     processProgression({ notify: false });
-
-    function updateActiveTabUI() {
-        // Stop the canvas loop when we're not on the world tab.
-        if (activeTab !== "world") {
-            worldPanel.deactivateZone?.();
-        }
-
-        if (activeTab === "camp") {
-            const stage = getCurrentStage(game);
-            if (stage) {
-                unreadManager.markRead("camp", `objective-${stage.id}`);
-            }
-        }
-
-        switch (activeTab) {
-            case "debug":
-                debugPanel.update();
-                break;
-            case "camp":
-                updateCampTab();
-                break;
-            case "world":
-                updateWorldTab();
-                break;
-            case "synthesis":
-                synthesisPanel.update();
-                break;
-            case "equipment":
-                updateEquipmentTab();
-                break;
-            case "log":
-                updateLogTab();
-                break;
-            case "journal":
-                updateJournalTab();
-                break;
-        }
-    }
-
-    function updateCampTab() {
-        mainObjective?.update?.();
-    }
-
-    function updateWorldTab() {
-        worldPanel.update();
-    }
-
-    function updateEquipmentTab() {
-        upgradePanel.update();
-
-        updateActiveDatabaseCount(
-            `${Object.values(game.upgrades).reduce((a, b) => a + b, 0)} levels`
-        );
-    }
-
-    function updateLogTab() {
-        logPanel.update();
-
-        updateActiveDatabaseCount(`${game.log.length} entries`);
-    }
-
-    function updateJournalTab() {
-        journalPanel.update();
-    }
 
     function updateSharedUI() {
         syncInventoryDiscovery(game);
@@ -615,8 +417,10 @@ export function startGame() {
         }
 
         const result = tryAdvanceStage(game);
+
         if (result.advanced) {
             save();
+
             if (result.to) {
                 showToast(
                     `Objective complete. New objective: ${result.to.name}.`
@@ -631,10 +435,10 @@ export function startGame() {
         objectiveTracker?.update?.();
 
         if (database) {
-            ui.tabs.update({ refreshContent: false });
+            gameUI.tabs.update({ refreshContent: false });
         }
 
-        updateActiveTabUI();
+        gameUI.updateActiveTab();
     }
 
     const upgradePanel = new UpgradePanel({
@@ -798,18 +602,44 @@ export function startGame() {
             openItemSheet: itemId => ui.itemSheet.show(itemId)
         });
 
+        gameUI = new GameUI({
+            getGame: () => game,
+            getCurrentStage,
+            unreadManager,
+
+            panels: {
+                debugPanel,
+                mainObjective,
+                worldPanel,
+                synthesisPanel,
+                upgradePanel,
+                logPanel,
+                journalPanel
+            },
+
+            onTabChange: () => gameUI.updateActiveTab()
+        });
+
+        // Give GameUI the content it should display in the CAMP tab.
+        gameUI.campContent = ui.campContent;
+
+        const tabsElement = gameUI.createTabs();
+
+        // Keep the existing UI reference working for other components.
+        ui.tabs = gameUI.tabs;
+
         const layout = el("div", { className: "game-layout" }, [
             topbar,
             objectiveTracker.getElement(),
             ui.inventory.element,
-            renderTabContent()
+            tabsElement
         ]);
 
         ui.layout = layout;
         app.replaceChildren(layout);
 
         updateSharedUI();
-        updateCampTab();
+        mainObjective.update();
     }
 
     window.kSim = {
