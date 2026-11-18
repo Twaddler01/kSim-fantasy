@@ -36,7 +36,8 @@ export const ZONE_DEFINITIONS = [
         // Guaranteed spawns — placed first, always present, unaffected by RNG.
         guaranteedSpawns: [
             { type: "enemy", enemyId: "meadowWolf", count: 2 },
-            { type: "cache", lootTableId: "meadowCache", count: 1 }
+            { type: "cache", lootTableId: "meadowCache", count: 1 },
+            { type: "cave", dungeonId: "whisperingCave", lootTableId: "whisperingCaveLoot", count: 1 },
         ],
 
         spawnTable: [

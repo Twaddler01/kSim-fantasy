@@ -70,9 +70,10 @@ import {
 
 import { ensurePlayerInitialized } from "../systems/character.js";
 
-import ZoneActions from "./actions/ZoneActions.js";
 import ProgressionProcessor from "../domain/progressionProcessing.js";
+import ZoneActions from "./actions/ZoneActions.js";
 import { createZoneIcon } from "../ui/zoneIcons.js";
+import CaveSearch from "./actions/CaveSearch.js";
 
 import UnreadManager from "../managers/UnreadManager.js";
 import Announce from "../notifications/Announce.js";
@@ -343,16 +344,22 @@ export function startGame() {
 
     ui.lootModal = lootModal;
 
-    caveModal = new CaveModal({
+    const caveSearch = new CaveSearch({
         getGame: () => game,
         save,
-        refreshUI: options => refreshUI(options),
+        refreshUI: options => refreshUI(options)
+    });
+    
+    caveModal = new CaveModal({
+        getGame: () => game,
+        searchCave: caveId => caveSearch.search(caveId),
+        hasSearched: caveId => caveSearch.hasSearched(caveId),
         onClose: newlyDiscovered => {
             worldPanel.update();
             zoneActions.announceDiscoveriesFrom(newlyDiscovered);
         }
     });
-
+    
     ui.caveModal = caveModal;
 
 

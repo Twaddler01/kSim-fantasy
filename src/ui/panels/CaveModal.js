@@ -9,24 +9,21 @@
 
 import { el } from "../components/Element.js";
 import { getCave } from "../../data/caves.js";
-import { getLootTable } from "../../data/lootTables.js";
-import { rollFromLootTable } from "../../systems/loot.js";
 
 export default class CaveModal {
-    constructor({ getGame, save, refreshUI, onClose } = {}) {
+    constructor({ getGame, searchCave, hasSearched, onClose } = {}) {
         if (typeof getGame !== "function") {
             throw new Error("CaveModal requires getGame().");
         }
 
         this.getGame = getGame;
-        this.save = save ?? (() => {});
-        this.refreshUI = refreshUI ?? (() => {});
+        this.searchCave = searchCave;
+        this.hasSearched = hasSearched;
         this.onClose = onClose ?? (() => {});
 
         this.currentCave = null;
         this.currentRewards = null;
         this.visible = false;
-        this.searchedCaves = new Set(); // session-local
         this.lastNewlyDiscovered = [];
 
         this.buildDOM();
@@ -109,24 +106,22 @@ export default class CaveModal {
         const cave = this.currentCave;
         if (!cave) return;
 
-        const alreadySearched = this.searchedCaves.has(cave.id);
-        if (alreadySearched) return;
+        const result = this.searchCave(cave.id);
 
-        const table = getLootTable(cave.lootTableId);
-        if (!table) {
-            console.warn("[CaveModal] Missing loot table:", cave.lootTableId);
+        if (!result.ok) {
+            if (result.reason === "missing-loot-table") {
+                console.warn(
+                    "[CaveModal] Missing loot table:",
+                    cave.lootTableId
+                );
+            }
+
             return;
         }
 
-        const items = rollFromLootTable(this.game, table);
-        this.currentRewards = { items };
-        this.lastNewlyDiscovered = items.filter(
-            item => item.newlyDiscovered && !item.failed
-        );
-        this.searchedCaves.add(cave.id);
+        this.currentRewards = { items: result.items };
+        this.lastNewlyDiscovered = result.newlyDiscovered;
 
-        this.save();
-        this.refreshUI({ database: true });
         this.render();
     }
 
@@ -172,8 +167,8 @@ export default class CaveModal {
             );
         }
 
-        const alreadySearched = this.searchedCaves.has(cave.id);
-
+        const alreadySearched = this.hasSearched(cave.id);
+        
         if (this.currentRewards) {
             // Show search result inline.
             if (cave.searchNarrative) {
