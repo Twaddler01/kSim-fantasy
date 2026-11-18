@@ -94,6 +94,29 @@ const ENTITY_MINIMAP_COLORS = {
     poi: "rgba(200,180,255,0.9)"
 };
 
+const ENTITY_RING_COLORS = {
+    gather: {
+        fill: "rgba(120, 255, 180, 0.12)",
+        stroke: alpha => `rgba(140, 255, 190, ${alpha})`
+    },
+    enemy: {
+        fill: "rgba(255, 100, 100, 0.15)",
+        stroke: alpha => `rgba(255, 130, 130, ${alpha})`
+    },
+    cache: {
+        fill: "rgba(255, 200, 80, 0.15)",
+        stroke: alpha => `rgba(255, 220, 110, ${alpha})`
+    },
+    cave: {
+        fill: "rgba(120, 140, 255, 0.15)",
+        stroke: alpha => `rgba(150, 170, 255, ${alpha})`
+    },
+    poi: {
+        fill: "rgba(65, 220, 115, 0.18)",
+        stroke: alpha => `rgba(90, 255, 145, ${alpha})`
+    }
+};
+
 export default class ZoneCanvas {
     constructor({
         entities = [],
@@ -653,21 +676,19 @@ export default class ZoneCanvas {
                 ctx.restore();
             } else if (e.icon) {
                 ctx.save();
-
-                // Fallback tinted circle. Skipped when the interaction
-                // indicator is present — the green ring already anchors
-                // the entity, so a second colored disc is visual noise.
-                if (!e.showInteractionIndicator) {
-                    ctx.fillStyle =
-                        ENTITY_FALLBACK_COLORS[e.type] ??
-                        ENTITY_FALLBACK_COLORS.gather;
-                    ctx.globalAlpha = 0.25;
-                    ctx.beginPath();
-                    ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.globalAlpha = 1;
-                }
-
+            
+                // Backdrop tint. Always rendered for emoji entities —
+                // it anchors the emoji, and the interaction ring sits
+                // around it as the type signal.
+                ctx.fillStyle =
+                    ENTITY_FALLBACK_COLORS[e.type] ??
+                    ENTITY_FALLBACK_COLORS.gather;
+                ctx.globalAlpha = 0.20;
+                ctx.beginPath();
+                ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            
                 // Emoji on top.
                 ctx.fillStyle = "#ffffff";
                 ctx.font = `${Math.round(
@@ -759,28 +780,38 @@ export default class ZoneCanvas {
      * `showInteractionIndicator: true`. Anchor point is the entity's
      * (drawX, drawY) — callers pass those so the ring follows shake
      * offsets together with the sprite.
+     *//**
+     * Universal interaction indicator.
+     * A subtle colored ring drawn over any entity with
+     * `showInteractionIndicator: true`. Ring color is determined by
+     * `entity.type` (green = gather, red = enemy, gold = cache,
+     * blue = cave, green = town POI). Anchor point is the entity's
+     * (drawX, drawY) so the ring follows shake offsets together with
+     * the sprite.
      */
     drawInteractionIndicator(ctx, entity, drawX, drawY) {
         if (!entity.showInteractionIndicator) return;
 
-        const radius =
-            entity.indicatorRadius ?? entity.r ?? 20;
+        const colors =
+            ENTITY_RING_COLORS[entity.type] ?? ENTITY_RING_COLORS.gather;
+
+        const radius = entity.indicatorRadius ?? entity.r ?? 20;
 
         // Very subtle pulse: oscillates the stroke alpha between
-        // 0.6 and 0.9 over ~4 seconds. Never fully invisible.
-        const pulse = 0.75 + 0.15 * Math.sin(this.time * 1.5);
+        // 0.55 and 0.85 over ~4 seconds. Never fully invisible.
+        const pulse = 0.7 + 0.15 * Math.sin(this.time * 1.5);
         const strokeAlpha = Math.round(pulse * 100) / 100;
 
         ctx.save();
 
-        // Transparent green fill.
-        ctx.fillStyle = "rgba(65, 220, 115, 0.18)";
+        // Transparent color fill.
+        ctx.fillStyle = colors.fill;
         ctx.beginPath();
         ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Visible green outline.
-        ctx.strokeStyle = `rgba(90, 255, 145, ${strokeAlpha})`;
+        // Visible colored outline.
+        ctx.strokeStyle = colors.stroke(strokeAlpha);
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
