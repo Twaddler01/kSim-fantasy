@@ -1,13 +1,10 @@
 
-// src/domain/progressionProcessing.js
+// src/app/services/ProgressionService.js
 //
-// Event-driven progression: unlock processing, batch handling, and
-// zone-unlocked notification fanout.
-//
-// Processes events repeatedly because one completed trigger may
-// satisfy another trigger in the same progression cycle.
+// Coordinates progression workflows: event processing, permanent
+// unlocks, persistence, and progression notifications.
 
-export default class ProgressionProcessor {
+export default class ProgressionService {
     constructor({
         getGame,
         save,

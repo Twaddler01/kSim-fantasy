@@ -9,7 +9,6 @@ import { startBattle } from "../../systems/BattleSystem.js";
 import { getLootTable } from "../../data/lootTables.js";
 import { rollFromLootTable } from "../../systems/loot.js";
 import { materials } from "../../data/materials.js";
-import { MaterialIcon } from "../../assets/icons/materials/MaterialIcon.js";
 
 export default class ZoneActions {
     constructor({
@@ -62,23 +61,7 @@ export default class ZoneActions {
         );
 
         if (result.newlyDiscovered) {
-            this.logEvent(
-                game,
-                `NEW MATERIAL DISCOVERED: ${result.item.name}.`,
-                {
-                    category: "important",
-                    tab: "log"
-                }
-            );
-
-            this.showAnnouncement({
-                title: "NEW MATERIAL DISCOVERED",
-                message: `${result.item.name}: ${
-                    result.item.description ??
-                    "A new material enters your journal."
-                }`,
-                symbol: MaterialIcon(result.item.id, { size: 44 })
-            });
+            this.announceMaterialDiscovery(result.item);
         }
 
         this.processProgression();
@@ -140,28 +123,32 @@ export default class ZoneActions {
     announceDiscoveriesFrom(items) {
         for (const item of items ?? []) {
             if (!item.newlyDiscovered || item.failed) continue;
-
+    
             const material = materials.find(m => m.id === item.itemId);
-
+    
             if (!material) continue;
-
-            this.logEvent(
-                this.getGame(),
-                `NEW MATERIAL DISCOVERED: ${material.name}.`,
-                {
-                    category: "important",
-                    tab: "log"
-                }
-            );
-
-            this.showAnnouncement({
-                title: "NEW MATERIAL DISCOVERED",
-                message: `${material.name}: ${
-                    material.description ??
-                    "A new material enters your journal."
-                }`,
-                symbol: MaterialIcon(material.id, { size: 44 })
-            });
+    
+            this.announceMaterialDiscovery(material);
         }
+    }
+
+    announceMaterialDiscovery(material) {
+        this.logEvent(
+            this.getGame(),
+            `NEW MATERIAL DISCOVERED: ${material.name}.`,
+            {
+                category: "important",
+                tab: "log"
+            }
+        );
+    
+        this.showAnnouncement({
+            title: "NEW MATERIAL DISCOVERED",
+            message: `${material.name}: ${
+                material.description ??
+                "A new material enters your journal."
+            }`,
+            symbol: this.presentation.createMaterialSymbol(material.id)
+        });
     }
 }

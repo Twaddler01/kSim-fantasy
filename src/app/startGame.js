@@ -8,6 +8,7 @@ import ZoneScene from "../ui/panels/ZoneScene.js";
 import TownScene from "../ui/panels/TownScene.js";
 import { buildMaterialSprites } from "../data/materialSprites.js";
 import { buildTileSprites, getTileCache } from "../data/tileSprites.js";
+import { MaterialIcon } from "../assets/icons/materials/MaterialIcon.js";
 
 // Debug
 import attachDebugPanel from "../../debug/attach.js";
@@ -71,7 +72,7 @@ import {
 
 import { ensurePlayerInitialized } from "../systems/character.js";
 
-import ProgressionProcessor from "../domain/progressionProcessing.js";
+import ProgressionService from "./services/ProgressionService.js";
 import ZoneActions from "./actions/ZoneActions.js";
 import { createZoneIcon } from "../ui/zoneIcons.js";
 import CaveSearch from "./actions/CaveSearch.js";
@@ -247,7 +248,7 @@ export function startGame() {
         getGame: () => game
     });
 
-    const progression = new ProgressionProcessor({
+    const progression = new ProgressionService({
         getGame: () => game,
         save,
         logEvent,
@@ -285,7 +286,9 @@ export function startGame() {
             deactivateZone: () => worldPanel?.deactivateZone?.(),
             showBattle: battle => battleModal.show(battle),
             showLoot: rewards => lootModal.show(rewards),
-            showCave: dungeonId => caveModal.show(dungeonId)
+            showCave: dungeonId => caveModal.show(dungeonId),
+            createMaterialSymbol: materialId =>
+                MaterialIcon(materialId, { size: 44 })
         }
     });
 
