@@ -143,7 +143,7 @@ export default class WorldPanel {
                 unlockManager: this.unlockManager,
                 unreadManager: this.unreadManager,
                 zoneDefinitions: this.zoneDefinitions,
-                onSelectZone: zoneId => this.showZone(zoneId),
+                onEnterZone: zoneId => this.showZone(zoneId),
                 showToast: message => this.showToast(message)
             });
         }

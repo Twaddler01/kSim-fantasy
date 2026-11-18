@@ -1,18 +1,15 @@
 // src/ui/panels/WorldMapPanel.js
-//
-// Stylized world map for WORLD. Replaces the zone card list as the
-// default navigation view. Pins are DOM buttons absolutely positioned by
-// percentage on top of a static SVG background.
-//
-// Tap an unlocked pin → enters the zone (immediately, no intermediate
-// info screen — the zone view has all the detail). Tap a locked pin →
-// toast with the unlock requirement.
 
 import { el } from "../components/Element.js";
 import { createZoneIcon } from "../zoneIcons.js";
 import { createSvgElement } from "../../assets/icons/svgHelpers.js";
 import { getWorldDrawing } from "../../assets/icons/world/worldMap.js";
+
 import { getMaterial } from "../../data/materials.js";
+import { getEnemy } from "../../data/enemies.js";
+import { getCave } from "../../data/caves.js";
+import { getZoneSpawnBreakdown } from "../../data/zones.js";
+import { TOWN_DEFINITIONS } from "../../data/towns.js";
 
 const FALLBACK_POSITION = { x: 50, y: 50 };
 
@@ -22,18 +19,22 @@ export default class WorldMapPanel {
         unlockManager,
         unreadManager,
         zoneDefinitions,
-        onSelectZone,
-        showToast
+        onEnterZone
     }) {
         this.getGame = getGame;
         this.unlockManager = unlockManager;
         this.unreadManager = unreadManager;
         this.zoneDefinitions = zoneDefinitions;
-        this.onSelectZone = onSelectZone ?? (() => {});
-        this.showToast = showToast ?? (() => {});
+        this.onEnterZone = onEnterZone ?? (() => {});
 
         this.element = null;
+        this.viewport = null;
+        this.mapContainer = null;
         this.pinLayer = null;
+        this.detailsPanel = null;
+
+        this.selectedZoneId = null;
+        this.cameraPosition = null;
     }
 
     get game() {
@@ -41,17 +42,19 @@ export default class WorldMapPanel {
     }
 
     getElement() {
-        if (!this.element) this.render();
+        if (!this.element) {
+            this.render();
+            this.initializeSelection();
+        }
+
         this.update();
+        this.positionCameraOnAshenbrook();
+
         return this.element;
     }
 
-    // ==================================================
-    // RENDER (one-time DOM structure)
-    // ==================================================
-
     render() {
-        this.background = createSvgElement("svg", {
+        const svg = createSvgElement("svg", {
             viewBox: "0 0 400 280",
             preserveAspectRatio: "xMidYMid meet",
             class: "world-map-bg",
@@ -60,53 +63,119 @@ export default class WorldMapPanel {
         });
 
         const draw = getWorldDrawing("valley");
-        if (draw) draw(this.background);
+        if (draw) draw(svg);
 
         this.pinLayer = el("div", {
             className: "world-map-pin-layer"
         });
 
-        this.element = el("div", { className: "world-map-container" }, [
-            this.background,
-            this.pinLayer
-        ]);
+        this.mapContainer = el(
+            "div",
+            {
+                className: "world-map-container"
+            },
+            [svg, this.pinLayer]
+        );
+
+        this.viewport = el(
+            "div",
+            {
+                className: "world-map-viewport",
+                "aria-label": "World map. Scroll to explore."
+            },
+            [this.mapContainer]
+        );
+
+        this.viewport.addEventListener(
+            "scroll",
+            () => {
+                this.cameraPosition = {
+                    left: this.viewport.scrollLeft,
+                    top: this.viewport.scrollTop
+                };
+            },
+            { passive: true }
+        );
+
+        this.detailsPanel = el("div", {
+            className: "world-map-details"
+        });
+
+        this.element = el(
+            "div",
+            {
+                className: "world-map-body"
+            },
+            [this.viewport, this.detailsPanel]
+        );
     }
 
-    // ==================================================
-    // UPDATE (pin state)
-    // ==================================================
-
-    update() {
-        if (!this.pinLayer) return this;
-
+    initializeSelection() {
         const activeZoneId = this.game?.appState?.navigation?.activeZoneId;
 
+        const activeZoneExists = this.zoneDefinitions.some(
+            zone => zone.id === activeZoneId
+        );
+
+        if (activeZoneExists) {
+            this.selectedZoneId = activeZoneId;
+            return;
+        }
+
+        const firstUnlocked = this.zoneDefinitions.find(zone =>
+            this.unlockManager.isUnlocked(zone.id)
+        );
+
+        this.selectedZoneId =
+            firstUnlocked?.id ?? this.zoneDefinitions[0]?.id ?? null;
+    }
+
+    update() {
+        if (!this.pinLayer || !this.detailsPanel) return this;
+
         this.pinLayer.replaceChildren(
-            ...this.zoneDefinitions.map(zone =>
-                this.renderPin(zone, { activeZoneId })
-            )
+            ...this.zoneDefinitions.map(zone => this.renderPin(zone))
+        );
+
+        const selectedZone = this.getSelectedZone();
+
+        this.detailsPanel.replaceChildren(
+            ...(selectedZone
+                ? this.renderZoneDetails(selectedZone)
+                : [
+                      el("p", {
+                          className: "world-map-empty",
+                          text: "No zones are available."
+                      })
+                  ])
         );
 
         return this;
     }
 
-    renderPin(zone, { activeZoneId }) {
-        const unlocked = this.unlockManager.isUnlocked(zone.id);
-        const unread = this.unreadManager.isUnread(
-            "world",
-            `zone-${zone.id}`
+    getSelectedZone() {
+        return (
+            this.zoneDefinitions.find(
+                zone => zone.id === this.selectedZoneId
+            ) ?? null
         );
-        const active = activeZoneId === zone.id;
+    }
+
+    renderPin(zone) {
+        const unlocked = this.unlockManager.isUnlocked(zone.id);
+        const unread = this.unreadManager.isUnread("world", `zone-${zone.id}`);
+
+        const selected = this.selectedZoneId === zone.id;
         const pos = zone.mapPosition ?? FALLBACK_POSITION;
 
-        const button = el(
+        return el(
             "button",
             {
                 type: "button",
                 className: [
                     "world-map-pin",
                     unlocked ? "is-unlocked" : "is-locked",
-                    active ? "is-active" : ""
+                    selected ? "is-active" : ""
                 ]
                     .filter(Boolean)
                     .join(" "),
@@ -114,23 +183,32 @@ export default class WorldMapPanel {
                     left: `${pos.x}%`,
                     top: `${pos.y}%`
                 },
-                dataset: { zoneId: zone.id },
-                "aria-label": unlocked
-                    ? `Enter ${zone.name}`
-                    : `${zone.name} (locked)`,
-                onClick: () => this.handlePinClick(zone, unlocked)
+                dataset: {
+                    zoneId: zone.id
+                },
+                "aria-label": `Select ${zone.name}${unlocked ? "" : " (locked)"}`,
+                "aria-pressed": selected ? "true" : "false",
+                onClick: () => this.selectZone(zone.id)
             },
             [
-                el("span", { className: "world-map-pin-icon" }, [
-                    createZoneIcon(zone, {
-                        size: 26,
-                        className: "world-map-pin-icon-svg"
-                    })
-                ]),
+                el(
+                    "span",
+                    {
+                        className: "world-map-pin-icon"
+                    },
+                    [
+                        createZoneIcon(zone, {
+                            size: 26,
+                            className: "world-map-pin-icon-svg"
+                        })
+                    ]
+                ),
+
                 el("span", {
                     className: "world-map-pin-label",
                     text: zone.name
                 }),
+
                 unlocked
                     ? null
                     : el("span", {
@@ -138,7 +216,8 @@ export default class WorldMapPanel {
                           text: "🔒",
                           "aria-hidden": "true"
                       }),
-                unread && !active
+
+                unread
                     ? el("span", {
                           className: "world-map-pin-dot",
                           "aria-hidden": "true"
@@ -146,33 +225,360 @@ export default class WorldMapPanel {
                     : null
             ].filter(Boolean)
         );
-
-        return button;
     }
 
-    // ==================================================
-    // ACTIONS
-    // ==================================================
+    selectZone(zoneId) {
+        if (this.selectedZoneId === zoneId) return;
 
-    handlePinClick(zone, unlocked) {
+        this.selectedZoneId = zoneId;
+        this.update();
+    }
+
+    renderZoneDetails(zone) {
+        const unlocked = this.unlockManager.isUnlocked(zone.id);
+
+        const children = [
+            el(
+                "div",
+                {
+                    className: "world-map-details-header"
+                },
+                [
+                    el(
+                        "div",
+                        {
+                            className: "world-map-details-title"
+                        },
+                        [
+                            el(
+                                "span",
+                                {
+                                    className: "world-map-details-icon"
+                                },
+                                [createZoneIcon(zone, { size: 30 })]
+                            ),
+                            el("div", {}, [
+                                el("h3", { text: zone.name }),
+                                el("span", {
+                                    className: unlocked
+                                        ? "world-map-status is-unlocked"
+                                        : "world-map-status is-locked",
+                                    text: unlocked ? "AVAILABLE" : "LOCKED"
+                                })
+                            ])
+                        ]
+                    )
+                ]
+            ),
+
+            el("p", {
+                className: "world-map-description",
+                text: zone.description ?? "No description available."
+            })
+        ];
+
         if (!unlocked) {
-            this.showToast(this.getLockMessage(zone));
-            return;
+            children.push(this.renderUnlockRequirement(zone));
         }
 
-        this.onSelectZone(zone.id);
+        const resources = this.getResourceItems(zone);
+        const enemies = this.getEnemyItems(zone);
+        const pointsOfInterest = this.getPointOfInterestItems(zone);
+        const buildings = this.getTownItems(zone);
+
+        if (resources.length) {
+            children.push(this.renderContentGroup("RESOURCES", resources));
+        }
+
+        if (enemies.length) {
+            children.push(this.renderContentGroup("CREATURES", enemies));
+        }
+
+        if (pointsOfInterest.length) {
+            children.push(
+                this.renderContentGroup("POINTS OF INTEREST", pointsOfInterest)
+            );
+        }
+
+        if (buildings.length) {
+            children.push(this.renderContentGroup("SETTLEMENT", buildings));
+        }
+
+        if (
+            !resources.length &&
+            !enemies.length &&
+            !pointsOfInterest.length &&
+            !buildings.length
+        ) {
+            children.push(
+                el("p", {
+                    className: "world-map-empty",
+                    text: "Nothing of note has been discovered here yet."
+                })
+            );
+        }
+
+        if (unlocked) {
+            children.push(
+                el("button", {
+                    type: "button",
+                    className: "world-map-enter-button",
+                    text: "ENTER ZONE",
+                    onClick: () => this.onEnterZone(zone.id)
+                })
+            );
+        }
+
+        return children;
     }
 
-    getLockMessage(zone) {
-        const req = zone.unlockTrigger;
-        if (!req) return `${zone.name} is locked.`;
+    renderUnlockRequirement(zone) {
+        const requirement = zone.unlockTrigger;
 
-        if (req.type === "inventoryAmount" && req.item) {
-            const material = getMaterial(req.item);
-            const itemName = material?.name ?? req.item;
-            return `${zone.name} — requires ${req.amount} ${itemName}.`;
+        let message = `${zone.name} is currently inaccessible.`;
+
+        if (requirement?.type === "inventoryAmount" && requirement.item) {
+            const material = getMaterial(requirement.item);
+            const itemName = material?.name ?? requirement.item;
+            const amount = requirement.amount ?? 1;
+
+            message = `Requires ${amount} ${itemName}`;
         }
 
-        return `${zone.name} is locked.`;
+        return el(
+            "div",
+            {
+                className: "world-map-lock-requirement"
+            },
+            [
+                el("span", {
+                    className: "world-map-lock-icon",
+                    text: "🔒"
+                }),
+                el("span", {
+                    text: message
+                })
+            ]
+        );
+    }
+
+    getResourceItems(zone) {
+        return getZoneSpawnBreakdown(zone)
+            .map(entry => {
+                const material = getMaterial(entry.materialId);
+                if (!material) return null;
+
+                return this.createContentItem({
+                    icon: material.icon ?? "📦",
+                    name: material.name,
+                    detail: `${Math.round(entry.percent)}% chance`
+                });
+            })
+            .filter(Boolean);
+    }
+
+    getEnemyItems(zone) {
+        const enemiesById = new Map();
+
+        const addEnemy = (enemyId, count = 0, guaranteed = false) => {
+            if (!enemyId) return;
+
+            const existing = enemiesById.get(enemyId) ?? {
+                count: 0,
+                guaranteed: false,
+                possible: false
+            };
+
+            existing.count += count;
+            existing.guaranteed ||= guaranteed;
+            existing.possible = true;
+
+            enemiesById.set(enemyId, existing);
+        };
+
+        for (const spawn of zone.guaranteedSpawns ?? []) {
+            if (spawn.type === "enemy") {
+                addEnemy(spawn.enemyId, spawn.count ?? 1, true);
+            }
+        }
+
+        for (const spawn of zone.spawnTable ?? []) {
+            if (spawn.type === "enemy") {
+                addEnemy(spawn.enemyId);
+            }
+        }
+
+        return [...enemiesById.entries()]
+            .map(([enemyId, info]) => {
+                const enemy = getEnemy(enemyId);
+                if (!enemy) return null;
+
+                const detail = info.guaranteed
+                    ? `${info.count} guaranteed`
+                    : "May appear";
+
+                return this.createContentItem({
+                    icon: enemy.icon ?? "🐾",
+                    name: enemy.name,
+                    detail
+                });
+            })
+            .filter(Boolean);
+    }
+
+    getPointOfInterestItems(zone) {
+        const entries = new Map();
+
+        const addEntry = (key, item) => {
+            const existing = entries.get(key);
+
+            if (existing) {
+                existing.count += item.count;
+                existing.guaranteed ||= item.guaranteed;
+                return;
+            }
+
+            entries.set(key, { ...item });
+        };
+
+        const processSpawn = (spawn, guaranteed) => {
+            if (spawn.type === "cache") {
+                addEntry("cache", {
+                    icon: "📦",
+                    name: "Treasure Cache",
+                    count: guaranteed ? (spawn.count ?? 1) : 0,
+                    guaranteed
+                });
+            }
+
+            if (spawn.type === "cave" && spawn.dungeonId) {
+                const cave = getCave(spawn.dungeonId);
+                if (!cave) return;
+
+                addEntry(`cave-${cave.id}`, {
+                    icon: cave.icon ?? "🕳️",
+                    name: cave.name,
+                    count: guaranteed ? (spawn.count ?? 1) : 0,
+                    guaranteed
+                });
+            }
+        };
+
+        for (const spawn of zone.guaranteedSpawns ?? []) {
+            processSpawn(spawn, true);
+        }
+
+        for (const spawn of zone.spawnTable ?? []) {
+            processSpawn(spawn, false);
+        }
+
+        return [...entries.values()].map(item => {
+            return this.createContentItem({
+                icon: item.icon,
+                name: item.name,
+                detail: item.guaranteed
+                    ? `${item.count} guaranteed`
+                    : "May be discovered"
+            });
+        });
+    }
+
+    getTownItems(zone) {
+        if (!zone.townId) return [];
+
+        const town = TOWN_DEFINITIONS.find(
+            definition => definition.id === zone.townId
+        );
+
+        if (!town) return [];
+
+        return (town.buildings ?? []).map(building => {
+            return this.createContentItem({
+                icon: building.icon ?? "🏠",
+                name: building.label ?? building.name ?? building.id,
+                detail: "Building"
+            });
+        });
+    }
+
+    createContentItem({ icon, name, detail }) {
+        return el(
+            "div",
+            {
+                className: "world-map-content-item"
+            },
+            [
+                el("span", {
+                    className: "world-map-content-icon",
+                    text: icon
+                }),
+                el("span", {
+                    className: "world-map-content-name",
+                    text: name
+                }),
+                detail
+                    ? el("span", {
+                          className: "world-map-content-detail",
+                          text: detail
+                      })
+                    : null
+            ].filter(Boolean)
+        );
+    }
+
+    renderContentGroup(title, items) {
+        return el(
+            "div",
+            {
+                className: "world-map-content-group"
+            },
+            [
+                el("h4", {
+                    className: "world-map-content-heading",
+                    text: title
+                }),
+                el(
+                    "div",
+                    {
+                        className: "world-map-content-items"
+                    },
+                    items
+                )
+            ]
+        );
+    }
+
+    positionCameraOnAshenbrook() {
+        requestAnimationFrame(() => {
+            // The map must be attached before we can measure it.
+            if (!this.viewport.isConnected) return;
+
+            // Returning to the map: restore its previous camera position.
+            if (this.cameraPosition) {
+                this.viewport.scrollLeft = this.cameraPosition.left;
+                this.viewport.scrollTop = this.cameraPosition.top;
+                return;
+            }
+
+            // First opening: center on Ashenbrook.
+            const ashBrook = this.zoneDefinitions.find(
+                zone => zone.id === "ashenbrook"
+            );
+
+            const pos = ashBrook?.mapPosition ?? FALLBACK_POSITION;
+
+            const targetX = (this.mapContainer.clientWidth * pos.x) / 100;
+            const targetY = (this.mapContainer.clientHeight * pos.y) / 100;
+
+            this.viewport.scrollLeft = targetX - this.viewport.clientWidth / 2;
+
+            this.viewport.scrollTop = targetY - this.viewport.clientHeight / 2;
+
+            // Save the initial camera position too.
+            this.cameraPosition = {
+                left: this.viewport.scrollLeft,
+                top: this.viewport.scrollTop
+            };
+        });
     }
 }
