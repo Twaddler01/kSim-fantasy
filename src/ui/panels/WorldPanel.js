@@ -1,12 +1,7 @@
 import { el } from "../components/Element.js";
 import { Button } from "../components/Button.js";
-import Badge from "../components/Badge.js";
-import NewBadge from "../../notifications/NewBadge.js";
-import { createZoneIcon } from "../zoneIcons.js";
-import { materials } from "../../data/materials.js";
-import { getZoneSpawnBreakdown } from "../../data/zones.js";
-import { MaterialIcon } from "../../assets/icons/materials/MaterialIcon.js";
 import WorldMapPanel from "./WorldMapPanel.js";
+import NewBadge from "../../notifications/NewBadge.js";
 
 export default class WorldPanel {
     constructor({
@@ -15,29 +10,31 @@ export default class WorldPanel {
         unlockManager,
         unreadManager,
         zoneDefinitions,
-        navigateTo,
         createZone,
-        refreshTab,
-        showToast
+        refreshTab
     }) {
         this.getGame = getGame;
         this.save = save;
         this.unlockManager = unlockManager;
         this.unreadManager = unreadManager;
         this.zoneDefinitions = zoneDefinitions;
-        this.navigateTo = navigateTo;
         this.refreshTab = refreshTab;
-        this.showToast = showToast ?? (() => {});
 
         this._viewKey = null;
         this.view = "map"; // default view
         this.zoneViews = new Map();
-        this.badges = new Map();
         this.worldMap = null;
 
+        this.mapTitleBadge = new NewBadge({
+            unreadManager: this.unreadManager,
+            isUnread: () => this.hasUnread(),
+            getElement: () =>
+                this.element?.querySelector(".world-map-title"),
+            placement: "inline",
+            ariaLabel: "NEW"
+        });
+        
         this.element = null;
-        this.zoneCards = null;
-        this.zoneSelectionButton = null;
 
         if (typeof createZone !== "function") {
             throw new Error(
@@ -49,19 +46,9 @@ export default class WorldPanel {
         this.createZone = createZone;
     }
 
-    // --- navigation entry points ---------------------------------------
     showMap() {
         this.deactivateZone();
         this.view = "map";
-        this.zoneSelectionButton = null;
-        this.refreshTab();
-        return true;
-    }
-
-    showList() {
-        this.deactivateZone();
-        this.view = "list";
-        this.zoneSelectionButton = null;
         this.refreshTab();
         return true;
     }
@@ -93,30 +80,35 @@ export default class WorldPanel {
 
     update() {
         if (!this.element) return this;
-
+    
         const zoneId = this.view === "zone" ? this.activeZoneId() : null;
-        const viewKey = zoneId ? `zone:${zoneId}` : `view:${this.view}`;
-
-        // Skip rebuild if the view hasn't changed. Rebuilding would detach
-        // and re-attach the canvas, losing pointer capture mid-gesture.
+        const viewKey = zoneId ? `zone:${zoneId}` : "view:map";
+    
+        // Avoid rebuilding an active canvas.
         if (this._viewKey === viewKey) {
-            if (zoneId) this.getZoneView(zoneId)?.update?.();
-            else if (this.view === "map") this.worldMap?.update?.();
+            if (zoneId) {
+                this.getZoneView(zoneId)?.update?.();
+            } else {
+                this.worldMap?.update?.();
+                this.mapTitleBadge.refresh();
+            }
+    
             return this;
         }
-
+    
         this._viewKey = viewKey;
-
+    
         if (zoneId) {
             this.element.replaceChildren(this.renderActiveZone());
             this.getZoneView(zoneId)?.update?.();
-        } else if (this.view === "map") {
+        } else {
             this.element.replaceChildren(this.renderMap());
             this.worldMap?.update?.();
-        } else {
-            this.element.replaceChildren(this.renderList());
+    
+            // The title now exists in the DOM.
+            this.mapTitleBadge.refresh();
         }
-
+    
         return this;
     }
 
@@ -134,8 +126,6 @@ export default class WorldPanel {
         return this.getGame().appState.navigation.activeZoneId;
     }
 
-    // --- MAP VIEW -------------------------------------------------------
-
     renderMap() {
         if (!this.worldMap) {
             this.worldMap = new WorldMapPanel({
@@ -143,73 +133,35 @@ export default class WorldPanel {
                 unlockManager: this.unlockManager,
                 unreadManager: this.unreadManager,
                 zoneDefinitions: this.zoneDefinitions,
-                onEnterZone: zoneId => this.showZone(zoneId),
-                showToast: message => this.showToast(message)
+                onEnterZone: zoneId => this.showZone(zoneId)
             });
         }
-
-        return el("section", { className: "world-map-section" }, [
+    
+        const section = el("section", {
+            className: "world-map-section"
+        }, [
             el("div", { className: "world-map-header" }, [
                 el("div", {}, [
-                    el("div", { className: "eyebrow", text: "THE VALLEY" }),
-                    el("h2", { text: "World Map" })
-                ]),
-                el("button", {
-                    type: "button",
-                    className: "world-map-list-toggle",
-                    text: "☰ LIST",
-                    "aria-label": "Show zone list",
-                    onClick: () => this.showList()
-                })
+                    el("div", {
+                        className: "eyebrow",
+                        text: "THE VALLEY"
+                    }),
+                    el("h2", {
+                        className: "world-map-title",
+                        text: "World Map"
+                    })
+                ])
             ]),
             this.worldMap.getElement()
         ]);
-    }
-
-    // --- LIST VIEW ------------------------------------------------------
-
-    renderList() {
-        const section = el(
-            "section",
-            { className: "zone-selection-section" },
-            [
-                el("div", { className: "world-map-header" }, [
-                    el("div", {}, [
-                        el("div", {
-                            className: "eyebrow",
-                            text: "ZONES"
-                        }),
-                        el("h2", { text: "All Zones" })
-                    ]),
-                    el("button", {
-                        type: "button",
-                        className: "world-map-list-toggle",
-                        text: "🗺 MAP",
-                        "aria-label": "Show world map",
-                        onClick: () => this.showMap()
-                    })
-                ]),
-                el("p", {
-                    className: "muted",
-                    text: "Choose a zone, then enter it when you're ready."
-                }),
-                (this.zoneCards = el("div", {
-                    className: "zone-selection-list"
-                }))
-            ]
-        );
-
-        this.updateZoneCards();
+    
         return section;
     }
-
-    // --- ZONE VIEW -----------------------------------------------------
 
     renderActiveZone() {
         const zoneId = this.activeZoneId();
         if (!zoneId) {
             this.view = "map";
-            this.zoneSelectionButton = null;
             return this.renderMap();
         }
 
@@ -218,173 +170,23 @@ export default class WorldPanel {
         const back = Button("← MAP", () => this.showMap(), {
             variant: "secondary-button"
         });
-        this.zoneSelectionButton = back;
-        this.updateZoneSelectionBadge();
-
+    
         return el("div", { className: "zone-work-active-view" }, [
             el("div", { className: "zone-work-toolbar" }, [back]),
             zoneView.getElement()
         ]);
     }
 
-    // --- ZONE CARDS (list view only) ----------------------------------
-
-    updateZoneCards() {
-        if (!this.zoneCards) return;
-
-        const game = this.getGame();
-
-        const cards = this.zoneDefinitions.map(zone => {
-            const unlocked = this.unlockManager.isUnlocked(zone.id);
-            const active = this.activeZoneId() === zone.id;
-
-            const selectButton = el(
-                "button",
-                {
-                    type: "button",
-                    className: "zone-selection-card__main",
-                    disabled: !unlocked,
-                    "aria-label": unlocked
-                        ? `Select ${zone.name}`
-                        : `${zone.name}, locked`,
-                    onClick: () => {
-                        if (!unlocked) return;
-                        game.appState.navigation.activeZoneId = zone.id;
-                        this.save();
-                        this.updateZoneCards();
-                    }
-                },
-                [
-                    el("span", { className: "zone-selection-card__icon" }, [
-                        createZoneIcon(zone, {
-                            size: 32,
-                            className: "zone-selection-card__icon-svg"
-                        })
-                    ]),
-                    el("span", { className: "zone-selection-card__copy" }, [
-                        el(
-                            "span",
-                            {
-                                className: "zone-selection-card__title",
-                                dataset: { zoneTitle: zone.id }
-                            },
-                            [el("strong", { text: zone.name })]
-                        ),
-                        el("span", {
-                            className: "zone-selection-card__description",
-                            text: unlocked
-                                ? zone.description
-                                : `Requires ${zone.unlockTrigger?.amount ?? 0} ${
-                                      this.materialName(
-                                          zone.unlockTrigger?.item
-                                      ) ??
-                                      zone.unlockTrigger?.item ??
-                                      "resources"
-                                  } Samples`
-                        }),
-                        unlocked ? this.renderZoneMaterials(zone) : null
-                    ])
-                ]
-            );
-
-            const actions = el(
-                "span",
-                { className: "zone-selection-card__actions" },
-                [
-                    el("span", {
-                        className: "zone-selection-card__status",
-                        text: !unlocked
-                            ? "LOCKED"
-                            : active
-                              ? "SELECTED"
-                              : "AVAILABLE"
-                    }),
-                    ...(unlocked && active
-                        ? [
-                              Button(
-                                  "GO",
-                                  () => {
-                                      this.navigateTo({
-                                          tab: "world",
-                                          pageId: zone.id
-                                      });
-                                  },
-                                  { variant: "primary-button" }
-                              )
-                          ]
-                        : [])
-                ]
-            );
-
-            return el(
-                "div",
-                {
-                    className: [
-                        "zone-selection-card",
-                        unlocked ? "is-unlocked" : "is-locked",
-                        active ? "is-active" : ""
-                    ]
-                        .filter(Boolean)
-                        .join(" ")
-                },
-                [selectButton, actions]
-            );
-        });
-
-        this.zoneCards.replaceChildren(...cards);
-        this.refreshBadges();
-    }
-
-    getBadge(zoneId) {
-        if (!this.badges.has(zoneId)) {
-            this.badges.set(
-                zoneId,
-                new NewBadge({
-                    unreadManager: this.unreadManager,
-                    tabId: "world",
-                    itemId: `zone-${zoneId}`,
-                    getElement: () =>
-                        [
-                            ...(this.zoneCards?.querySelectorAll(
-                                "[data-zone-title]"
-                            ) ?? [])
-                        ].find(el => el.dataset.zoneTitle === zoneId),
-                    placement: "inline",
-                    ariaLabel: "New zone"
-                })
-            );
-        }
-        return this.badges.get(zoneId);
-    }
-
-    refreshBadges() {
-        for (const zone of this.zoneDefinitions) {
-            this.getBadge(zone.id).refresh();
-        }
-        // Map pins render unread state directly; refresh them too.
-        if (this.view === "map") {
-            this.worldMap?.update?.();
-        }
+    refreshUnreadIndicators() {
+        if (this.view !== "map") return;
+    
+        this.worldMap?.update?.();
+        this.mapTitleBadge.refresh();
     }
 
     hasUnread() {
         return this.zoneDefinitions.some(zone =>
             this.unreadManager.isUnread("world", `zone-${zone.id}`)
-        );
-    }
-
-    updateZoneSelectionBadge() {
-        const button = this.zoneSelectionButton;
-        if (!button) return;
-        button.querySelector(".zone-selection-button__badge")?.remove();
-        if (!this.hasUnread()) return;
-        button.append(
-            Badge({
-                text: "NEW",
-                variant: "new",
-                className: "zone-selection-button__badge",
-                ariaLabel: "New zone content"
-            })
         );
     }
 
@@ -404,52 +206,5 @@ export default class WorldPanel {
         for (const view of this.zoneViews.values()) {
             view.refreshBackground?.();
         }
-    }
-
-    renderZoneMaterials(zone) {
-        const breakdown = getZoneSpawnBreakdown(zone);
-        if (breakdown.length === 0) return null;
-
-        const top = breakdown.slice(0, 3);
-
-        return el(
-            "span",
-            {
-                className: "zone-selection-card__materials",
-                "aria-label": `Zone materials: ${top
-                    .map(
-                        b =>
-                            `${this.materialName(b.materialId)} ${Math.round(b.percent)}%`
-                    )
-                    .join(", ")}`
-            },
-            top.map(spawn => {
-                const pct = Math.round(spawn.percent);
-                const name = this.materialName(spawn.materialId);
-
-                return el(
-                    "span",
-                    {
-                        className: "zone-selection-card__chip",
-                        title: `${name} · ${pct}%`
-                    },
-                    [
-                        MaterialIcon(spawn.materialId, {
-                            size: 14,
-                            variant: "core",
-                            className: "zone-selection-card__chip-icon"
-                        }),
-                        el("span", {
-                            className: "zone-selection-card__chip-label",
-                            text: `${pct}%`
-                        })
-                    ]
-                );
-            })
-        );
-    }
-
-    materialName(materialId) {
-        return materials.find(m => m.id === materialId)?.name ?? materialId;
     }
 }

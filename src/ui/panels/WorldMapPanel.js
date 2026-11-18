@@ -86,6 +86,16 @@ export default class WorldMapPanel {
             [this.mapContainer]
         );
 
+        // Reposition the camera when the map becomes visible or its
+        // container changes size (such as when switching tabs).
+        if (typeof ResizeObserver !== "undefined") {
+            this.resizeObserver = new ResizeObserver(() => {
+                this.positionCameraOnAshenbrook();
+            });
+
+            this.resizeObserver.observe(this.viewport);
+        }
+
         this.viewport.addEventListener(
             "scroll",
             () => {
@@ -236,6 +246,7 @@ export default class WorldMapPanel {
 
     renderZoneDetails(zone) {
         const unlocked = this.unlockManager.isUnlocked(zone.id);
+        const unread = this.unreadManager.isUnread("world", `zone-${zone.id}`);
 
         const children = [
             el(
@@ -257,15 +268,28 @@ export default class WorldMapPanel {
                                 },
                                 [createZoneIcon(zone, { size: 30 })]
                             ),
-                            el("div", {}, [
-                                el("h3", { text: zone.name }),
-                                el("span", {
-                                    className: unlocked
-                                        ? "world-map-status is-unlocked"
-                                        : "world-map-status is-locked",
-                                    text: unlocked ? "AVAILABLE" : "LOCKED"
-                                })
-                            ])
+                            el(
+                                "div",
+                                {
+                                    className: "world-map-status-row"
+                                },
+                                [
+                                    el("span", {
+                                        className: unlocked
+                                            ? "world-map-status is-unlocked"
+                                            : "world-map-status is-locked",
+                                        text: unlocked ? "AVAILABLE" : "LOCKED"
+                                    }),
+
+                                    unread
+                                        ? el("span", {
+                                              className: "ui-badge",
+                                              text: "NEW",
+                                              "aria-label": "NEW"
+                                          })
+                                        : null
+                                ].filter(Boolean)
+                            )
                         ]
                     )
                 ]
@@ -550,8 +574,16 @@ export default class WorldMapPanel {
 
     positionCameraOnAshenbrook() {
         requestAnimationFrame(() => {
-            // The map must be attached before we can measure it.
-            if (!this.viewport.isConnected) return;
+            if (!this.viewport?.isConnected) return;
+
+            // A hidden tab may have zero dimensions.
+            // Don't calculate or save a camera position yet.
+            if (
+                this.viewport.clientWidth === 0 ||
+                this.viewport.clientHeight === 0
+            ) {
+                return;
+            }
 
             // Returning to the map: restore its previous camera position.
             if (this.cameraPosition) {
@@ -574,7 +606,6 @@ export default class WorldMapPanel {
 
             this.viewport.scrollTop = targetY - this.viewport.clientHeight / 2;
 
-            // Save the initial camera position too.
             this.cameraPosition = {
                 left: this.viewport.scrollLeft,
                 top: this.viewport.scrollTop

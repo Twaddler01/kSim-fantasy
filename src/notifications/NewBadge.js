@@ -13,13 +13,19 @@ export default class NewBadge {
         placement = "inline",
         showNew = true,
         variant = "new",
-        ariaLabel = "New content"
+        ariaLabel = "New content",
+        isUnread: isUnreadCheck = null
     } = {}) {
         if (!unreadManager) {
             throw new TypeError("NewBadge requires unreadManager.");
         }
-        if (!tabId || !itemId) {
-            throw new TypeError("NewBadge requires tabId and itemId.");
+        if (
+            typeof isUnreadCheck !== "function" &&
+            (!tabId || !itemId)
+        ) {
+            throw new TypeError(
+                "NewBadge requires either isUnread() or tabId and itemId."
+            );
         }
         if (typeof getElement !== "function") {
             throw new TypeError("NewBadge requires getElement().");
@@ -38,7 +44,8 @@ export default class NewBadge {
             placement,
             showNew,
             variant,
-            ariaLabel
+            ariaLabel,
+            isUnreadCheck
         });
 
         this.target = null;
@@ -47,6 +54,10 @@ export default class NewBadge {
     }
 
     isUnread() {
+        if (this.isUnreadCheck) {
+            return this.isUnreadCheck();
+        }
+    
         return this.unreadManager.isUnread(this.tabId, this.itemId);
     }
 

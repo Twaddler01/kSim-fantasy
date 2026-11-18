@@ -202,8 +202,7 @@ export function startGame() {
         save,
         onChange: () => {
             ui.tabs?.update({ refreshContent: false });
-            ui.worldPanel?.updateZoneSelectionBadge?.();
-            ui.worldPanel?.refreshBadges?.();
+            ui.worldPanel?.refreshUnreadIndicators?.();
         },
         isTabActive: tabId => activeTab === tabId
     });
@@ -295,10 +294,7 @@ export function startGame() {
         unlockManager,
         unreadManager,
         zoneDefinitions: ZONE_DEFINITIONS,
-        navigateTo: target => navigateTo(target),
-        showToast: message => showToast(message),
         refreshTab: () => ui.tabs?.update({ refreshContent: true }),
-        resourcePopups,
 
         createZone: zone => {
             if (zone.type === "town") {
@@ -386,7 +382,7 @@ export function startGame() {
     // Navigation — still registered in main because it's global,
     // but delegating to the panel:
     registerPage("world", "selector", {
-        activate: () => worldPanel.showSelector()
+        activate: () => worldPanel.showMap()
     });
     for (const zone of ZONE_DEFINITIONS) {
         registerPage("world", zone.id, {

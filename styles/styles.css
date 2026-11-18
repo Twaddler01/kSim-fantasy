@@ -3907,6 +3907,12 @@ ZONE
     color: var(--muted);
 }
 
+.world-map-status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .world-map-description {
     margin: 0;
     color: var(--muted);
