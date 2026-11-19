@@ -4,7 +4,7 @@
 // Game operations remain in their respective systems.
 // UI access is provided through the presentation interface.
 
-import { recoverMaterial } from "../../systems/MaterialRecovery.js";
+import { gatherMaterial } from "../../systems/MaterialGathering.js";
 import { startBattle } from "../../systems/BattleSystem.js";
 import { getLootTable } from "../../data/lootTables.js";
 import { rollFromLootTable } from "../../systems/loot.js";
@@ -42,7 +42,7 @@ export default class ZoneActions {
 
     handleGather(zone, event, target) {
         const game = this.getGame();
-        const result = recoverMaterial(game, target.id, target.richness ?? 1);
+        const result = gatherMaterial(game, target.id, target.richness ?? 1);
 
         if (!result.ok) {
             this.showToast(result.reason);
@@ -52,7 +52,7 @@ export default class ZoneActions {
         this.resourcePopups.show(
             [
                 {
-                    amount: result.amount ?? 1,
+                    amount: result.amount,
                     icon: result.item.icon,
                     materialId: result.item.id
                 }

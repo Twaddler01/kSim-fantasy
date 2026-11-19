@@ -3,6 +3,10 @@
 import { resourceDefinitions } from "./resources.js";
 import { materials } from "./materials.js";
 
+// ===================================
+// INVENTORY DEFINITIONS
+// ===================================
+
 export const inventoryItems = [
     ...resourceDefinitions.map(item => ({
         ...item,
@@ -17,16 +21,31 @@ export const inventoryItems = [
     }))
 ];
 
+// ===================================
+// ITEM LOOKUP
+// ===================================
+
 export function getInventoryItem(itemId) {
     return inventoryItems.find(item => item.id === itemId) ?? null;
 }
+
+function hasInventoryItem(game, itemId) {
+    return (
+        getInventoryItem(itemId) !== null &&
+        Object.prototype.hasOwnProperty.call(game.inventory, itemId)
+    );
+}
+
+// ===================================
+// DISCOVERY
+// ===================================
 
 export function unlockInventoryItem(game, itemId) {
     if (!game?.inventory || !game.inventoryDiscovered) {
         return false;
     }
 
-    if (!(itemId in game.inventory)) {
+    if (!hasInventoryItem(game, itemId)) {
         return false;
     }
 
@@ -35,6 +54,7 @@ export function unlockInventoryItem(game, itemId) {
     }
 
     game.inventoryDiscovered[itemId] = true;
+
     return true;
 }
 
@@ -56,6 +76,10 @@ export function syncInventoryDiscovery(game) {
     return newlyDiscovered;
 }
 
+// ===================================
+// INITIALIZATION
+// ===================================
+
 export function initializeInventory(game) {
     if (!game) return null;
 
@@ -75,66 +99,133 @@ export function initializeInventory(game) {
     return game.inventory;
 }
 
-/**
- * Adds an item and automatically discovers it.
- * Returns true only when this acquisition discovers
- * the item for the first time.
- */
-export function addInventoryItem(game, itemId, amount = 1) {
-    if (!game?.inventory || !game.inventoryDiscovered) {
-        return { success: false, newlyDiscovered: false };
-    }
+// ===================================
+// OPERATION RESULTS
+// ===================================
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-        return { success: false, newlyDiscovered: false };
-    }
-
-    if (!(itemId in game.inventory)) {
-        console.warn(`Unknown inventory item: ${itemId}`);
-        return { success: false, newlyDiscovered: false };
-    }
-
-    game.inventory[itemId] += amount;
-
-    const newlyDiscovered = unlockInventoryItem(game, itemId);
-
+function inventoryResult({
+    success,
+    reason = null,
+    amount = 0,
+    newlyDiscovered = false
+}) {
     return {
-        success: true,
-        newlyDiscovered,
-        amount: game.inventory[itemId]
+        success,
+        reason,
+        amount,
+        newlyDiscovered
     };
 }
 
-// WIP integrate where -=
-export function removeInventoryItem(game, itemId, amount = 1) {
-    if (!game?.inventory) {
-        return { success: false, remaining: 0 };
+// ===================================
+// ADD ITEM
+// ===================================
+
+/**
+ * Adds an item to inventory and automatically discovers it.
+ *
+ * Returns:
+ * {
+ *     success: boolean,
+ *     reason: string | null,
+ *     amount: number,
+ *     newlyDiscovered: boolean
+ * }
+ */
+export function addInventoryItem(game, itemId, amount = 1) {
+    if (!game?.inventory || !game.inventoryDiscovered) {
+        return inventoryResult({
+            success: false,
+            reason: "invalid-game"
+        });
     }
 
     if (!Number.isFinite(amount) || amount <= 0) {
-        return { success: false, remaining: 0 };
+        return inventoryResult({
+            success: false,
+            reason: "invalid-amount"
+        });
     }
 
-    if (!(itemId in game.inventory)) {
-        console.warn(`Unknown inventory item: ${itemId}`);
-        return { success: false, remaining: 0 };
+    if (!hasInventoryItem(game, itemId)) {
+        return inventoryResult({
+            success: false,
+            reason: "unknown-item"
+        });
     }
 
     const currentAmount = game.inventory[itemId];
 
-    // Prevent spending more than the player owns.
-    if (currentAmount < amount) {
-        return {
+    if (!Number.isFinite(currentAmount) || currentAmount < 0) {
+        return inventoryResult({
             success: false,
-            remaining: currentAmount,
-            insufficient: true
-        };
+            reason: "invalid-game"
+        });
     }
 
-    game.inventory[itemId] -= amount;
+    game.inventory[itemId] = currentAmount + amount;
 
-    return {
+    const newlyDiscovered = unlockInventoryItem(game, itemId);
+
+    return inventoryResult({
         success: true,
-        remaining: game.inventory[itemId]
-    };
+        amount: game.inventory[itemId],
+        newlyDiscovered
+    });
+}
+
+// ===================================
+// REMOVE ITEM
+// ===================================
+
+/**
+ * Removes an item if sufficient quantity exists.
+ *
+ * Returns the same standardized result as addInventoryItem().
+ */
+export function removeInventoryItem(game, itemId, amount = 1) {
+    if (!game?.inventory || !game.inventoryDiscovered) {
+        return inventoryResult({
+            success: false,
+            reason: "invalid-game"
+        });
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+        return inventoryResult({
+            success: false,
+            reason: "invalid-amount"
+        });
+    }
+
+    if (!hasInventoryItem(game, itemId)) {
+        return inventoryResult({
+            success: false,
+            reason: "unknown-item"
+        });
+    }
+
+    const currentAmount = game.inventory[itemId];
+
+    if (!Number.isFinite(currentAmount) || currentAmount < 0) {
+        return inventoryResult({
+            success: false,
+            reason: "invalid-game"
+        });
+    }
+
+    if (currentAmount < amount) {
+        return inventoryResult({
+            success: false,
+            reason: "insufficient-items",
+            amount: currentAmount
+        });
+    }
+
+    game.inventory[itemId] = currentAmount - amount;
+
+    return inventoryResult({
+        success: true,
+        amount: game.inventory[itemId]
+    });
 }

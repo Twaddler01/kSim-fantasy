@@ -29,7 +29,7 @@ export function gatherMaterial(game, materialId, amount = 1) {
     if (!result.success) {
         return {
             ok: false,
-            reason: "Unable to add material to inventory."
+            reason: result.reason
         };
     }
 
