@@ -74,6 +74,7 @@ import { ensurePlayerInitialized } from "../systems/character.js";
 
 import ProgressionService from "./services/ProgressionService.js";
 import ZoneActions from "./actions/ZoneActions.js";
+import ItemActions from "./actions/ItemActions.js";
 import { createZoneIcon } from "../ui/zoneIcons.js";
 import CaveSearch from "./actions/CaveSearch.js";
 
@@ -444,6 +445,13 @@ export function startGame() {
         gameUI.updateActiveTab();
     }
 
+    const itemActions = new ItemActions({
+        getGame: () => game,
+        save,
+        refreshUI,
+        showToast
+    });
+
     const upgradePanel = new UpgradePanel({
         getGame: () => game,
         upgradeDefinitions,
@@ -550,51 +558,9 @@ export function startGame() {
 
         ui.itemSheet = new ItemDetailSheet({
             getGame: () => game,
-            onEquip: itemId => {
-                const result = equipItem(game, itemId);
-                if (!result.ok) {
-                    console.warn("[Equip] Failed:", result.reason);
-                    return false;
-                }
-                save();
-                refreshUI({ database: true });
-                return true;
-            },
-            onUnequip: slotId => {
-                const result = unequipItem(game, slotId);
-                if (!result.ok) {
-                    console.warn("[Unequip] Failed:", result.reason);
-                    return false;
-                }
-                save();
-                refreshUI({ database: true });
-                return true;
-            },
-
-            onUse: itemId => {
-                const result = consumeItem(game, itemId);
-
-                if (!result.success) {
-                    const messages = {
-                        "health-full": "Your health is already full.",
-                        "not-owned": "You don't have this item.",
-                        "not-consumable": "This item cannot be consumed."
-                    };
-
-                    showToast(messages[result.reason] ?? "Unable to use item.");
-                    return false;
-                }
-
-                save();
-
-                showToast(
-                    `Restored ${result.restored} HP. (${result.current}/${result.maximum})`
-                );
-
-                refreshUI({ database: true });
-
-                return true;
-            }
+            onEquip: itemActions.equip,
+            onUnequip: itemActions.unequip,
+            onUse: itemActions.use
         });
 
         ui.inventory = new Inventory({

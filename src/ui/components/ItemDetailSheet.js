@@ -321,17 +321,20 @@ export default class ItemDetailSheet {
     // ==================================================
 
     handleEquip(itemId) {
-        this.onEquip(itemId);
-        this.hide();
+        if (this.onEquip(itemId)) {
+            this.hide();
+        }
     }
-
+    
     handleUnequip(slotId) {
-        this.onUnequip(slotId);
-        this.hide();
+        if (this.onUnequip(slotId)) {
+            this.hide();
+        }
     }
-
+    
     handleUse(itemId) {
-        this.onUse(itemId);
-        this.hide();
+        if (this.onUse(itemId)) {
+            this.hide();
+        }
     }
 }
