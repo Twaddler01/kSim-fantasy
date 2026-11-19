@@ -30,8 +30,6 @@ import CaveModal from "../ui/panels/CaveModal.js";
 
 import Inventory from "../ui/panels/Inventory.js";
 import ItemDetailSheet from "../ui/components/ItemDetailSheet.js";
-import { equipItem, unequipItem } from "../systems/equipment.js";
-import { consumeItem } from "../systems/ConsumableSystem.js";
 
 // Components
 import { el } from "../ui/components/Element.js";
@@ -566,8 +564,6 @@ export function startGame() {
         ui.inventory = new Inventory({
             getGame: () => game,
             formatNumber,
-            save,
-            refreshUI: options => refreshUI(options),
             openItemSheet: itemId => ui.itemSheet.show(itemId)
         });
 

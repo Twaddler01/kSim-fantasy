@@ -1,16 +1,14 @@
 import { el } from "../components/Element.js";
-import { inventoryItems, initializeInventory } from "../../data/inventory.js";
+import { inventoryItems } from "../../data/inventory.js";
 import { ItemIcon } from "../components/ItemIcon.js";
 import { EQUIPMENT_SLOTS } from "../../data/equipment.js";
 import { getMaterial } from "../../data/materials.js";
 import { getDerivedStats, getPlayerLevel } from "../../systems/character.js";
 
 export default class Inventory {
-    constructor({ getGame, formatNumber, save, refreshUI, openItemSheet }) {
+    constructor({ getGame, formatNumber, openItemSheet }) {
         this.getGame = getGame;
         this.formatNumber = formatNumber ?? (value => String(value));
-        this.save = save;
-        this.refreshUI = refreshUI;
         this.openItemSheet = openItemSheet ?? (() => {});
 
         this.expanded = false;
@@ -22,7 +20,6 @@ export default class Inventory {
         this._outsideBound = false;
         this.bindOutsideClick();
 
-        initializeInventory(this.game);
         this.element = this.render();
     }
 
