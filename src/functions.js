@@ -1,5 +1,7 @@
 import { upgradeDefinitions } from "./data/upgrades.js";
-import { addInventoryItem, removeInventoryItem } from "./data/inventory.js";
+import { canAfford, payCost } from "./systems/InventorySystem.js";
+
+export { canAfford, payCost };
 
 export const LOG_RETENTION = {
     important: 100,
@@ -86,20 +88,6 @@ export function addLog(
     return id;
 }
 
-export function canAfford(game, cost) {
-    return Object.entries(cost).every(
-        ([resource, amount]) => (game.inventory[resource] ?? 0) >= amount
-    );
-}
-
-export function payCost(game, cost) {
-    if (!canAfford(game, cost)) return false;
-    for (const [resource, amount] of Object.entries(cost)) {
-        removeInventoryItem(game, resource, amount);
-    }
-    return true;
-}
-
 export function upgradeCost(definition, level) {
     const cost = {};
     for (const [resource, amount] of Object.entries(definition.baseCost)) {
@@ -113,7 +101,11 @@ export function buyUpgrade(game, id) {
     if (!definition) return false;
     const level = game.upgrades[id] ?? 0;
     if (level >= definition.maxLevel) return false;
-    if (!payCost(game, upgradeCost(definition, level))) return false;
+
+    const payment = payCost(game, upgradeCost(definition, level));
+
+    if (!payment.ok) return false;
+
     game.upgrades[id] = level + 1;
     addLog(
         game,

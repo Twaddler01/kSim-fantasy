@@ -9,6 +9,7 @@ import { startBattle } from "../../systems/BattleSystem.js";
 import { getLootTable } from "../../data/lootTables.js";
 import { rollFromLootTable } from "../../systems/loot.js";
 import { materials } from "../../data/materials.js";
+import { getResultMessage } from "../../notifications/resultMessages.js";
 
 export default class ZoneActions {
     constructor({
@@ -45,7 +46,7 @@ export default class ZoneActions {
         const result = gatherMaterial(game, target.id, target.richness ?? 1);
 
         if (!result.ok) {
-            this.showToast(result.reason);
+            this.showToast(getResultMessage(result.reason));
             return false;
         }
 
@@ -72,15 +73,15 @@ export default class ZoneActions {
     }
 
     handleEncounter(zone, screenPos, { enemyId }) {
-        const battle = startBattle(this.getGame(), enemyId);
+        const result = startBattle(this.getGame(), enemyId);
 
-        if (!battle) {
-            this.showToast("Cannot start battle.");
+        if (!result.ok) {
+            this.showToast(getResultMessage(result.reason));
             return false;
         }
 
         this.presentation.deactivateZone();
-        this.presentation.showBattle(battle);
+        this.presentation.showBattle(result.battle);
 
         return true;
     }

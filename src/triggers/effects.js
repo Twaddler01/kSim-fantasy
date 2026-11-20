@@ -1,4 +1,5 @@
-import { addInventoryItem } from "../data/inventory.js";
+import { isKnownItem } from "../data/items.js";
+import { addItem } from "../systems/InventorySystem.js";
 
 export function applyEffects(
     game,
@@ -6,8 +7,6 @@ export function applyEffects(
     { onProgress = () => {} } = {}
 ) {
     const applied = [];
-
-    game.inventory ??= {};
 
     for (const effect of effects) {
         if (!effect || typeof effect !== "object") continue;
@@ -19,13 +18,16 @@ export function applyEffects(
         if (
             !resource ||
             !Number.isFinite(amount) ||
-            !Object.hasOwn(game.inventory, resource)
+            !isKnownItem(resource)
         ) {
             continue;
         }
 
-        addInventoryItem(game, resource, amount);
-        applied.push({ ...effect });
+        const result = addItem(game, resource, amount);
+
+        if (result.ok) {
+            applied.push({ ...effect });
+        }
     }
 
     if (applied.length > 0) {

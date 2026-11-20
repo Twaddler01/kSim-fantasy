@@ -11,6 +11,8 @@ import {
     fleeAction,
     useConsumableAction
 } from "../../systems/BattleSystem.js";
+import { getResultMessage } from "../../notifications/resultMessages.js";
+import { getItemAmount } from "../../systems/InventorySystem.js";
 
 export default class BattleModal {
     constructor({ getGame, save, refreshUI, showToast, onClose } = {}) {
@@ -120,15 +122,10 @@ export default class BattleModal {
 
         const result = useConsumableAction(this.game, this.battle, itemId);
 
-        if (!result.success) {
-            const messages = {
-                "health-full": "Your health is already full.",
-                "battle-limit":
-                    "You've already used a healing potion this battle.",
-                "not-owned": "You don't have this potion."
-            };
-
-            this.showToast(messages[result.reason] ?? "Unable to use item.");
+        if (!result.ok) {
+            this.showToast(
+                getResultMessage(result.reason, "Unable to use item.")
+            );
 
             return;
         }
@@ -254,7 +251,7 @@ export default class BattleModal {
             return footer;
         }
 
-        const potionCount = this.game.inventory?.healingPotion ?? 0;
+        const potionCount = getItemAmount(this.game, "healingPotion");
         const potionUsed = Boolean(battle.consumablesUsed?.healing);
         
         if (potionCount > 0 || potionUsed) {

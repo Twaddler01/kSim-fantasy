@@ -26,7 +26,11 @@ export function ItemIcon(
     const id =
         materialId ??
         item.materialId ??
-        (item.type === "material" || item.category ? item.id : null);
+        (item.inventoryType === "material" ||
+        item.type === "material" ||
+        Boolean(item.category)
+            ? item.id
+            : null);
 
     if (id && hasMaterialIcon(id)) {
         wrapper.append(

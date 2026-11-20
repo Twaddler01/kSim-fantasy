@@ -1,28 +1,30 @@
 // src/systems/ConsumableSystem.js
 
-import { getInventoryItem, removeInventoryItem } from "../data/inventory.js";
+import { getItemDefinition } from "../data/items.js";
 import { getDerivedStats } from "./character.js";
+import { getItemAmount, removeItem } from "./InventorySystem.js";
+import { ok, fail } from "../results.js";
 
 /**
  * Consume an item and apply its defined effect.
  */
 export function consumeItem(game, itemId, { battle = null } = {}) {
-    const item = getInventoryItem(itemId);
+    const item = getItemDefinition(itemId);
 
     if (!game?.player || !item?.consumable) {
-        return { success: false, reason: "not-consumable" };
+        return fail("not-consumable");
     }
 
     const { effect, amount, percentage, battleLimitKey } = item.consumable;
 
     // Check inventory before applying anything.
-    if ((game.inventory?.[itemId] ?? 0) < 1) {
-        return { success: false, reason: "not-owned" };
+    if (getItemAmount(game, itemId) < 1) {
+        return fail("not-owned");
     }
 
     // Check the per-battle usage limit.
     if (battle && battleLimitKey && battle.consumablesUsed?.[battleLimitKey]) {
-        return { success: false, reason: "battle-limit" };
+        return fail("battle-limit");
     }
 
     switch (effect) {
@@ -31,7 +33,7 @@ export function consumeItem(game, itemId, { battle = null } = {}) {
                     (percentage !== undefined && percentage <= 0 || percentage > 1) ||
                     (amount !== undefined && !Number.isFinite(amount))
                ) {
-                return { success: false, reason: "invalid-effect" };
+                return fail("invalid-effect");
             }
             
             const stats = getDerivedStats(game);
@@ -43,7 +45,7 @@ export function consumeItem(game, itemId, { battle = null } = {}) {
                 : (game.player.hp ?? maxHealth);
 
             if (currentHp >= maxHealth) {
-                return { success: false, reason: "health-full" };
+                return fail("health-full");
             }
 
             const isPercentage = percentage < 1 && percentage >= 0;
@@ -52,10 +54,10 @@ export function consumeItem(game, itemId, { battle = null } = {}) {
                 maxHealth - currentHp
             );
 
-            const removal = removeInventoryItem(game, itemId, 1);
+            const removal = removeItem(game, itemId, 1);
 
-            if (!removal.success) {
-                return { success: false, reason: "consume-failed" };
+            if (!removal.ok) {
+                return fail("consume-failed");
             }
 
             if (battle) {
@@ -70,19 +72,15 @@ export function consumeItem(game, itemId, { battle = null } = {}) {
                 game.player.hp = currentHp + restored;
             }
 
-            return {
-                success: true,
+            return ok({
                 effect,
                 restored,
                 current: currentHp + restored,
                 maximum: maxHealth
-            };
+            });
         }
 
         default:
-            return {
-                success: false,
-                reason: "unsupported-effect"
-            };
+            return fail("unsupported-effect");
     }
 }

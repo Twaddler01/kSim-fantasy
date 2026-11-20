@@ -1,8 +1,10 @@
 import { el } from "../components/Element.js";
-import { inventoryItems } from "../../data/inventory.js";
+import { getItemDefinition } from "../../data/items.js";
 import { ItemIcon } from "../components/ItemIcon.js";
 import { EQUIPMENT_SLOTS } from "../../data/equipment.js";
-import { getMaterial } from "../../data/materials.js";
+import {
+    getVisibleItems as getVisibleInventoryItems
+} from "../../systems/InventorySystem.js";
 import { getDerivedStats, getPlayerLevel } from "../../systems/character.js";
 
 export default class Inventory {
@@ -58,25 +60,7 @@ export default class Inventory {
     }
 
     getVisibleItems() {
-        const discovered = this.game.inventoryDiscovered ?? {};
-
-        return inventoryItems.filter(item => {
-            if (!discovered[item.id]) return false;
-
-            // Equippable items disappear from the list when you don't
-            // have any. Equipped items live in the character sheet.
-            if (item.equipment?.slot) {
-                if ((this.game.inventory?.[item.id] ?? 0) === 0) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-    }
-
-    getAmount(item) {
-        return this.game.inventory?.[item.id] ?? 0;
+        return getVisibleInventoryItems(this.game);
     }
 
     getItemKey(item) {
@@ -122,7 +106,7 @@ export default class Inventory {
 
         for (const slotDef of EQUIPMENT_SLOTS) {
             const equipped = equipment[slotDef.id] ?? null;
-            const item = equipped ? getMaterial(equipped.id) : null;
+            const item = equipped ? getItemDefinition(equipped.id) : null;
 
             const slotEl = el(
                 "button",
@@ -178,9 +162,9 @@ export default class Inventory {
     // ITEM LIST
     // ==================================================
 
-    renderItemRow(item) {
+    renderItemRow(entry) {
+        const { item, amount } = entry;
         const key = this.getItemKey(item);
-        const amount = this.getAmount(item);
 
         const value = el("strong", {
             className: "inventory-item-value",
@@ -211,28 +195,31 @@ export default class Inventory {
     // ==================================================
 
     render() {
-        const items = this.getVisibleItems();
+        const entries = this.getVisibleItems();
 
         this.values.clear();
         this.detailValues.clear();
-        this.itemIds = items.map(item => this.getItemKey(item));
+        this.itemIds = entries.map(entry =>
+            this.getItemKey(entry.item)
+        );
 
         // Snapshot equippable counts so update() can detect changes.
         this.equipCounts = new Map();
-        for (const item of items) {
-            if (item.equipment) {
+        for (const entry of entries) {
+            if (entry.item.equipment) {
                 this.equipCounts.set(
-                    this.getItemKey(item),
-                    this.getAmount(item)
+                    this.getItemKey(entry.item),
+                    entry.amount
                 );
             }
         }
 
-        const chips = items.map(item => {
+        const chips = entries.map(entry => {
+            const { item, amount } = entry;
             const key = this.getItemKey(item);
             const value = el("span", {
                 className: "resource-chip-value",
-                text: this.formatNumber(this.getAmount(item))
+                text: this.formatNumber(amount)
             });
             this.values.set(key, value);
 
@@ -288,7 +275,7 @@ export default class Inventory {
                       el(
                           "div",
                           { className: "inventory-items-list" },
-                          items.map(item => this.renderItemRow(item))
+                          entries.map(entry => this.renderItemRow(entry))
                       )
                   ]
               )
@@ -321,8 +308,10 @@ export default class Inventory {
     }
 
     update() {
-        const items = this.getVisibleItems();
-        const ids = items.map(item => this.getItemKey(item));
+        const entries = this.getVisibleItems();
+        const ids = entries.map(entry =>
+            this.getItemKey(entry.item)
+        );
 
         if (JSON.stringify(ids) !== JSON.stringify(this.itemIds)) {
             this.replaceElement();
@@ -331,21 +320,21 @@ export default class Inventory {
 
         // Equip / unequip changes the count of an equippable item — rebuild
         // so the character sheet and any conditional UI reflect new state.
-        for (const item of items) {
-            if (!item.equipment) continue;
-            const key = this.getItemKey(item);
-            const current = this.getAmount(item);
+        for (const entry of entries) {
+            if (!entry.item.equipment) continue;
+            const key = this.getItemKey(entry.item);
             const previous = this.equipCounts.get(key);
-            if (previous !== current) {
+
+            if (previous !== entry.amount) {
                 this.replaceElement();
                 return;
             }
         }
 
         // Fast path: only text content changed.
-        for (const item of items) {
-            const key = this.getItemKey(item);
-            const value = this.formatNumber(this.getAmount(item));
+        for (const entry of entries) {
+            const key = this.getItemKey(entry.item);
+            const value = this.formatNumber(entry.amount);
 
             const compactValue = this.values.get(key);
             if (compactValue) compactValue.textContent = value;

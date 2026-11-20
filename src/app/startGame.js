@@ -22,7 +22,10 @@ import BattleModal from "../ui/panels/BattleModal.js";
 
 import MainObjective from "../ui/panels/MainObjective.js";
 import ObjectiveTracker from "../ui/panels/ObjectiveTracker.js";
-import { tryAdvanceStage, getCurrentStage } from "../data/stages.js";
+import {
+    tryAdvanceStage,
+    getCurrentStage
+} from "../systems/StageSystem.js";
 
 import WorldPanel from "../ui/panels/WorldPanel.js";
 import LootModal from "../ui/panels/LootModal.js";
@@ -54,7 +57,7 @@ import {
 import {
     initializeInventory,
     syncInventoryDiscovery
-} from "../data/inventory.js";
+} from "../systems/InventorySystem.js";
 
 import ResourcePopups from "../ui/effects/ResourcePopups.js";
 import SaveManager from "../managers/SaveManager.js";

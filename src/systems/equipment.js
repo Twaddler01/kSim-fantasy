@@ -1,8 +1,8 @@
 // src/systems/equipment.js
 //
-// Equip / unequip logic. Mutates game.inventory and game.equipment only.
-// Never touches the UI. Every mutation is reversible: unequip restores the
-// item to inventory, equip returns any replaced item to inventory.
+// Equip / unequip logic. Mutates game.equipment and inventory through
+// InventorySystem. Never touches the UI. Every mutation is reversible:
+// unequip restores the item to inventory, equip returns any replaced item.
 //
 // The authoritative shape of game.equipment is:
 //   { head: null | { id, slot, weaponType?, stats: {...} }, chest: ..., ... }
@@ -12,79 +12,96 @@
 // array is edited later, existing equipped items are unaffected until the
 // player unequips and re-equips them.
 
-import { getMaterial } from "../data/materials.js";
+import { getItemDefinition } from "../data/items.js";
 import { getEquipmentSlot, isEquippable } from "../data/equipment.js";
+import {
+    addItem,
+    getItemAmount,
+    isInventoryReady,
+    removeItem
+} from "./InventorySystem.js";
+import { ok, fail } from "../results.js";
 
 export function equipItem(game, itemId) {
-    if (!game?.inventory) {
-        return { ok: false, reason: "Invalid game state." };
+    if (!isInventoryReady(game)) {
+        return fail("invalid-game");
     }
 
     // Migration safety: older saves may not have `equipment` yet.
     game.equipment ??= {};
 
-    const material = getMaterial(itemId);
-    if (!material) {
-        return { ok: false, reason: `Unknown item: ${itemId}` };
+    const item = getItemDefinition(itemId);
+    if (!item) {
+        return fail("unknown-item", { itemId });
     }
 
-    if (!isEquippable(material)) {
-        return {
-            ok: false,
-            reason: `${material.name ?? itemId} cannot be equipped.`
-        };
+    if (!isEquippable(item)) {
+        return fail("not-equippable", { itemId });
     }
 
-    const slotId = material.equipment.slot;
+    const slotId = item.equipment.slot;
     const slotDef = getEquipmentSlot(slotId);
     if (!slotDef) {
-        return { ok: false, reason: `Unknown equipment slot: ${slotId}` };
+        return fail("unknown-slot", { slotId });
     }
 
-    const available = game.inventory[itemId] ?? 0;
-    if (available < 1) {
-        return { ok: false, reason: "You don't have that item." };
+    if (getItemAmount(game, itemId) < 1) {
+        return fail("not-owned", { itemId });
     }
 
-    // Return whatever is currently in the slot to inventory first.
     const existing = game.equipment[slotId];
-    if (existing?.id) {
-        game.inventory[existing.id] = (game.inventory[existing.id] ?? 0) + 1;
+    if (existing?.id && !getItemDefinition(existing.id)) {
+        return fail("unknown-item", { itemId: existing.id });
     }
 
-    // Move one from inventory to the slot.
-    game.inventory[itemId] -= 1;
+    const removal = removeItem(game, itemId, 1);
+    if (!removal.ok) {
+        return fail(removal.reason, { itemId });
+    }
+
+    if (existing?.id) {
+        const replaced = addItem(game, existing.id, 1);
+
+        if (!replaced.ok) {
+            // Roll back the equip so inventory stays consistent.
+            addItem(game, itemId, 1);
+            return fail(replaced.reason, { itemId: existing.id });
+        }
+    }
+
     game.equipment[slotId] = {
         id: itemId,
-        ...material.equipment
+        ...item.equipment
     };
 
-    return {
-        ok: true,
+    return ok({
         slotId,
-        item: material,
+        item,
         replaced: existing?.id ?? null
-    };
+    });
 }
 
 export function unequipItem(game, slotId) {
-    if (!game?.inventory || !game?.equipment) {
-        return { ok: false, reason: "Invalid game state." };
+    if (!isInventoryReady(game) || !game?.equipment) {
+        return fail("invalid-game");
     }
 
     const existing = game.equipment[slotId];
     if (!existing?.id) {
-        return { ok: false, reason: `Nothing equipped in ${slotId}.` };
+        return fail("not-equipped", { slotId });
     }
 
-    game.inventory[existing.id] = (game.inventory[existing.id] ?? 0) + 1;
+    const result = addItem(game, existing.id, 1);
+    if (!result.ok) {
+        return fail(result.reason, { itemId: existing.id, slotId });
+    }
+
     game.equipment[slotId] = null;
 
-    return {
-        ok: true,
+    return ok({
         slotId,
         itemId: existing.id
-    };
+    });
 }
 
 export function getEquipped(game, slotId) {

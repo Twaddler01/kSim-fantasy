@@ -6,6 +6,7 @@
 import { getCave } from "../../data/caves.js";
 import { getLootTable } from "../../data/lootTables.js";
 import { rollFromLootTable } from "../../systems/loot.js";
+import { ok, fail } from "../../results.js";
 
 export default class CaveSearch {
     constructor({ getGame, save, refreshUI }) {
@@ -25,17 +26,17 @@ export default class CaveSearch {
         const cave = getCave(caveId);
 
         if (!cave) {
-            return { ok: false, reason: "unknown-cave" };
+            return fail("unknown-cave");
         }
 
         if (this.hasSearched(caveId)) {
-            return { ok: false, reason: "already-searched" };
+            return fail("already-searched");
         }
 
         const table = getLootTable(cave.lootTableId);
 
         if (!table) {
-            return { ok: false, reason: "missing-loot-table" };
+            return fail("missing-loot-table");
         }
 
         const items = rollFromLootTable(this.getGame(), table);
@@ -46,12 +47,11 @@ export default class CaveSearch {
         this.save();
         this.refreshUI({ database: true });
 
-        return {
-            ok: true,
+        return ok({
             items,
             newlyDiscovered: items.filter(
                 item => item.newlyDiscovered && !item.failed
             )
-        };
+        });
     }
 }

@@ -2,11 +2,10 @@
 //
 // Loot rolling. One primitive: rollFromLootTable(game, table). Enemies
 // and non-enemy reward sources (caches, caves, future quest rewards) all
-// funnel through it. Every item grant goes through addInventoryItem and
-// checks .success — respects the deferred slot-system contract.
+// funnel through it. Every item grant goes through InventorySystem.
 
-import { addInventoryItem } from "../data/inventory.js";
-import { getMaterial } from "../data/materials.js";
+import { getItemDefinition } from "../data/items.js";
+import { addItem } from "./InventorySystem.js";
 import { gainXp } from "./character.js";
 
 /**
@@ -24,14 +23,15 @@ export function rollFromLootTable(game, table) {
         const qty = randomInt(entry.minQty ?? 1, entry.maxQty ?? 1);
         if (qty < 1) continue;
 
-        const addResult = addInventoryItem(game, entry.itemId, qty);
-        const name = getMaterial(entry.itemId)?.name ?? entry.itemId;
+        const addResult = addItem(game, entry.itemId, qty);
+        const name =
+            getItemDefinition(entry.itemId)?.name ?? entry.itemId;
 
         items.push({
             itemId: entry.itemId,
             qty,
             name,
-            failed: !addResult.success,
+            failed: !addResult.ok,
             newlyDiscovered: Boolean(addResult.newlyDiscovered)
         });
     }
@@ -41,7 +41,7 @@ export function rollFromLootTable(game, table) {
 
 export function rollRewards(game, enemy) {
     const gold = rollGold(enemy.goldRange ?? [0, 0]);
-    if (gold > 0) addInventoryItem(game, "gold", gold);
+    if (gold > 0) addItem(game, "gold", gold);
 
     const xp = enemy.xp ?? 0;
     let levelUps = [];

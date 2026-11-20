@@ -21,14 +21,16 @@
 import { getEnemy } from "../data/enemies.js";
 import { getDerivedStats } from "./character.js";
 import { rollRewards, formatRewardsText } from "./loot.js";
-import { getInventoryItem } from "../data/inventory.js";
+import { getItemDefinition } from "../data/items.js";
 import { consumeItem } from "./ConsumableSystem.js";
+import { getItemAmount, removeItem } from "./InventorySystem.js";
+import { ok, fail } from "../results.js";
 
 export function startBattle(game, enemyId) {
     const enemy = getEnemy(enemyId);
     if (!enemy) {
         console.warn("[BattleSystem] Unknown enemy:", enemyId);
-        return null;
+        return fail("unknown-enemy", { enemyId });
     }
 
     const stats = getDerivedStats(game);
@@ -39,31 +41,33 @@ export function startBattle(game, enemyId) {
         game.player.hp = stats.maxHealth;
     }
 
-    return {
-        enemyId,
-        enemy,
-        enemyHp: enemy.hp,
-        enemyMaxHp: enemy.hp,
-        playerHp: game.player.hp,
-        playerMaxHp: stats.maxHealth,
-        playerStats: {
-            attack: stats.attack,
-            defense: stats.defense,
-            crit: stats.crit
-        },
-        consumablesUsed: {},
-        log: [
-            {
-                kind: "info",
-                text: `A ${enemy.name} blocks your path.`
-            }
-        ],
-        turn: 0,
-        finished: false,
-        victory: false,
-        fled: false,
-        rewards: null
-    };
+    return ok({
+        battle: {
+            enemyId,
+            enemy,
+            enemyHp: enemy.hp,
+            enemyMaxHp: enemy.hp,
+            playerHp: game.player.hp,
+            playerMaxHp: stats.maxHealth,
+            playerStats: {
+                attack: stats.attack,
+                defense: stats.defense,
+                crit: stats.crit
+            },
+            consumablesUsed: {},
+            log: [
+                {
+                    kind: "info",
+                    text: `A ${enemy.name} blocks your path.`
+                }
+            ],
+            turn: 0,
+            finished: false,
+            victory: false,
+            fled: false,
+            rewards: null
+        }
+    });
 }
 
 
@@ -198,10 +202,12 @@ function finalizeVictory(game, battle) {
 
 function finalizeDefeat(game, battle) {
     const stats = getDerivedStats(game);
-    const goldBefore = game.inventory.gold ?? 0;
-    const goldLost = Math.floor(goldBefore * 0.1);
+    const goldBefore = getItemAmount(game, "gold");
+    const goldLost = Math.min(goldBefore, Math.floor(goldBefore * 0.1));
 
-    game.inventory.gold = Math.max(0, goldBefore - goldLost);
+    if (goldLost > 0) {
+        removeItem(game, "gold", goldLost);
+    }
     game.player.hp = stats.maxHealth;
     battle.playerHp = game.player.hp;
     battle.rewards = { goldLost, healed: true };
@@ -217,14 +223,14 @@ function finalizeDefeat(game, battle) {
 
 export function useConsumableAction(game, battle, itemId) {
     if (!battle || battle.finished) {
-        return { success: false, reason: "battle-finished", newEvents: [] };
+        return fail("battle-finished", { newEvents: [] });
     }
 
     const prevLen = battle.log.length;
 
     const result = consumeItem(game, itemId, { battle });
 
-    if (!result.success) {
+    if (!result.ok) {
         return {
             ...result,
             battle,
@@ -232,7 +238,7 @@ export function useConsumableAction(game, battle, itemId) {
         };
     }
 
-    const item = getInventoryItem(itemId);
+    const item = getItemDefinition(itemId);
 
     battle.log.push({
         kind: "player-heal",

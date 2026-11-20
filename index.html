@@ -14,11 +14,11 @@
         <div id="productionErrorLog"></div>
 
         <!-- Install error listeners first. -->
-        <script src="./mobile-dev-console/errorBootstrap.js"></script>
+        <script src="https://twaddler01.github.io/mobile-dev-console/releases/v1.0.2/errorBootstrap.js"></script>
 
         <!-- Initialize the console before integrations and the application. -->
         <script type="module">
-            const DEBUG_MODE = true;
+            const DEBUG_MODE = false;
 
             document.body.classList.toggle("debug-mode", DEBUG_MODE);
 
@@ -72,7 +72,7 @@
             if (DEBUG_MODE) {
                 try {
                     const { default: DevTools } =
-                        await import("./mobile-dev-console/DevTools.js");
+                        await import("https://twaddler01.github.io/mobile-dev-console/releases/v1.0.2/DevTools.js");
 
                     const { DebugButtons } =
                         await import("./debug/DebugButtons.js");

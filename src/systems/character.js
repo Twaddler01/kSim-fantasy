@@ -12,7 +12,11 @@
 // crit are always derived — never stored — so tuning the formulas is safe
 // for existing saves.
 
-import { addInventoryItem } from "../data/inventory.js";
+import {
+    addItem,
+    getItemAmount,
+    removeItem
+} from "./InventorySystem.js";
 
 // --------------------------------------------------
 // TUNING CONSTANTS
@@ -59,7 +63,7 @@ export function getPlayerLevel(game) {
 }
 
 export function getPlayerXp(game) {
-    return Math.max(0, game?.inventory?.experience ?? 0);
+    return getItemAmount(game, "experience");
 }
 
 export function getXpToNext(game) {
@@ -159,13 +163,29 @@ export function gainXp(game, amount) {
         xp: getPlayerXp(game)
     };
 
-    addInventoryItem(game, "experience", amount);
+    const added = addItem(game, "experience", amount);
+
+    if (!added.ok) {
+        return {
+            gained: 0,
+            before,
+            after: {
+                level: game.player.level,
+                xp: getPlayerXp(game)
+            },
+            levelUps: [],
+            level: game.player.level
+        };
+    }
 
     const levelUps = [];
     let toNext = computeXpToNext(game.player.level);
 
-    while (game.inventory.experience >= toNext) {
-        game.inventory.experience -= toNext;
+    while (getItemAmount(game, "experience") >= toNext) {
+        const spent = removeItem(game, "experience", toNext);
+
+        if (!spent.ok) break;
+
         game.player.level += 1;
         game.player.hp = getDerivedStats(game).maxHealth;
         levelUps.push(game.player.level);
@@ -177,7 +197,7 @@ export function gainXp(game, amount) {
         before,
         after: {
             level: game.player.level,
-            xp: game.inventory.experience
+            xp: getPlayerXp(game)
         },
         levelUps,
         level: game.player.level
