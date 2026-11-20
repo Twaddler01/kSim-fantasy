@@ -16,8 +16,7 @@
 
 import { el } from "./Element.js";
 import { ItemIcon } from "./ItemIcon.js";
-import { getInventoryItem } from "../../data/inventory.js";
-import { getMaterial } from "../../data/materials.js";
+import { getItemEntry } from "../../systems/InventorySystem.js";
 import {
     getItemStats,
     compareItemStats,
@@ -118,14 +117,14 @@ export default class ItemDetailSheet {
     show(itemId) {
         if (!itemId) return;
 
-        const item = getInventoryItem(itemId);
-        if (!item) {
+        const entry = getItemEntry(this.game, itemId);
+        if (!entry) {
             console.warn("[ItemDetailSheet] Unknown item:", itemId);
             return;
         }
 
         this.currentItemId = itemId;
-        this.render(item);
+        this.render(entry);
 
         this.element.classList.add("is-visible");
         document.body.classList.add("modal-open", "sheet-open");
@@ -153,7 +152,8 @@ export default class ItemDetailSheet {
     // RENDER
     // ==================================================
 
-    render(item) {
+    render(entry) {
+        const { item, amount } = entry;
         const game = this.game;
         const slotId = item.equipment?.slot ?? null;
         const equipped = slotId ? game.equipment?.[slotId] : null;
@@ -218,9 +218,7 @@ export default class ItemDetailSheet {
         // Footer / action
         this.footer.replaceChildren();
         this.footer.hidden = true;
-        
-        const amount = game.inventory?.[item.id] ?? 0;
-        
+
         if (item.consumable) {
             this.footer.hidden = false;
         
@@ -260,9 +258,10 @@ export default class ItemDetailSheet {
 
     renderIcon(item) {
         // Real materials use the SVG pipeline. Resources use their emoji.
-        if (getMaterial(item.id)) {
+        if (item.inventoryType === "material") {
             return ItemIcon(item, { size: 32, materialId: item.id });
         }
+
         return el("span", {
             className: "item-sheet-icon-emoji",
             text: item.icon || "◈"

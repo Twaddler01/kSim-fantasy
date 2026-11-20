@@ -5,7 +5,7 @@ import { createZoneIcon } from "../zoneIcons.js";
 import { createSvgElement } from "../../assets/icons/svgHelpers.js";
 import { getWorldDrawing } from "../../assets/icons/world/worldMap.js";
 
-import { getMaterial } from "../../data/materials.js";
+import { getItemDefinition } from "../../data/items.js";
 import { getEnemy } from "../../data/enemies.js";
 import { getCave } from "../../data/caves.js";
 import { getZoneSpawnBreakdown } from "../../data/zones.js";
@@ -362,7 +362,7 @@ export default class WorldMapPanel {
         let message = `${zone.name} is currently inaccessible.`;
 
         if (requirement?.type === "inventoryAmount" && requirement.item) {
-            const material = getMaterial(requirement.item);
+            const material = getItemDefinition(requirement.item);
             const itemName = material?.name ?? requirement.item;
             const amount = requirement.amount ?? 1;
 
@@ -389,7 +389,7 @@ export default class WorldMapPanel {
     getResourceItems(zone) {
         return getZoneSpawnBreakdown(zone)
             .map(entry => {
-                const material = getMaterial(entry.materialId);
+                const material = getItemDefinition(entry.materialId);
                 if (!material) return null;
 
                 return this.createContentItem({

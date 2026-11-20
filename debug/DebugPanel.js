@@ -3,9 +3,12 @@
 import { el } from "../src/ui/components/Element.js";
 import { Button } from "../src/ui/components/Button.js";
 import { Card } from "../src/ui/components/Card.js";
-import { materials } from "../src/data/materials.js";
-import { resourceDefinitions as RESOURCES } from "../src/data/resources.js";
-import { addInventoryItem } from "../src/data/inventory.js";
+import { getItemsByType } from "../src/data/items.js";
+import {
+    addItem,
+    getItemAmount
+} from "../src/systems/InventorySystem.js";
+import { getResultMessage } from "../src/notifications/resultMessages.js";
 import {
     getDerivedStats,
     gainXp,
@@ -63,9 +66,10 @@ export default class DebugPanel {
             {
                 label: "Grant Starter Equipment",
                 run: () => {
-                    addInventoryItem(this.getGame(), "ironSword", 1);
-                    addInventoryItem(this.getGame(), "leatherVest", 1);
-                    this.finishGrant("Starter equipment");
+                    this.grantMany(
+                        ["ironSword", "leatherVest"],
+                        "Starter equipment"
+                    );
                 }
             },
             {
@@ -245,17 +249,12 @@ export default class DebugPanel {
 
         const resources = this.createItemSection(
             "Primary Resources",
-            RESOURCES
+            getItemsByType("resource")
         );
-
-        const materialItems = materials.map(item => ({
-            ...item,
-            inventoryType: "material"
-        }));
 
         const materialSection = this.createItemSection(
             "Materials",
-            materialItems
+            getItemsByType("material")
         );
 
         const utilityCard = Card(
@@ -309,32 +308,59 @@ export default class DebugPanel {
     }
 
     grantItem(itemId, amount = 1) {
-        addInventoryItem(this.game, itemId, amount);
+        const result = addItem(this.game, itemId, amount);
+
+        if (!result.ok) {
+            this.showToast?.(
+                getResultMessage(result.reason, "Grant failed.")
+            );
+            return;
+        }
 
         this.finishGrant(`${amount} ${itemId}`);
     }
 
-    grantAllMaterials(amount = 100) {
-        for (const item of materials) {
-            addInventoryItem(this.game, item.id, amount);
+    grantMany(items, label) {
+        for (const item of items) {
+            const itemId = typeof item === "string" ? item : item.id;
+            const result = addItem(this.game, itemId, 1);
+
+            if (!result.ok) {
+                this.showToast?.(
+                    getResultMessage(result.reason, "Grant failed.")
+                );
+                return;
+            }
         }
 
-        this.finishGrant("All materials");
+        this.finishGrant(label);
+    }
+
+    grantAllMaterials(amount = 100) {
+        this.grantAll(getItemsByType("material"), amount, "All materials");
     }
 
     grantAllResources(amount = 1000) {
-        for (const item of RESOURCES) {
-            addInventoryItem(this.game, item.id, amount);
+        this.grantAll(getItemsByType("resource"), amount, "All resources");
+    }
+
+    grantAll(items, amount, label) {
+        for (const item of items) {
+            const result = addItem(this.game, item.id, amount);
+
+            if (!result.ok) {
+                this.showToast?.(
+                    getResultMessage(result.reason, "Grant failed.")
+                );
+                return;
+            }
         }
 
-        this.finishGrant("All resources");
+        this.finishGrant(label);
     }
 
     grantItemWithoutRefresh(itemId, amount) {
-        const game = this.game;
-
-        game.inventory ??= {};
-        addInventoryItem(game, itemId, amount);
+        addItem(this.game, itemId, amount);
     }
 
     finishGrant(label) {
@@ -350,7 +376,7 @@ export default class DebugPanel {
         if (!this.element) return this;
 
         for (const [itemId, display] of this.valueDisplays) {
-            display.textContent = this.game.inventory?.[itemId] ?? 0;
+            display.textContent = getItemAmount(this.game, itemId);
         }
 
         return this;

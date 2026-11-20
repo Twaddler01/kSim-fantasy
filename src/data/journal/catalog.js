@@ -2,13 +2,11 @@
 
 import { locations } from "../locations.js";
 import { ZONE_DEFINITIONS } from "../zones.js";
-import { materials } from "../materials.js";
+import { getItemsByType } from "../items.js";
 
 import { refinementRecipes } from "../recipes/refinement.js";
 import { fabricationRecipes } from "../recipes/fabrication.js";
 import { assemblyRecipes } from "../recipes/assembly.js";
-
-import { resourceDefinitions } from "../resources.js";
 
 // --------------------------------------------------
 // CATALOG BUILDER
@@ -22,6 +20,7 @@ function createEntry(source, type, category) {
         name: source.name,
         icon: source.icon ?? "❔",
         description: source.description ?? "",
+        inventoryType: source.inventoryType ?? null,
 
         metadata: {
             hidden: false,
@@ -45,7 +44,7 @@ const zoneEntries = ZONE_DEFINITIONS.map(zone =>
     createEntry(zone, "zone", "zones")
 );
 
-const materialEntries = materials.map(material => {
+const materialEntries = getItemsByType("material").map(material => {
     const categoryMap = {
         raw: "rawMaterials",
         processed: "processedMaterials",
@@ -71,7 +70,7 @@ const recipeEntries = [
     )
 ];
 
-const resourceEntries = resourceDefinitions.map(resource =>
+const resourceEntries = getItemsByType("resource").map(resource =>
     createEntry(resource, "resource", "resources")
 );
 

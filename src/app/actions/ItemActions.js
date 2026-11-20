@@ -8,6 +8,8 @@ import { equipItem, unequipItem } from "../../systems/equipment.js";
 
 import { consumeItem } from "../../systems/ConsumableSystem.js";
 
+import { getResultMessage } from "../../notifications/resultMessages.js";
+
 export default class ItemActions {
     constructor({ getGame, save, refreshUI, showToast }) {
         this.getGame = getGame;
@@ -52,19 +54,9 @@ export default class ItemActions {
     use(itemId) {
         const result = consumeItem(this.getGame(), itemId);
 
-        if (!result.success) {
-            const messages = {
-                "not-consumable": "That item cannot be used.",
-                "not-owned": "You don't have that item.",
-                "battle-limit": "You've already used that item in this battle.",
-                "invalid-effect": "This item's effect is invalid.",
-                "health-full": "Your health is already full.",
-                "consume-failed": "Couldn't use that item.",
-                "unsupported-effect": "That item's effect isn't supported yet."
-            };
-
+        if (!result.ok) {
             this.showToast(
-                messages[result.reason] ?? "Couldn't use that item."
+                getResultMessage(result.reason, "Couldn't use that item.")
             );
 
             return false;

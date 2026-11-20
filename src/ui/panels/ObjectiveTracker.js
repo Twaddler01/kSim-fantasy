@@ -1,6 +1,9 @@
 // src/ui/panels/ObjectiveTracker.js
 import { el } from "../components/Element.js";
-import { getCurrentStage, checkRequirements } from "../../data/stages.js";
+import {
+    getCurrentStage,
+    checkRequirements
+} from "../../systems/StageSystem.js";
 
 export default class ObjectiveTracker {
     constructor({ getGame, navigateToCamp }) {

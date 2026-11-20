@@ -2,13 +2,13 @@ import { el } from "../components/Element.js";
 import { Button } from "../components/Button.js";
 import { Card } from "../components/Card.js";
 import Badge from "../components/Badge.js";
-import { materials } from "../../data/materials.js";
+import { getItemDefinition } from "../../data/items.js";
 import { refinementRecipes } from "../../data/recipes/refinement.js";
 import { fabricationRecipes } from "../../data/recipes/fabrication.js";
 import { assemblyRecipes } from "../../data/recipes/assembly.js";
 import { getRecipeStatus, craftRecipe } from "../../systems/SynthesisEngine.js";
-import { resourceDefinitions } from "../../data/resources.js";
 import { ItemIcon } from "../components/ItemIcon.js";
+import { getResultMessage } from "../../notifications/resultMessages.js";
 
 const RECIPE_GROUPS = [
     {
@@ -60,8 +60,7 @@ export default class SynthesisPanel {
 
     getItem(itemId) {
         return (
-            materials.find(item => item.id === itemId) ??
-            resourceDefinitions.find(item => item.id === itemId) ?? {
+            getItemDefinition(itemId) ?? {
                 id: itemId,
                 name: itemId,
                 icon: "◈"
@@ -468,7 +467,7 @@ export default class SynthesisPanel {
         const result = craftRecipe(this.game, recipe);
 
         if (!result.ok) {
-            this.showToast?.(result.reason);
+            this.showToast?.(getResultMessage(result.reason));
             this.update();
             return false;
         }

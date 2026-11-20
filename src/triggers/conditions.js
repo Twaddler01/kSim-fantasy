@@ -1,3 +1,5 @@
+import { getItemAmount } from "../systems/InventorySystem.js";
+
 /**
  * Shared, side-effect-free trigger condition evaluator.
  *
@@ -12,7 +14,7 @@ export function evaluateTrigger(game, trigger) {
             if (!trigger.item) return false;
 
             return (
-                (game.inventory?.[trigger.item] ?? 0) >= (trigger.amount ?? 0)
+                getItemAmount(game, trigger.item) >= (trigger.amount ?? 0)
             );
 
         case "upgradeLevel": {

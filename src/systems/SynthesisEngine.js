@@ -1,16 +1,16 @@
 // src/systems/SynthesisEngine.js
 import {
-    getInventoryItem,
-    addInventoryItem,
-    removeInventoryItem
-} from "../data/inventory.js";
-
-/**
- * Read the amount of an item in the shared inventory.
- */
-export function getInventoryAmount(game, itemId) {
-    return Math.max(0, Number(game?.inventory?.[itemId]) || 0);
-}
+    getItemDefinition,
+    isKnownItem
+} from "../data/items.js";
+import {
+    addItems,
+    getItemAmount,
+    isInventoryReady,
+    isItemDiscovered,
+    removeItems
+} from "./InventorySystem.js";
+import { ok, fail } from "../results.js";
 
 /**
  * Check whether a recipe's progression requirement is unlocked.
@@ -25,7 +25,7 @@ export function isRecipeUnlocked(game, recipe) {
  * Check whether the inventory contains every recipe input.
  */
 export function canCraftRecipe(game, recipe) {
-    if (!game?.inventory || !recipe?.inputs) {
+    if (!isInventoryReady(game) || !recipe?.inputs) {
         return false;
     }
 
@@ -37,7 +37,7 @@ export function canCraftRecipe(game, recipe) {
         ([itemId, required]) =>
             Number.isFinite(required) &&
             required > 0 &&
-            getInventoryAmount(game, itemId) >= required
+            getItemAmount(game, itemId) >= required
     );
 }
 
@@ -45,7 +45,7 @@ export function canCraftRecipe(game, recipe) {
  * Calculate how many complete crafts the current inventory supports.
  */
 export function getAvailableCrafts(game, recipe) {
-    if (!game?.inventory || !recipe?.inputs) return 0;
+    if (!isInventoryReady(game) || !recipe?.inputs) return 0;
 
     if (!isRecipeUnlocked(game, recipe)) return 0;
 
@@ -54,7 +54,7 @@ export function getAvailableCrafts(game, recipe) {
             return 0;
         }
 
-        return Math.floor(getInventoryAmount(game, itemId) / required);
+        return Math.floor(getItemAmount(game, itemId) / required);
     });
 
     if (!limits.length) return 0;
@@ -81,14 +81,14 @@ export function getRecipeStatus(game, recipe) {
 
     const requirements = Object.entries(recipe.inputs ?? {}).map(
         ([itemId, required]) => {
-            const available = getInventoryAmount(game, itemId);
+            const available = getItemAmount(game, itemId);
 
             return {
                 id: itemId,
                 available,
                 required,
                 sufficient: available >= required,
-                discovered: game?.inventoryDiscovered?.[itemId] === true
+                discovered: isItemDiscovered(game, itemId)
             };
         }
     );
@@ -126,58 +126,50 @@ export function getRecipeStatus(game, recipe) {
  * Consume all inputs and grant all outputs.
  */
 export function craftRecipe(game, recipe, { onProgress = () => {} } = {}) {
-    if (!game?.inventory || !recipe?.inputs || !recipe?.outputs) {
-        return {
-            ok: false,
-            reason: "Invalid recipe or inventory."
-        };
+    if (!isInventoryReady(game) || !recipe?.inputs || !recipe?.outputs) {
+        return fail("invalid-recipe");
     }
 
     if (!isRecipeUnlocked(game, recipe)) {
-        return {
-            ok: false,
-            reason: `Recipe locked. Requires: ${recipe.unlockId}.`
-        };
+        return fail("recipe-locked", { unlockId: recipe.unlockId });
     }
 
     if (!canCraftRecipe(game, recipe)) {
-        return {
-            ok: false,
-            reason: "Insufficient materials."
-        };
+        return fail("insufficient-materials");
     }
 
     const outputs = Object.entries(recipe.outputs);
 
     if (
         outputs.length === 0 ||
-        outputs.some(([, amount]) => !Number.isFinite(amount) || amount <= 0)
+        outputs.some(
+            ([itemId, amount]) =>
+                !isKnownItem(itemId) ||
+                !Number.isFinite(amount) ||
+                amount <= 0
+        )
     ) {
-        return {
-            ok: false,
-            reason: "Recipe has invalid outputs."
-        };
+        return fail("invalid-outputs");
     }
 
     if (recipe.unique) {
         const completed = game.manufacturing?.completedRecipes ?? [];
 
         if (completed.includes(recipe.id)) {
-            return {
-                ok: false,
-                reason: "This recipe has already been completed."
-            };
+            return fail("recipe-completed", { recipeId: recipe.id });
         }
     }
 
-    // Consume inputs.
-    for (const [itemId, amount] of Object.entries(recipe.inputs)) {
-        removeInventoryItem(game, itemId, amount);
+    const consumed = removeItems(game, recipe.inputs);
+
+    if (!consumed.ok) {
+        return fail(consumed.reason, { ...consumed });
     }
 
-    // Grant outputs.
-    for (const [id, amount] of outputs) {
-        addInventoryItem(game, id, amount);
+    const granted = addItems(game, recipe.outputs);
+
+    if (!granted.ok) {
+        return fail(granted.reason, { ...granted });
     }
 
     // Evaluate progression after all outputs are granted.
@@ -191,18 +183,18 @@ export function craftRecipe(game, recipe, { onProgress = () => {} } = {}) {
         game.manufacturing.completedRecipes.push(recipe.id);
     }
 
-    return {
-        ok: true,
+    return ok({
         recipe,
         inputs: { ...recipe.inputs },
         outputs: { ...recipe.outputs }
-    };
+    });
 }
 
 export function areRecipeIngredientsDiscovered(game, recipe) {
     return Object.keys(recipe.inputs ?? {}).every(itemId => {
-        const item = getInventoryItem(itemId);
-
-        return item !== null && game?.inventoryDiscovered?.[itemId] === true;
+        return (
+            getItemDefinition(itemId) !== null &&
+            isItemDiscovered(game, itemId)
+        );
     });
 }

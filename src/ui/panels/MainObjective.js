@@ -4,7 +4,7 @@ import {
     getCurrentStage,
     getStageEntriesVisible,
     checkRequirements
-} from "../../data/stages.js";
+} from "../../systems/StageSystem.js";
 
 export default class MainObjective {
     constructor({ getGame, onToggleTracker }) {
