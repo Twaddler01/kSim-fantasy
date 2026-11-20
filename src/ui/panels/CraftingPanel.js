@@ -1,12 +1,11 @@
 import { el } from "../components/Element.js";
 import { Button } from "../components/Button.js";
 import { Card } from "../components/Card.js";
-import Badge from "../components/Badge.js";
 import { getItemDefinition } from "../../data/items.js";
 import { refinementRecipes } from "../../data/recipes/refinement.js";
 import { fabricationRecipes } from "../../data/recipes/fabrication.js";
 import { assemblyRecipes } from "../../data/recipes/assembly.js";
-import { getRecipeStatus, craftRecipe } from "../../systems/SynthesisEngine.js";
+import { getRecipeStatus, craftRecipe } from "../../systems/CraftingSystem.js";
 import { ItemIcon } from "../components/ItemIcon.js";
 import { getResultMessage } from "../../notifications/resultMessages.js";
 
@@ -34,7 +33,7 @@ const RECIPE_GROUPS = [
     }
 ];
 
-export default class SynthesisPanel {
+export default class CraftingPanel {
     constructor({ getGame, save, refreshUI, showToast, processProgression }) {
         this.getGame = getGame;
         this.save = save;
@@ -81,14 +80,14 @@ export default class SynthesisPanel {
     createCollapseContent(content, expanded) {
         const inner = el(
             "div",
-            { className: "synthesis-collapse-inner" },
+            { className: "craft-collapse-inner" },
             content
         );
 
         const wrapper = el(
             "div",
             {
-                className: `synthesis-collapse ${expanded ? "is-expanded" : ""}`
+                className: `craft-collapse ${expanded ? "is-expanded" : ""}`
             },
             inner
         );
@@ -174,21 +173,21 @@ export default class SynthesisPanel {
         });
 
         const lockBadge = el("span", {
-            className: "synthesis-lock-badge",
+            className: "craft-lock-badge",
             text: "🔒 LOCKED",
             title: "Locked recipe"
         });
 
         const quantityBadge = el("span", {
-            className: "synthesis-available-quantity"
+            className: "craft-available-quantity"
         });
 
         const requirements = el("div", {
-            className: "synthesis-requirements"
+            className: "craft-requirements"
         });
 
         const outputs = el("div", {
-            className: "synthesis-outputs"
+            className: "craft-outputs"
         });
 
         const craftButton = Button("CRAFT", () => this.craft(recipe), {
@@ -218,7 +217,7 @@ export default class SynthesisPanel {
             {
                 icon: group.icon,
                 itemId: recipe.id,
-                tabId: "synthesis",
+                tabId: "craft",
                 badge: lockBadge
             }
         );
@@ -226,7 +225,7 @@ export default class SynthesisPanel {
         // Build a valid inline-content button for the recipe header.
         const body = card.querySelector(".card-body");
 
-        const bodyId = `synthesis-recipe-${recipe.id}`;
+        const bodyId = `craft-recipe-${recipe.id}`;
 
         body.id = bodyId;
 
@@ -234,7 +233,7 @@ export default class SynthesisPanel {
             "button",
             {
                 type: "button",
-                className: "synthesis-recipe-toggle",
+                className: "craft-recipe-toggle",
                 "aria-expanded": "false",
                 "aria-controls": bodyId,
                 onClick: () => this.toggleRecipe(recipe.id)
@@ -247,7 +246,7 @@ export default class SynthesisPanel {
                 }),
 
                 el("span", {
-                    className: "card-title synthesis-recipe-title",
+                    className: "card-title craft-recipe-title",
                     text: this.getRecipeOutputName(recipe)
                 }),
 
@@ -256,7 +255,7 @@ export default class SynthesisPanel {
                 lockBadge,
 
                 el("span", {
-                    className: "synthesis-chevron",
+                    className: "craft-chevron",
                     text: "›",
                     "aria-hidden": "true"
                 })
@@ -264,10 +263,10 @@ export default class SynthesisPanel {
         );
 
         const bodyWrapper = this.createCollapseContent(body, false);
-        bodyWrapper.classList.add("synthesis-recipe-content");
+        bodyWrapper.classList.add("craft-recipe-content");
 
         card.replaceChildren(recipeToggle, bodyWrapper);
-        card.classList.add("synthesis-card", "is-collapsed");
+        card.classList.add("craft-card", "is-collapsed");
 
         this.cards.set(recipe.id, {
             recipe,
@@ -289,36 +288,36 @@ export default class SynthesisPanel {
 
     createGroup(group) {
         const section = el("section", {
-            className: "synthesis-group is-expanded"
+            className: "craft-group is-expanded"
         });
 
         const toggle = el(
             "button",
             {
                 type: "button",
-                className: "synthesis-group-toggle",
+                className: "craft-group-toggle",
                 "aria-expanded": "true",
                 onClick: () => this.toggleGroup(group.id)
             },
             [
                 el("span", {
-                    className: "synthesis-group-icon",
+                    className: "craft-group-icon",
                     text: group.icon,
                     "aria-hidden": "true"
                 }),
 
                 el("span", {
-                    className: "synthesis-group-title",
+                    className: "craft-group-title",
                     text: group.title.toUpperCase()
                 }),
 
                 el("span", {
-                    className: "synthesis-group-count",
+                    className: "craft-group-count",
                     text: `${group.recipes.length} RECIPES`
                 }),
 
                 el("span", {
-                    className: "synthesis-chevron",
+                    className: "craft-chevron",
                     text: "›",
                     "aria-hidden": "true"
                 })
@@ -326,12 +325,12 @@ export default class SynthesisPanel {
         );
 
         const description = el("p", {
-            className: "synthesis-group-description",
+            className: "craft-group-description",
             text: group.description
         });
 
         const grid = el("div", {
-            className: "synthesis-card-grid"
+            className: "craft-card-grid"
         });
 
         for (const recipe of group.recipes) {
@@ -340,7 +339,7 @@ export default class SynthesisPanel {
 
         const content = this.createCollapseContent([description, grid], true);
 
-        content.classList.add("synthesis-group-content");
+        content.classList.add("craft-group-content");
 
         section.append(toggle, content);
 
@@ -483,15 +482,15 @@ export default class SynthesisPanel {
     render() {
         if (!this.element) {
             this.element = el("div", {
-                className: "synthesis-panel"
+                className: "craft-panel"
             });
 
             const toolbar = el("div", {
-                className: "synthesis-toolbar"
+                className: "craft-toolbar"
             });
 
             const title = el("span", {
-                className: "synthesis-toolbar-title",
+                className: "craft-toolbar-title",
                 text: "RECIPE CATALOG"
             });
 
@@ -501,7 +500,7 @@ export default class SynthesisPanel {
                 { variant: "secondary-button" }
             );
 
-            collapseButton.classList.add("synthesis-collapse-all");
+            collapseButton.classList.add("craft-collapse-all");
 
             toolbar.append(title, collapseButton);
             this.element.append(toolbar);

@@ -24,9 +24,9 @@ const TREE_SECTIONS = [
         icon: "🌎"
     },
     {
-        id: "synthesis",
-        label: "SYNTHESIS",
-        icon: "⚗️",
+        id: "craft",
+        label: "CRAFT",
+        icon: "⚙️",
         children: [
             {
                 id: "refinementRecipes",
@@ -74,7 +74,7 @@ export default class JournalTree {
         this.selectedEntryId = null;
         this.selectedEntryType = null;
 
-        this.expanded = new Set(["locations", "zones", "synthesis"]);
+        this.expanded = new Set(["locations", "zones", "craft"]);
 
         this.element = el("div", {
             className: "journal-tree-layout"
@@ -151,7 +151,7 @@ export default class JournalTree {
         // Expand the entry's category.
         this.expanded.add(category);
 
-        // Recipe categories live beneath Synthesis.
+        // Recipe categories live beneath Craft.
         if (
             [
                 "refinementRecipes",
@@ -159,8 +159,8 @@ export default class JournalTree {
                 "assemblyRecipes"
             ].includes(category)
         ) {
-            this.expanded.add("synthesis");
-            this.expanded.add(`synthesis:${category}`);
+            this.expanded.add("craft");
+            this.expanded.add(`craft:${category}`);
         }
 
         // If this is a material found in a zone,
@@ -361,7 +361,7 @@ export default class JournalTree {
         });
     }
 
-    renderSynthesis() {
+    renderCraft() {
         const children = [];
 
         for (const category of [
@@ -385,7 +385,7 @@ export default class JournalTree {
 
             children.push(
                 this.createBranch({
-                    id: `synthesis:${category.id}`,
+                    id: `craft:${category.id}`,
                     label: category.label,
                     icon: category.icon,
                     count: recipes.length,
@@ -406,8 +406,8 @@ export default class JournalTree {
             children = this.renderLocations();
         } else if (section.id === "zones") {
             children = this.renderZones();
-        } else if (section.id === "synthesis") {
-            children = this.renderSynthesis();
+        } else if (section.id === "craft") {
+            children = this.renderCraft();
         } else {
             children = this.renderCategoryEntries(section.id);
         }

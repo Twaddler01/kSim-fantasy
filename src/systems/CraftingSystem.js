@@ -1,4 +1,4 @@
-// src/systems/SynthesisEngine.js
+// src/systems/CraftingSystem.js
 import {
     getItemDefinition,
     isKnownItem

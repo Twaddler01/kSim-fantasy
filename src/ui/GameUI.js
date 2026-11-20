@@ -30,7 +30,7 @@ export default class GameUI {
         const {
             debugPanel,
             worldPanel,
-            synthesisPanel,
+            craftingPanel,
             upgradePanel,
             logPanel,
             journalPanel
@@ -53,9 +53,9 @@ export default class GameUI {
                 render: () => worldPanel.getElement()
             },
             {
-                id: "synthesis",
-                label: "SYNTHESIS",
-                render: () => synthesisPanel.getElement()
+                id: "craft",
+                label: "CRAFT",
+                render: () => craftingPanel.getElement()
             },
             {
                 id: "equipment",
@@ -133,7 +133,7 @@ export default class GameUI {
             debugPanel,
             mainObjective,
             worldPanel,
-            synthesisPanel,
+            craftingPanel,
             upgradePanel,
             logPanel,
             journalPanel
@@ -161,8 +161,8 @@ export default class GameUI {
             case "world":
                 worldPanel.update();
                 break;
-            case "synthesis":
-                synthesisPanel.update();
+            case "craft":
+                craftingPanel.update();
                 break;
             case "equipment":
                 upgradePanel.update();

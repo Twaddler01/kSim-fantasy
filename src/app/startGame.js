@@ -14,7 +14,7 @@ import { MaterialIcon } from "../assets/icons/materials/MaterialIcon.js";
 import attachDebugPanel from "../../debug/attach.js";
 
 // Panels
-import SynthesisPanel from "../ui/panels/SynthesisPanel.js";
+import CraftingPanel from "../ui/panels/CraftingPanel.js";
 import UpgradePanel from "../ui/panels/UpgradePanel.js";
 import LogPanel from "../ui/panels/LogPanel.js";
 import JournalPanel from "../ui/panels/journal/JournalPanel.js";
@@ -231,7 +231,7 @@ export function startGame() {
         });
     }
 
-    const synthesisPanel = new SynthesisPanel({
+    const craftingPanel = new CraftingPanel({
         getGame: () => game,
         save,
         refreshUI: options => refreshUI(options),
@@ -579,7 +579,7 @@ export function startGame() {
                 debugPanel,
                 mainObjective,
                 worldPanel,
-                synthesisPanel,
+                craftingPanel,
                 upgradePanel,
                 logPanel,
                 journalPanel
