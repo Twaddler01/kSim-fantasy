@@ -2402,7 +2402,7 @@ body:not(.debug-mode) {
 }
 
 /* ========================================
-   Inventory — Character Sheet
+   Character Sheet
    ======================================== */
 
 .character-sheet {
@@ -2531,6 +2531,124 @@ body:not(.debug-mode) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.character-panel {
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color, #343b46);
+    border-radius: 12px;
+    background: var(--panel-background, #171c25);
+}
+
+.character-header,
+.character-progress-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.character-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.character-level {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+}
+
+.character-level span,
+.character-progress-heading > span {
+    color: var(--muted-text, #929baa);
+    font-size: 0.75rem;
+}
+
+.character-progress {
+    display: grid;
+    gap: 12px;
+    margin: 14px 0;
+}
+
+.character-progress-heading {
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+}
+
+.character-xp-track,
+.character-hp-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--progress-background, #303743);
+}
+
+.character-xp-fill,
+.character-hp-fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    transition: width 180ms ease;
+}
+
+.character-xp-fill {
+    background: #8d79dc;
+}
+
+.character-hp-fill {
+    background: #49ae79;
+}
+
+.character-stat-groups {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 16px 0;
+}
+
+.character-stat-group h4,
+.character-equipment h4 {
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted-text, #929baa);
+}
+
+.character-attributes,
+.character-combat {
+    display: grid;
+    gap: 6px;
+}
+
+.character-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.character-stat-label {
+    color: var(--muted-text, #929baa);
+    text-transform: capitalize;
+}
+
+.character-stat-value {
+    font-variant-numeric: tabular-nums;
+}
+
+.character-equipment {
+    margin-top: 14px;
+}
+
+.character-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
 }
 
 /* ========================================

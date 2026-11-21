@@ -76,15 +76,14 @@ export default class DebugPanel {
                 label: "Show Character",
                 run: () => {
                     const game = this.getGame();
-                    const stats = getDerivedStats(game);
-                    const player = game.player ?? {};
-                    const equipment = game.equipment ?? {};
+                    const player = game.player;
+                    const equipment = game.equipment;
+                    const stats = getDerivedStats(player, equipment);
 
                     console.table([
                         {
-                            level: getPlayerLevel(game),
                             hp: `${player.hp ?? 0} / ${stats.maxHealth}`,
-                            xp: `${getPlayerXp(game)} / ${getXpToNext(game)}`,
+                            xp: `${getPlayerXp(player)} / ${getXpToNext(player)}`,
                             strength: stats.strength,
                             agility: stats.agility,
                             vitality: stats.vitality,

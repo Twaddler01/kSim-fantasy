@@ -2,21 +2,19 @@
 //
 // Player character: base stats, derived combat stats, XP, level, HP.
 //
+// State ownership:
+//   player    — level, xp, hp
+//   equipment — equipped items and their stat bonuses
+//
+// This module never accesses the complete game object or inventory.
+//
 // Stat model (warrior only for v1):
 //   strength  — base attack contribution
 //   agility   — attack + crit contribution
 //   vitality  — max health + defense contribution
 //
-// XP is stored as the "experience" resource in inventory (consistent with
-// gold). Levels are stored on game.player. Max HP, attack, defense, and
-// crit are always derived — never stored — so tuning the formulas is safe
-// for existing saves.
-
-import {
-    addItem,
-    getItemAmount,
-    removeItem
-} from "./InventorySystem.js";
+// XP, max HP, attack, defense, and crit are derived or calculated.
+// Only level, current XP, and current HP are stored.
 
 // --------------------------------------------------
 // TUNING CONSTANTS
@@ -55,32 +53,39 @@ export function computeXpToNext(level) {
 }
 
 // --------------------------------------------------
+// CHARACTER PROGRESSION
+// --------------------------------------------------
+
+export function getPlayerLevel(player) {
+    return Math.max(1, Number(player?.level) || 1);
+}
+
+export function getPlayerXp(player) {
+    return Math.max(0, Number(player?.xp) || 0);
+}
+
+export function getXpToNext(player) {
+    return computeXpToNext(getPlayerLevel(player));
+}
+
+// --------------------------------------------------
 // STAT SOURCES
 // --------------------------------------------------
 
-export function getPlayerLevel(game) {
-    return Math.max(1, game?.player?.level ?? 1);
-}
-
-export function getPlayerXp(game) {
-    return getItemAmount(game, "experience");
-}
-
-export function getXpToNext(game) {
-    return computeXpToNext(getPlayerLevel(game));
-}
-
-export function getBaseStats(game) {
-    const level = getPlayerLevel(game);
+export function getBaseStats(player) {
+    const level = getPlayerLevel(player);
     const gains = level - 1;
+
     return {
         strength: BASE_STATS.strength + WARRIOR_LEVEL_GAINS.strength * gains,
+
         agility: BASE_STATS.agility + WARRIOR_LEVEL_GAINS.agility * gains,
+
         vitality: BASE_STATS.vitality + WARRIOR_LEVEL_GAINS.vitality * gains
     };
 }
 
-export function getEquipmentStats(game) {
+export function getEquipmentStats(equipment) {
     const total = {
         strength: 0,
         agility: 0,
@@ -91,10 +96,9 @@ export function getEquipmentStats(game) {
         crit: 0
     };
 
-    const equipment = game?.equipment ?? {};
-
-    for (const equipped of Object.values(equipment)) {
+    for (const equipped of Object.values(equipment ?? {})) {
         if (!equipped?.stats) continue;
+
         for (const [key, value] of Object.entries(equipped.stats)) {
             if (typeof value === "number" && key in total) {
                 total[key] += value;
@@ -105,9 +109,13 @@ export function getEquipmentStats(game) {
     return total;
 }
 
-export function getDerivedStats(game) {
-    const base = getBaseStats(game);
-    const gear = getEquipmentStats(game);
+// --------------------------------------------------
+// DERIVED STATS
+// --------------------------------------------------
+
+export function getDerivedStats(player, equipment) {
+    const base = getBaseStats(player);
+    const gear = getEquipmentStats(equipment);
 
     const strength = base.strength + gear.strength;
     const agility = base.agility + gear.agility;
@@ -117,16 +125,49 @@ export function getDerivedStats(game) {
         strength,
         agility,
         vitality,
+
         maxHealth: Math.round(
             BASE_HEALTH + vitality * HP_PER_VITALITY + gear.health
         ),
+
         attack: round1(
             strength * ATTACK_PER_STRENGTH +
                 agility * ATTACK_PER_AGILITY +
                 gear.attack
         ),
+
         defense: round1(vitality * DEFENSE_PER_VITALITY + gear.defense),
+
         crit: round3(BASE_CRIT + agility * CRIT_PER_AGILITY + gear.crit)
+    };
+}
+
+// --------------------------------------------------
+// CHARACTER DATA
+// --------------------------------------------------
+
+/**
+ * Returns the complete read-only data needed by character UI.
+ *
+ * XP progress is a ratio from 0 to 1.
+ */
+export function getCharacterData(player, equipment) {
+    const stats = getDerivedStats(player, equipment);
+    const level = getPlayerLevel(player);
+    const xp = getPlayerXp(player);
+    const xpToNext = computeXpToNext(level);
+
+    return {
+        level,
+        xp,
+        xpToNext,
+        xpRemaining: Math.max(0, xpToNext - xp),
+        xpProgress: Math.min(1, xp / xpToNext),
+
+        hp: player?.hp ?? stats.maxHealth,
+        maxHealth: stats.maxHealth,
+
+        stats
     };
 }
 
@@ -134,73 +175,80 @@ export function getDerivedStats(game) {
 // INITIALIZATION
 // --------------------------------------------------
 
-export function ensurePlayerInitialized(game) {
-    if (!game) return null;
-
-    game.player ??= {};
-    game.player.level ??= 1;
-
-    if (game.player.hp == null) {
-        game.player.hp = getDerivedStats(game).maxHealth;
+/**
+ * Ensures the player state exists and is valid.
+ *
+ * Existing HP is preserved when possible, but clamped to the
+ * current maximum if equipment or stats have changed.
+ */
+export function ensurePlayerInitialized(player, equipment) {
+    if (!player || typeof player !== "object") {
+        throw new TypeError(
+            "[CharacterSystem] A valid player object is required."
+        );
     }
 
-    return game.player;
+    player.level = getPlayerLevel(player);
+    player.xp = getPlayerXp(player);
+
+    const stats = getDerivedStats(player, equipment);
+
+    if (player.hp == null || !Number.isFinite(player.hp)) {
+        player.hp = stats.maxHealth;
+    } else {
+        player.hp = Math.max(0, Math.min(stats.maxHealth, player.hp));
+    }
+
+    return player;
 }
 
 // --------------------------------------------------
 // XP / LEVEL
 // --------------------------------------------------
 
-export function gainXp(game, amount) {
-    if (!Number.isFinite(amount) || amount <= 0) {
-        return { gained: 0, levelUps: [], level: getPlayerLevel(game) };
-    }
+/**
+ * Awards XP and processes any resulting level-ups.
+ *
+ * Returns levelUps as an array of level numbers.
+ */
+export function gainXp(player, amount, equipment) {
+    ensurePlayerInitialized(player, equipment);
 
-    ensurePlayerInitialized(game);
+    const gained = Math.max(0, Math.floor(Number(amount) || 0));
+    const before = player.xp;
 
-    const before = {
-        level: game.player.level,
-        xp: getPlayerXp(game)
-    };
-
-    const added = addItem(game, "experience", amount);
-
-    if (!added.ok) {
+    if (gained === 0) {
         return {
             gained: 0,
             before,
-            after: {
-                level: game.player.level,
-                xp: getPlayerXp(game)
-            },
+            after: before,
             levelUps: [],
-            level: game.player.level
+            level: player.level
         };
     }
 
+    player.xp += gained;
+
     const levelUps = [];
-    let toNext = computeXpToNext(game.player.level);
 
-    while (getItemAmount(game, "experience") >= toNext) {
-        const spent = removeItem(game, "experience", toNext);
+    while (player.xp >= getXpToNext(player)) {
+        const required = getXpToNext(player);
 
-        if (!spent.ok) break;
+        player.xp -= required;
+        player.level += 1;
 
-        game.player.level += 1;
-        game.player.hp = getDerivedStats(game).maxHealth;
-        levelUps.push(game.player.level);
-        toNext = computeXpToNext(game.player.level);
+        levelUps.push(player.level);
+
+        // Leveling up fully restores health.
+        player.hp = getDerivedStats(player, equipment).maxHealth;
     }
 
     return {
-        gained: amount,
+        gained,
         before,
-        after: {
-            level: game.player.level,
-            xp: getPlayerXp(game)
-        },
+        after: player.xp,
         levelUps,
-        level: game.player.level
+        level: player.level
     };
 }
 
@@ -208,27 +256,33 @@ export function gainXp(game, amount) {
 // HP
 // --------------------------------------------------
 
-export function healPlayer(game, amount) {
+export function healPlayer(player, amount, equipment) {
     if (!Number.isFinite(amount) || amount <= 0) return 0;
-    ensurePlayerInitialized(game);
 
-    const max = getDerivedStats(game).maxHealth;
-    const before = game.player.hp;
-    game.player.hp = Math.min(max, before + amount);
-    return game.player.hp - before;
+    ensurePlayerInitialized(player, equipment);
+
+    const max = getDerivedStats(player, equipment).maxHealth;
+    const before = player.hp;
+
+    player.hp = Math.min(max, before + amount);
+
+    return player.hp - before;
 }
 
-export function damagePlayer(game, amount) {
+export function damagePlayer(player, amount, equipment) {
     if (!Number.isFinite(amount) || amount <= 0) return 0;
-    ensurePlayerInitialized(game);
 
-    const before = game.player.hp;
-    game.player.hp = Math.max(0, before - amount);
-    return before - game.player.hp;
+    ensurePlayerInitialized(player, equipment);
+
+    const before = player.hp;
+
+    player.hp = Math.max(0, before - amount);
+
+    return before - player.hp;
 }
 
-export function isPlayerDead(game) {
-    return (game?.player?.hp ?? 0) <= 0;
+export function isPlayerDead(player) {
+    return (player?.hp ?? 0) <= 0;
 }
 
 // --------------------------------------------------

@@ -46,7 +46,7 @@ export function rollRewards(game, enemy) {
     const xp = enemy.xp ?? 0;
     let levelUps = [];
     if (xp > 0) {
-        const result = gainXp(game, xp);
+        const result = gainXp(game.player, xp, game.equipment);
         levelUps = result.levelUps ?? [];
     }
 

@@ -3,8 +3,7 @@ export const initialGameData = {
     stage: 0,
     clicks: 0,
     inventory: {
-        gold: 0,
-        experience: 0
+        gold: 0
     },
     upgrades: {
         zoneTools: 0,
@@ -13,6 +12,7 @@ export const initialGameData = {
     },
     player: {
         level: 1,
+        xp: 0,
         hp: null
     },
     equipment: {

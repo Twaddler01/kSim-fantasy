@@ -19,6 +19,7 @@ import UpgradePanel from "../ui/panels/UpgradePanel.js";
 import LogPanel from "../ui/panels/LogPanel.js";
 import JournalPanel from "../ui/panels/journal/JournalPanel.js";
 import BattleModal from "../ui/panels/BattleModal.js";
+import Character from "../ui/panels/Character.js";
 
 import MainObjective from "../ui/panels/MainObjective.js";
 import ObjectiveTracker from "../ui/panels/ObjectiveTracker.js";
@@ -93,7 +94,7 @@ export function startGame() {
 
     let game = saveManager.load();
     initializeInventory(game);
-    ensurePlayerInitialized(game);
+    ensurePlayerInitialized(game.player, game.equipment);
 
     const unlockManager = new UnlockManager(game);
 
@@ -412,7 +413,9 @@ export function startGame() {
 
     function updateSharedUI() {
         syncInventoryDiscovery(game);
-        updateInventory();
+    
+        ui.character?.update();
+        ui.inventory?.update();
     }
 
     function refreshUI({ database = false } = {}) {
@@ -563,7 +566,13 @@ export function startGame() {
             onUnequip: itemActions.unequip,
             onUse: itemActions.use
         });
-
+        
+        ui.character = new Character({
+            getPlayer: () => game.player,
+            getEquipment: () => game.equipment,
+            openItemSheet: itemId => ui.itemSheet.show(itemId)
+        });
+        
         ui.inventory = new Inventory({
             getGame: () => game,
             formatNumber,
@@ -599,6 +608,7 @@ export function startGame() {
         const layout = el("div", { className: "game-layout" }, [
             topbar,
             objectiveTracker.getElement(),
+            ui.character.element,
             ui.inventory.element,
             tabsElement
         ]);

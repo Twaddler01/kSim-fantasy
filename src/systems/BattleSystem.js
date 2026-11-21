@@ -33,7 +33,7 @@ export function startBattle(game, enemyId) {
         return fail("unknown-enemy", { enemyId });
     }
 
-    const stats = getDerivedStats(game);
+    const stats = getDerivedStats(game.player, game.equipment);
 
     // Defensive: player should never start a battle at 0 HP.
     if (!game.player?.hp || game.player.hp <= 0) {
@@ -201,7 +201,7 @@ function finalizeVictory(game, battle) {
 }
 
 function finalizeDefeat(game, battle) {
-    const stats = getDerivedStats(game);
+    const stats = getDerivedStats(game.player, game.equipment);
     const goldBefore = getItemAmount(game, "gold");
     const goldLost = Math.min(goldBefore, Math.floor(goldBefore * 0.1));
 

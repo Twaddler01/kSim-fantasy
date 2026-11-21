@@ -1,11 +1,6 @@
 import { el } from "../components/Element.js";
-import { getItemDefinition } from "../../data/items.js";
 import { ItemIcon } from "../components/ItemIcon.js";
-import { EQUIPMENT_SLOTS } from "../../data/equipment.js";
-import {
-    getVisibleItems as getVisibleInventoryItems
-} from "../../systems/InventorySystem.js";
-import { getDerivedStats, getPlayerLevel } from "../../systems/character.js";
+import { getVisibleItems as getVisibleInventoryItems } from "../../systems/InventorySystem.js";
 
 export default class Inventory {
     constructor({ getGame, formatNumber, openItemSheet }) {
@@ -68,97 +63,6 @@ export default class Inventory {
     }
 
     // ==================================================
-    // CHARACTER SHEET
-    // ==================================================
-
-    renderCharacterSheet() {
-        const game = this.game;
-        const stats = getDerivedStats(game);
-        const player = game.player ?? {};
-        const level = getPlayerLevel(game);
-        const hp = player.hp ?? stats.maxHealth;
-        const equipment = game.equipment ?? {};
-
-        const statRow = el("div", { className: "character-stats" }, [
-            el("span", { className: "character-stat" }, [
-                el("span", { className: "character-stat-label", text: "LV" }),
-                el("strong", { text: String(level) })
-            ]),
-            el("span", { className: "character-stat" }, [
-                el("span", { className: "character-stat-label", text: "HP" }),
-                el("strong", { text: `${hp}/${stats.maxHealth}` })
-            ]),
-            el("span", { className: "character-stat" }, [
-                el("span", { className: "character-stat-label", text: "ATK" }),
-                el("strong", { text: String(stats.attack) })
-            ]),
-            el("span", { className: "character-stat" }, [
-                el("span", { className: "character-stat-label", text: "DEF" }),
-                el("strong", { text: String(stats.defense) })
-            ]),
-            el("span", { className: "character-stat" }, [
-                el("span", { className: "character-stat-label", text: "CRIT" }),
-                el("strong", { text: `${(stats.crit * 100).toFixed(1)}%` })
-            ])
-        ]);
-
-        const slots = el("div", { className: "character-slots" });
-
-        for (const slotDef of EQUIPMENT_SLOTS) {
-            const equipped = equipment[slotDef.id] ?? null;
-            const item = equipped ? getItemDefinition(equipped.id) : null;
-
-            const slotEl = el(
-                "button",
-                {
-                    type: "button",
-                    className: [
-                        "character-slot",
-                        equipped ? "is-filled" : "is-empty"
-                    ].join(" "),
-                    "aria-label": equipped
-                        ? `${slotDef.name}: ${item?.name ?? equipped.id}. Tap for details.`
-                        : `${slotDef.name}: empty`,
-                    onClick: () => {
-                        if (!equipped) return;
-                        this.openItemSheet(equipped.id);
-                    }
-                },
-                [
-                    el("span", {
-                        className: "character-slot-label",
-                        text: slotDef.name
-                    }),
-                    el("span", { className: "character-slot-item" }, [
-                        item
-                            ? ItemIcon(item, {
-                                  size: 18,
-                                  className: "character-slot-icon",
-                                  materialId: item.id
-                              })
-                            : null,
-                        el("span", {
-                            className: "character-slot-name",
-                            text: item?.name ?? "—"
-                        })
-                    ])
-                ]
-            );
-
-            slots.append(slotEl);
-        }
-
-        return el("section", { className: "character-sheet" }, [
-            el("h3", {
-                className: "character-sheet-title",
-                text: "Character"
-            }),
-            statRow,
-            slots
-        ]);
-    }
-
-    // ==================================================
     // ITEM LIST
     // ==================================================
 
@@ -199,18 +103,13 @@ export default class Inventory {
 
         this.values.clear();
         this.detailValues.clear();
-        this.itemIds = entries.map(entry =>
-            this.getItemKey(entry.item)
-        );
+        this.itemIds = entries.map(entry => this.getItemKey(entry.item));
 
         // Snapshot equippable counts so update() can detect changes.
         this.equipCounts = new Map();
         for (const entry of entries) {
             if (entry.item.equipment) {
-                this.equipCounts.set(
-                    this.getItemKey(entry.item),
-                    entry.amount
-                );
+                this.equipCounts.set(this.getItemKey(entry.item), entry.amount);
             }
         }
 
@@ -268,10 +167,9 @@ export default class Inventory {
                   {
                       className: "inventory-expanded",
                       role: "list",
-                      "aria-label": "Character and materials"
+                      "aria-label": "Inventory items"
                   },
                   [
-                      this.renderCharacterSheet(),
                       el(
                           "div",
                           { className: "inventory-items-list" },
@@ -309,9 +207,7 @@ export default class Inventory {
 
     update() {
         const entries = this.getVisibleItems();
-        const ids = entries.map(entry =>
-            this.getItemKey(entry.item)
-        );
+        const ids = entries.map(entry => this.getItemKey(entry.item));
 
         if (JSON.stringify(ids) !== JSON.stringify(this.itemIds)) {
             this.replaceElement();
