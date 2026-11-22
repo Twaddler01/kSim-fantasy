@@ -390,10 +390,6 @@ export function startGame() {
         });
     }
 
-    function updateInventory() {
-        ui.inventory?.update();
-    }
-
     function navigateTo(target = {}) {
         return coordinateNavigation(gameUI?.tabs, target);
     }
@@ -414,8 +410,8 @@ export function startGame() {
     function updateSharedUI() {
         syncInventoryDiscovery(game);
     
-        ui.character?.update();
-        ui.inventory?.update();
+        //ui.character?.update();
+        //ui.inventory?.update();
     }
 
     function refreshUI({ database = false } = {}) {
@@ -608,8 +604,8 @@ export function startGame() {
         const layout = el("div", { className: "game-layout" }, [
             topbar,
             objectiveTracker.getElement(),
-            ui.character.element,
-            ui.inventory.element,
+            //ui.character.element,
+            //ui.inventory.element,
             tabsElement
         ]);
 
