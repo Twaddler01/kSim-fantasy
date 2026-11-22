@@ -1,5 +1,4 @@
 import { el } from "../components/Element.js";
-import { Button } from "../components/Button.js";
 import WorldMapPanel from "./WorldMapPanel.js";
 import NewBadge from "../../notifications/NewBadge.js";
 
@@ -20,21 +19,26 @@ export default class WorldPanel {
         this.zoneDefinitions = zoneDefinitions;
         this.refreshTab = refreshTab;
 
+        // The viewport starts empty.
+        this.view = "blank";
+
+        // Stable viewport and replaceable content.
+        this.element = null;
+        this.contentElement = null;
+
         this._viewKey = null;
-        this.view = "map"; // default view
+
+        // Cached world views.
         this.zoneViews = new Map();
         this.worldMap = null;
 
         this.mapTitleBadge = new NewBadge({
             unreadManager: this.unreadManager,
             isUnread: () => this.hasUnread(),
-            getElement: () =>
-                this.element?.querySelector(".world-map-title"),
+            getElement: () => this.element?.querySelector(".world-map-title"),
             placement: "inline",
             ariaLabel: "NEW"
         });
-        
-        this.element = null;
 
         if (typeof createZone !== "function") {
             throw new Error(
@@ -43,87 +47,135 @@ export default class WorldPanel {
                     "(optionally deactivate() and refreshSprites())."
             );
         }
+
         this.createZone = createZone;
     }
 
+    // --- public navigation ---------------------------------------------
+
+    showBlank() {
+        this.deactivateCurrentZone();
+
+        this.view = "blank";
+        this.refreshTab();
+
+        return true;
+    }
+
     showMap() {
-        this.deactivateZone();
+        this.deactivateCurrentZone();
+
         this.view = "map";
         this.refreshTab();
+
         return true;
     }
 
     showZone(zoneId) {
-        if (!this.unlockManager.isUnlocked(zoneId)) return false;
-        if (this.view === "zone" && this.activeZoneId() !== zoneId) {
-            this.deactivateZone();
+        const zone = this.zoneDefinitions.find(
+            definition => definition.id === zoneId
+        );
+
+        if (!zone || !this.unlockManager.isUnlocked(zoneId)) {
+            return false;
+        }
+
+        const previousZoneId = this.activeZoneId();
+
+        if (this.view === "zone" && previousZoneId !== zoneId) {
+            this.getZoneView(previousZoneId)?.deactivate?.();
         }
 
         const game = this.getGame();
+
         game.appState.navigation.activeZoneId = zoneId;
+
         this.view = "zone";
+
         this.unreadManager.markRead("world", `zone-${zoneId}`);
+
         this.save();
         this.refreshTab();
+
         return true;
     }
 
-    // --- tab contract ---------------------------------------------------
+    // --- viewport contract --------------------------------------------
 
     getElement() {
         if (!this.element) {
-            this.element = el("div", { className: "zone-work-content" });
+            this.contentElement = el("div", {
+                className: "world-viewport-content"
+            });
+
+            this.element = el(
+                "div",
+                {
+                    className: "zone-work-content world-viewport"
+                },
+                [this.contentElement]
+            );
         }
+
         this.update();
+
         return this.element;
     }
 
     update() {
-        if (!this.element) return this;
-    
+        if (!this.contentElement) return this;
+
         const zoneId = this.view === "zone" ? this.activeZoneId() : null;
-        const viewKey = zoneId ? `zone:${zoneId}` : "view:map";
-    
-        // Avoid rebuilding an active canvas.
+
+        const viewKey = zoneId ? `zone:${zoneId}` : `view:${this.view}`;
+
+        // Keep the current DOM intact when the active view hasn't changed.
         if (this._viewKey === viewKey) {
-            if (zoneId) {
-                this.getZoneView(zoneId)?.update?.();
-            } else {
-                this.worldMap?.update?.();
-                this.mapTitleBadge.refresh();
-            }
-    
+            this.updateCurrentView(zoneId);
             return this;
         }
-    
+
         this._viewKey = viewKey;
-    
-        if (zoneId) {
-            this.element.replaceChildren(this.renderActiveZone());
-            this.getZoneView(zoneId)?.update?.();
-        } else {
-            this.element.replaceChildren(this.renderMap());
-            this.worldMap?.update?.();
-    
-            // The title now exists in the DOM.
-            this.mapTitleBadge.refresh();
+
+        let viewElement;
+
+        switch (this.view) {
+            case "map":
+                viewElement = this.renderMap();
+                break;
+
+            case "zone":
+                viewElement = this.renderActiveZone();
+                break;
+
+            case "blank":
+            default:
+                viewElement = this.renderBlank();
+                break;
         }
-    
+
+        this.contentElement.replaceChildren(viewElement);
+
+        this.updateCurrentView(zoneId);
+
         return this;
     }
 
-    // --- internal -------------------------------------------------------
-
-    getZoneView(zoneId) {
-        if (!this.zoneViews.has(zoneId)) {
-            const zone = this.zoneDefinitions.find(f => f.id === zoneId);
-            this.zoneViews.set(zoneId, this.createZone(zone));
+    updateCurrentView(zoneId) {
+        if (zoneId) {
+            this.getZoneView(zoneId)?.update?.();
+        } else if (this.view === "map") {
+            this.worldMap?.update?.();
+            this.mapTitleBadge.refresh();
         }
-        return this.zoneViews.get(zoneId);
     }
 
-    activeZoneId() {
-        return this.getGame().appState.navigation.activeZoneId;
+    // --- internal world views ------------------------------------------
+
+    renderBlank() {
+        return el("div", {
+            className: "world-blank-state"
+        });
     }
 
     renderMap() {
@@ -136,50 +188,80 @@ export default class WorldPanel {
                 onEnterZone: zoneId => this.showZone(zoneId)
             });
         }
-    
-        const section = el("section", {
-            className: "world-map-section"
-        }, [
-            el("div", { className: "world-map-header" }, [
-                el("div", {}, [
-                    el("div", {
-                        className: "eyebrow",
-                        text: "THE VALLEY"
-                    }),
-                    el("h2", {
-                        className: "world-map-title",
-                        text: "World Map"
-                    })
-                ])
-            ]),
-            this.worldMap.getElement()
-        ]);
-    
-        return section;
+
+        return el(
+            "section",
+            {
+                className: "world-map-section"
+            },
+            [
+                el(
+                    "div",
+                    {
+                        className: "world-map-header"
+                    },
+                    [
+                        el("div", {}, [
+                            el("div", {
+                                className: "eyebrow",
+                                text: "THE VALLEY"
+                            }),
+                            el("h2", {
+                                className: "world-map-title",
+                                text: "World Map"
+                            })
+                        ])
+                    ]
+                ),
+                this.worldMap.getElement()
+            ]
+        );
     }
 
     renderActiveZone() {
         const zoneId = this.activeZoneId();
+
         if (!zoneId) {
-            this.view = "map";
-            return this.renderMap();
+            this.view = "blank";
+            return this.renderBlank();
         }
 
-        const zoneView = this.getZoneView(zoneId);
-
-        const back = Button("← MAP", () => this.showMap(), {
-            variant: "secondary-button"
-        });
-    
-        return el("div", { className: "zone-work-active-view" }, [
-            el("div", { className: "zone-work-toolbar" }, [back]),
-            zoneView.getElement()
-        ]);
+        return this.getZoneView(zoneId).getElement();
     }
+
+    // --- cached zone views ---------------------------------------------
+
+    getZoneView(zoneId) {
+        if (!zoneId) return null;
+
+        if (!this.zoneViews.has(zoneId)) {
+            const zone = this.zoneDefinitions.find(
+                definition => definition.id === zoneId
+            );
+
+            if (!zone) return null;
+
+            this.zoneViews.set(zoneId, this.createZone(zone));
+        }
+
+        return this.zoneViews.get(zoneId);
+    }
+
+    activeZoneId() {
+        return this.getGame()?.appState?.navigation?.activeZoneId ?? null;
+    }
+
+    deactivateCurrentZone() {
+        if (this.view !== "zone") return;
+
+        this.getZoneView(this.activeZoneId())?.deactivate?.();
+    }
+
+    // --- notifications and refreshes ----------------------------------
 
     refreshUnreadIndicators() {
         if (this.view !== "map") return;
-    
+
         this.worldMap?.update?.();
         this.mapTitleBadge.refresh();
     }
@@ -189,6 +271,8 @@ export default class WorldPanel {
             this.unreadManager.isUnread("world", `zone-${zone.id}`)
         );
     }
+
+    // --- world maintenance --------------------------------------------
 
     refreshZoneSprites() {
         for (const view of this.zoneViews.values()) {

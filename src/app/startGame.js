@@ -374,16 +374,18 @@ export function startGame() {
         }
     });
 
-    const objectiveTracker = new ObjectiveTracker({
-        getGame: () => game,
-        navigateToCamp: () => navigateTo({ tab: "camp" })
-    });
-
-    // Navigation — still registered in main because it's global,
-    // but delegating to the panel:
+    // WORLD destinations
+    // Default WORLD viewport.
     registerPage("world", "selector", {
+        activate: () => worldPanel.showBlank()
+    });
+    
+    // World map.
+    registerPage("world", "map", {
         activate: () => worldPanel.showMap()
     });
+
+    // Individual zones load into the same viewport.
     for (const zone of ZONE_DEFINITIONS) {
         registerPage("world", zone.id, {
             activate: () => worldPanel.showZone(zone.id)

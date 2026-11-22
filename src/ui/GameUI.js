@@ -138,32 +138,32 @@ export default class GameUI {
             logPanel,
             journalPanel
         } = this.panels;
-
-        if (this.activeTab !== "world") {
-            worldPanel.deactivateZone?.();
-        }
-
+    
         if (this.activeTab === "camp") {
             const stage = this.getCurrentStage(game);
-
+    
             if (stage) {
                 this.unreadManager.markRead("camp", `objective-${stage.id}`);
             }
         }
-
+    
         switch (this.activeTab) {
             case "debug":
                 debugPanel.update();
                 break;
+    
             case "camp":
                 mainObjective?.update?.();
                 break;
+    
             case "world":
                 worldPanel.update();
                 break;
+    
             case "craft":
                 craftingPanel.update();
                 break;
+    
             case "equipment":
                 upgradePanel.update();
                 this.updateDatabaseCount(
@@ -173,10 +173,12 @@ export default class GameUI {
                     )} levels`
                 );
                 break;
+    
             case "log":
                 logPanel.update();
                 this.updateDatabaseCount(`${game.log.length} entries`);
                 break;
+    
             case "journal":
                 journalPanel.update();
                 break;
