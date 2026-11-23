@@ -225,6 +225,21 @@ export function startGame() {
     }
     // Ironhollow Mine unlocks via its inventoryAmount trigger (5 oak logs).
 
+    // Ensure the saved active zone exists and is unlocked.
+    const activeZoneId = game.appState.navigation.activeZoneId;
+    
+    const activeZoneExists = ZONE_DEFINITIONS.some(
+        zone => zone.id === activeZoneId
+    );
+    
+    if (
+        !activeZoneExists ||
+        !unlockManager.isUnlocked(activeZoneId)
+    ) {
+        game.appState.navigation.activeZoneId = "whisperingMeadow";
+        saveManager.save(game);
+    }
+    
     function logEvent(game, message, options = {}) {
         return addLog(game, message, {
             onUnread: notifyUnread,
@@ -325,6 +340,9 @@ export function startGame() {
 
     ui.worldPanel = worldPanel;
 
+    // Initialize the world viewport from the saved location.
+    worldPanel.showZone(game.appState.navigation.activeZoneId);
+
     battleModal = new BattleModal({
         getGame: () => game,
         save,
@@ -374,17 +392,30 @@ export function startGame() {
         }
     });
 
+    const objectiveTracker = new ObjectiveTracker({
+        getGame: () => game,
+        navigateToCamp: () => navigateTo({ tab: "camp" })
+    });
+
     // WORLD destinations
     // Default WORLD viewport.
     registerPage("world", "selector", {
-        activate: () => worldPanel.showBlank()
+        activate: () => {
+            const zoneId = game.appState.navigation.activeZoneId;
+    
+            if (zoneId) {
+                worldPanel.showZone(zoneId);
+            } else {
+                worldPanel.showBlank();
+            }
+        }
     });
     
     // World map.
     registerPage("world", "map", {
         activate: () => worldPanel.showMap()
     });
-
+    
     // Individual zones load into the same viewport.
     for (const zone of ZONE_DEFINITIONS) {
         registerPage("world", zone.id, {

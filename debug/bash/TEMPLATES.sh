@@ -174,4 +174,7 @@ browser_package: org.mozilla.firefox
 
 
 
-
+fc src/data/zones.js \
+src/data/initialGameData.js \
+src/ui/panels/ZoneCanvas.js \
+src/ui/navigation/Tabs/Tabs.js 
