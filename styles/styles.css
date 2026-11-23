@@ -4273,3 +4273,142 @@ ZONE
     min-width: 0;
     min-height: 0;
 }
+
+/* ================================================
+   GAME OVERLAY LAYER
+   ================================================ */
+
+.overlay-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 12px;
+    box-sizing: border-box;
+
+    background: rgba(3, 9, 17, 0.28);
+}
+
+.overlay-layer[hidden] {
+    display: none;
+}
+
+.game-overlay {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+
+    overflow: hidden;
+
+    background: rgba(8, 18, 30, 0.97);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+}
+
+.game-overlay-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 48px;
+    padding: 0 12px;
+
+    border-bottom: 1px solid var(--line);
+}
+
+.game-overlay-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.game-overlay-close {
+    display: grid;
+    place-items: center;
+
+    width: 36px;
+    height: 36px;
+    padding: 0;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: transparent;
+    color: inherit;
+
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.game-overlay-close:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.game-overlay-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    padding: 12px;
+}
+
+/* ================================================
+   PERSISTENT WORLD WORKSPACE
+   ================================================ */
+
+.world-workspace {
+    position: relative;
+    flex: 1 1 auto;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+
+    overflow: hidden;
+}
+
+/* World remains mounted and fills the workspace. */
+.world-workspace > .world-viewport {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+}
+
+/* Overlay occupies the same workspace as the world. */
+.world-workspace > .overlay-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+}
+
+/* Temporary: retain the old tabs while migrating navigation. */
+.game-layout > .tabs-component {
+    flex: 0 0 30dvh;
+    max-height: 30dvh;
+    min-height: 0;
+}
+
+.world-tab-placeholder {
+    padding: 20px;
+    color: var(--muted);
+    text-align: center;
+}

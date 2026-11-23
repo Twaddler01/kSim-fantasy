@@ -50,7 +50,10 @@ export default class GameUI {
             {
                 id: "world",
                 label: "WORLD",
-                render: () => worldPanel.getElement()
+                render: () => el("div", {
+                    className: "world-tab-placeholder",
+                    text: "The world is always visible."
+                })
             },
             {
                 id: "craft",

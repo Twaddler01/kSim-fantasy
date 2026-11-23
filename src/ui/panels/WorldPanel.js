@@ -10,7 +10,8 @@ export default class WorldPanel {
         unreadManager,
         zoneDefinitions,
         createZone,
-        refreshTab
+        refreshTab,
+        onZoneEnter
     }) {
         this.getGame = getGame;
         this.save = save;
@@ -18,7 +19,8 @@ export default class WorldPanel {
         this.unreadManager = unreadManager;
         this.zoneDefinitions = zoneDefinitions;
         this.refreshTab = refreshTab;
-
+        this.onZoneEnter = onZoneEnter;
+        
         // The viewport starts empty.
         this.view = "blank";
 
@@ -102,6 +104,14 @@ export default class WorldPanel {
 
     // --- viewport contract --------------------------------------------
 
+    getMapElement() {
+        if (!this.worldMap) {
+            this.renderMap();
+        }
+    
+        return this.worldMap.getElement();
+    }
+    
     getElement() {
         if (!this.element) {
             this.contentElement = el("div", {
@@ -185,7 +195,13 @@ export default class WorldPanel {
                 unlockManager: this.unlockManager,
                 unreadManager: this.unreadManager,
                 zoneDefinitions: this.zoneDefinitions,
-                onEnterZone: zoneId => this.showZone(zoneId)
+                onEnterZone: zoneId => {
+                    const entered = this.showZone(zoneId);
+                
+                    if (entered) {
+                        this.onZoneEnter?.(zoneId);
+                    }
+                }
             });
         }
 

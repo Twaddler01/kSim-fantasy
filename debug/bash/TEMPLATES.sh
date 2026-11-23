@@ -94,7 +94,8 @@ multiple...
 grep -rnE "effects.js" --include="*.js" .
 grep -rnE "toast" --include="*.css" .
 
-craftRecipe() and applyEffects() a
+# sed line range
+sed -n 'START,ENDp' styles/styles.css
 
 # MORE:
 # Include line numbers
@@ -138,7 +139,7 @@ grep -RIn 'panel' \
 
 
 
-grep -rn "recoverMaterial" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
+grep -rn "unread\|badge" styles/styles.css --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
 
 
 
@@ -178,3 +179,19 @@ fc src/data/zones.js \
 src/data/initialGameData.js \
 src/ui/panels/ZoneCanvas.js \
 src/ui/navigation/Tabs/Tabs.js 
+
+
+
+
+# WorldPanel remaining lifecycle
+sed -n '120,250p' src/ui/panels/WorldPanel.js
+# Character update and surrounding methods
+sed -n '385,430p' src/ui/panels/Character.js
+# Inventory update and surrounding methods
+sed -n '175,235p' src/ui/panels/Inventory.js
+
+grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
+  src/ui/panels/WorldMapPanel.js
+
+
+
