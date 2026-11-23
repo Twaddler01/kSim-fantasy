@@ -4,10 +4,30 @@ A mobile-first native HTML/CSS/JavaScript RPG game.
 
 ## Updates
 
-Latest alpha (in development) release:
+- Latest alpha (in development) pre-release:
 https://github.com/Twaddler01/kSim-fantasy/releases/tag/v0.5.0-alpha
 
-## Run
+## To Run Remotely
 
-- Serve the project over HTTP (for example, with the included DevServer from /mobile-dev-console) and open `index.html`. 
-- Install PWA when prompted (optional).
+- Visit: https://Twaddler01.github.io/kSim-fantasy
+- If pronpted, install PWA for a better experience.
+
+## To Run Locally (using included local node server):
+
+1. Install Termux (Android, if applicable).
+
+2. Edit settings.config in /mobile-dev-console/DevServer folder:
+```text
+directory: <folder of index.html>
+start_page: index.html
+```
+
+4. Run:
+```text
+node startServer.js
+```
+
+6. Load in browser:
+http://localhost:8080/index.html
+
+OPTIONAL: Host with any other preferred local server.

@@ -4638,3 +4638,170 @@ ZONE
     width: 22px;
     text-align: center;
 }
+
+
+/* =========================================
+   WORLD HUD
+========================================= */
+
+.world-workspace {
+    position: relative;
+    container-type: inline-size;
+}
+
+.world-hud {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    padding: 10px;
+    gap: 8px;
+
+    pointer-events: none;
+}
+
+/* =========================================
+   STATUS PANELS
+========================================= */
+
+.player-status-panel,
+.target-status-panel {
+    position: relative;
+
+    width: calc((100% - 8px) / 2);
+    height: 48px;
+    flex: 0 0 calc((100% - 8px) / 2);
+
+    box-sizing: border-box;
+
+    background: rgba(20, 25, 32, 0.95);
+    border: 1px solid rgba(180, 190, 200, 0.3);
+    border-radius: 8px;
+
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+.target-status-panel.is-hidden {
+    visibility: hidden;
+}
+
+/* =========================================
+   PANEL CONTENT
+========================================= */
+
+.status-panel-main {
+    display: flex;
+    align-items: center;
+
+    height: 100%;
+    min-width: 0;
+
+    gap: 5px;
+    padding: 1px 3px 3px;
+
+    box-sizing: border-box;
+}
+
+.status-panel-portrait {
+    display: block;
+
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.status-panel-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+}
+
+.status-panel-name {
+    overflow: hidden;
+
+    font-size: 11px;
+    line-height: 1;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* =========================================
+   HEALTH / RESOURCE BARS
+========================================= */
+
+.status-panel-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.status-bar {
+    height: 5px;
+
+    overflow: hidden;
+    border-radius: 999px;
+
+    background: #3b4148;
+}
+
+.status-bar-fill {
+    width: 0;
+    height: 100%;
+
+    border-radius: inherit;
+    transition: width 0.2s ease;
+}
+
+.status-bar-health .status-bar-fill {
+    background: #45bd70;
+}
+
+.status-bar-resource .status-bar-fill {
+    background: #55a9e8;
+}
+
+/* Target health uses red instead of green. */
+
+.target-status-panel .status-bar-health .status-bar-fill {
+    background: #d65353;
+}
+
+/* =========================================
+   XP STRIP
+========================================= */
+
+.status-panel-xp {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 2px;
+
+    height: 2px;
+
+    overflow: hidden;
+    border-radius: 999px;
+
+    background: #55472b;
+}
+
+.status-panel-xp-fill {
+    width: 0;
+    height: 100%;
+
+    background: #e5b64d;
+    transition: width 0.2s ease;
+}

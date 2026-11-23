@@ -231,3 +231,13 @@ grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
   src/ui/panels/WorldMapPanel.js
 
 
+
+
+
+/hud/
+├── 
+├── 
+└── 
+
+
+

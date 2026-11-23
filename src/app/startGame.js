@@ -16,6 +16,7 @@ import DebugButton from "../../debug/DebugButtons.js";
 
 // Overlay
 import OverlayManager from "../ui/overlays/OverlayManager.js";
+import WorldHUD from "../ui/hud/WorldHUD.js";
 
 // Panels
 import CraftingPanel from "../ui/panels/CraftingPanel.js";
@@ -156,6 +157,11 @@ export function startGame() {
 
     let gameUI = null;
     let ui = {};
+
+    const worldHUD = new WorldHUD({
+        getPlayer: () => game.player,
+        getEquipment: () => game.equipment
+    });
 
     let materialSprites = {};
     buildMaterialSprites()
@@ -452,7 +458,7 @@ export function startGame() {
 
     function updateSharedUI() {
         syncInventoryDiscovery(game);
-
+        worldHUD.update();
         //ui.character?.update();
         //ui.inventory?.update();
     }
@@ -694,7 +700,11 @@ export function startGame() {
             {
                 className: "world-workspace"
             },
-            [worldPanel.getElement(), ui.overlayManager.getElement()]
+            [
+                worldPanel.getElement(),
+                worldHUD.getElement(),
+                ui.overlayManager.getElement()
+            ]
         );
 
         ui.worldWorkspace = worldWorkspace;
