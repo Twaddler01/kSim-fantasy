@@ -207,10 +207,16 @@ export function startGame() {
         getGame: () => game,
         save,
         onChange: () => {
-            gameUI?.tabs?.update({ refreshContent: false });
+            gameUI?.updateNavigation();
             ui.worldPanel?.refreshUnreadIndicators?.();
         },
-        isTabActive: tabId => (gameUI?.activeTab ?? "camp") === tabId
+        isTabActive: tabId => {
+            const activeId = gameUI?.activeDestinationId;
+
+            return (
+                activeId === tabId || (tabId === "world" && activeId === "map")
+            );
+        }
     });
 
     function notifyUnread(tabId, itemId, options = {}) {
@@ -316,7 +322,7 @@ export function startGame() {
         zoneDefinitions: ZONE_DEFINITIONS,
         refreshTab: () => {
             worldPanel?.update();
-            ui.tabs?.update({ refreshContent: true });
+            gameUI?.updateActiveDestination();
         },
         createZone: zone => {
             if (zone.type === "town") {
@@ -394,8 +400,7 @@ export function startGame() {
     });
 
     const objectiveTracker = new ObjectiveTracker({
-        getGame: () => game,
-        navigateToCamp: () => navigateTo({ tab: "camp" })
+        getGame: () => game
     });
 
     // World map.
@@ -405,15 +410,15 @@ export function startGame() {
 
     // Default WORLD viewport.
     registerPage("world", "selector", {
-            activate: () => {
+        activate: () => {
             ui.overlayManager?.close();
-    
+
             const zoneId = game.appState.navigation.activeZoneId;
-    
+
             if (zoneId) {
                 return worldPanel.showZone(zoneId);
             }
-    
+
             return worldPanel.showBlank();
         }
     });
@@ -429,11 +434,11 @@ export function startGame() {
     }
 
     function navigateTo(target = {}) {
-        return coordinateNavigation(gameUI?.tabs, target);
+        return coordinateNavigation(gameUI, target);
     }
 
     function navigateToItem(target) {
-        return navigateTabToItem(gameUI?.tabs, target);
+        return navigateTabToItem(gameUI, target);
     }
 
     const toast = new Toast();
@@ -475,15 +480,8 @@ export function startGame() {
 
         updateSharedUI();
         objectiveTracker?.update?.();
-        
         worldPanel?.update();
-        ui.overlayManager?.update();
-
-        if (database) {
-            gameUI.tabs.update({ refreshContent: false });
-        }
-
-        gameUI.updateActiveTab();
+        gameUI?.updateActiveDestination();
     }
 
     const itemActions = new ItemActions({
@@ -640,14 +638,38 @@ export function startGame() {
                     title: "World Map",
                     getElement: () => worldPanel.getMapElement(),
                     update: () => worldPanel.worldMap?.update()
+                },
+                equipment: {
+                    title: "Equipment",
+                    getElement: () => upgradePanel.render(),
+                    update: () => upgradePanel.update()
+                },
+
+                log: {
+                    title: "Journey Log",
+                    getElement: () => logPanel.render(),
+                    update: () => logPanel.update()
+                },
+
+                journal: {
+                    title: "Journal",
+                    getElement: () => journalPanel.getElement(),
+                    update: () => journalPanel.update()
+                },
+
+                debug: {
+                    title: "Debug",
+                    getElement: () => debugPanel.getElement(),
+                    update: () => debugPanel.update()
                 }
-            }
+            },
+            onChange: id => gameUI?.handleOverlayChange(id)
         });
 
         gameUI = new GameUI({
             getGame: () => game,
-            getCurrentStage,
             unreadManager,
+            overlayManager: ui.overlayManager,
 
             panels: {
                 debugPanel,
@@ -656,35 +678,32 @@ export function startGame() {
                 craftingPanel,
                 upgradePanel,
                 logPanel,
-                journalPanel
-            },
-
-            onTabChange: () => gameUI.updateActiveTab()
+                journalPanel,
+                character: ui.character,
+                inventory: ui.inventory
+            }
         });
 
-        // Give GameUI the content it should display in the CAMP tab.
-        gameUI.campContent = ui.campContent;
+        const navigationElement = gameUI.createNavigation();
 
-        const tabsElement = gameUI.createTabs();
-        
-        // Keep the existing UI reference working for other components.
-        ui.tabs = gameUI.tabs;
-        
+        ui.navigationBar = gameUI.navigationBar;
+
         // The world is now a permanent part of the layout.
-        const worldWorkspace = el("div", {
-            className: "world-workspace"
-        }, [
-            worldPanel.getElement(),
-            ui.overlayManager.getElement()
-        ]);
-        
+        const worldWorkspace = el(
+            "div",
+            {
+                className: "world-workspace"
+            },
+            [worldPanel.getElement(), ui.overlayManager.getElement()]
+        );
+
         ui.worldWorkspace = worldWorkspace;
-        
+
         const layout = el("div", { className: "game-layout" }, [
             topbar,
             objectiveTracker.getElement(),
             worldWorkspace,
-            tabsElement
+            navigationElement
         ]);
 
         ui.layout = layout;
@@ -767,7 +786,7 @@ export function startGame() {
         description: "show whisperingMeadow",
         label: "show whisperingMeadow",
         run: () => {
-            const activeZoneId = 'whisperingMeadow';
+            const activeZoneId = "whisperingMeadow";
             worldPanel.showZone(activeZoneId);
         }
     });

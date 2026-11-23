@@ -8,7 +8,6 @@ import {
 export default class ObjectiveTracker {
     constructor({ getGame, navigateToCamp }) {
         this.getGame = getGame;
-        this.navigateToCamp = navigateToCamp;
         this.element = null;
         this.expanded = false;
         this._lastStageId = null;
@@ -142,22 +141,9 @@ export default class ObjectiveTracker {
             ]);
         });
 
-        return el("div", { className: "objective-tracker__body" }, [
-            ...rows,
-            el(
-                "button",
-                {
-                    type: "button",
-                    className: "objective-tracker__open-camp",
-                    onClick: () => {
-                        this.expanded = false;
-                        this.update();
-                        this.navigateToCamp();
-                    }
-                },
-                ["Open CAMP →"]
-            )
-        ]);
+        return el("div", {
+            className: "objective-tracker__body"
+        }, rows);
     }
 
     formatItemName(itemId) {

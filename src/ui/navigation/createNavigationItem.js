@@ -4,7 +4,6 @@
 unread indicator. */
 
 import { el } from "../components/Element.js";
-import Badge from "../components/Badge.js";
 
 export function createNavigationItem(
     destination,
@@ -26,16 +25,15 @@ export function createNavigationItem(
             : destination.icon;
 
     if (icon) {
-        const iconElement =
+        button.append(
             typeof icon === "string"
                 ? el("span", {
                       className: "navigation-item-icon",
                       text: icon,
                       "aria-hidden": "true"
                   })
-                : icon;
-
-        button.append(iconElement);
+                : icon
+        );
     }
 
     button.append(
@@ -52,22 +50,19 @@ export function createNavigationItem(
             ) ?? 0;
 
         if (count > 0) {
-            if (destination.unreadDisplay === "count") {
-                button.append(
-                    Badge({
-                        text: count,
-                        className: "navigation-unread",
-                        ariaLabel: `${count} unread`
-                    })
-                );
-            } else {
-                button.append(
-                    el("span", {
-                        className: "navigation-unread-dot",
-                        "aria-label": `${count} unread`
-                    })
-                );
-            }
+            button.append(
+                el("span", {
+                    className:
+                        destination.unreadDisplay === "count"
+                            ? "navigation-unread-count"
+                            : "navigation-unread-dot",
+                    text:
+                        destination.unreadDisplay === "count"
+                            ? String(count)
+                            : "",
+                    "aria-label": `${count} unread`
+                })
+            );
         }
     }
 

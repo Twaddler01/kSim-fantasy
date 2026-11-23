@@ -4400,15 +4400,155 @@ ZONE
     z-index: 20;
 }
 
-/* Temporary: retain the old tabs while migrating navigation. */
-.game-layout > .tabs-component {
-    flex: 0 0 30dvh;
-    max-height: 30dvh;
-    min-height: 0;
-}
-
 .world-tab-placeholder {
     padding: 20px;
     color: var(--muted);
+    text-align: center;
+}
+
+
+/* =========================================
+   GAME NAVIGATION
+========================================= */
+
+.game-navigation-shell {
+    position: relative;
+    z-index: 30;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+}
+
+.game-navigation {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 4px;
+
+    width: 100%;
+    min-height: 62px;
+
+    padding: 5px 8px calc(5px + env(safe-area-inset-bottom));
+
+    background: var(--panel, #101c2b);
+    border-top: 1px solid var(--line);
+}
+
+.navigation-item {
+    position: relative;
+
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+
+    min-width: 0;
+    padding: 5px 2px;
+
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+
+    font: inherit;
+    cursor: pointer;
+}
+
+.navigation-item.is-active {
+    color: var(--text, #fff);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.navigation-item-icon {
+    font-size: 21px;
+    line-height: 1.2;
+}
+
+.navigation-item-label {
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.navigation-unread-dot {
+    position: absolute;
+    top: 3px;
+    right: calc(50% - 17px);
+
+    width: 7px;
+    height: 7px;
+
+    background: var(--accent, #e4b75c);
+    border-radius: 50%;
+}
+
+.navigation-unread-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+
+    color: #fff;
+    background: #bd4b4b;
+    border-radius: 20px;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* More menu */
+
+.game-more-menu {
+    position: absolute;
+    right: 8px;
+    bottom: calc(100% + 8px);
+
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    min-width: 180px;
+    max-width: calc(100vw - 24px);
+    padding: 6px;
+
+    background: var(--panel, #101c2b);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+.game-more-menu[hidden] {
+    display: none;
+}
+
+.game-more-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+    padding: 10px;
+
+    color: var(--text, #fff);
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.game-more-menu-item:active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.game-more-menu-icon {
+    width: 22px;
     text-align: center;
 }
