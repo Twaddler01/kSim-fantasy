@@ -20,9 +20,11 @@
     --warning: #ffcf76;
     font-family: "Manrope", system-ui, sans-serif;
 }
+
 * {
     box-sizing: border-box;
 }
+
 body {
     margin: 0;
     min-height: 100vh;
@@ -35,9 +37,11 @@ body {
         ),
         linear-gradient(180deg, #07111f, #081321 65%, #050c15);
 }
+
 button {
     font: inherit;
 }
+
 .is-hidden {
     display: none !important;
 }
@@ -56,11 +60,13 @@ button {
     z-index: 5;
     backdrop-filter: blur(14px);
 }
+
 .brand {
     display: flex;
     align-items: center;
     gap: 10px;
 }
+
 .brand-mark {
     display: grid;
     place-items: center;
@@ -74,14 +80,17 @@ button {
     background: rgba(98, 228, 244, 0.08);
     font-weight: 800;
 }
+
 .brand-name {
     font-size: 0.85rem;
     font-weight: 800;
     letter-spacing: 0.04em;
 }
+
 .brand-subtitle {
     font-size: 0.52rem; /* was 0.55rem */
 }
+
 .eyebrow {
     color: var(--muted);
     font:
@@ -89,10 +98,12 @@ button {
         monospace;
     letter-spacing: 0.14em;
 }
+
 .stage-pill {
     padding: 5px 8px; /* was 7px 9px */
     font-size: 0.58rem; /* was 0.62rem */
 }
+
 .count-pill,
 .level-pill {
     border: 1px solid var(--line);
@@ -106,16 +117,19 @@ button {
     letter-spacing: 0.06em;
     white-space: nowrap;
 }
+
 .app-shell {
     width: 100%;
     max-width: 1100px;
     margin: 0 auto;
     padding: 16px;
 }
+
 .game-layout {
     display: grid;
     gap: 14px;
 }
+
 .sim-card,
 .panel {
     min-width: 0;
@@ -129,21 +143,25 @@ button {
     );
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
+
 h1,
 h2,
 p {
     margin-top: 0;
 }
+
 h1 {
     margin-bottom: 10px;
     font-size: clamp(1.45rem, 5vw, 2rem);
     letter-spacing: -0.04em;
 }
+
 h2 {
     margin: 4px 0 0;
     font-size: 1.02rem;
     letter-spacing: -0.025em;
 }
+
 .camp-intro > p {
     max-width: 680px;
     margin-bottom: 14px;
@@ -151,6 +169,7 @@ h2 {
     line-height: 1.65;
     font-size: 0.91rem;
 }
+
 .camp-warning {
     padding: 11px 12px;
     border-left: 3px solid var(--warning);
@@ -161,10 +180,12 @@ h2 {
         500 0.7rem/1.6 "DM Mono",
         monospace;
 }
+
 .panel {
     padding: 13px;
     border-radius: 14px;
 }
+
 .panel-heading {
     display: flex;
     align-items: flex-start;
@@ -172,15 +193,18 @@ h2 {
     gap: 8px;
     margin-bottom: 6px;
 }
+
 .panel-heading h2 {
     font-size: 0.78rem;
     color: #b8cfdf;
     font-weight: 600;
 }
+
 .panel-heading small {
     color: var(--muted);
     font-size: 0.65rem;
 }
+
 .resource-value {
     margin-top: 9px;
     font-size: 1.6rem;
@@ -188,6 +212,7 @@ h2 {
     letter-spacing: -0.05em;
     color: var(--cyan);
 }
+
 .section-heading {
     display: flex;
     align-items: flex-start;
@@ -195,6 +220,7 @@ h2 {
     gap: 12px;
     margin-bottom: 13px;
 }
+
 .live-indicator {
     padding-top: 3px;
     color: #72f0c0;
@@ -203,6 +229,7 @@ h2 {
         monospace;
     white-space: nowrap;
 }
+
 .muted {
     color: var(--muted);
     font-size: 0.82rem;
@@ -227,20 +254,24 @@ h2 {
     letter-spacing: 0.04em;
     cursor: pointer;
 }
+
 .secondary-button {
     color: #b9d0df;
     background: rgba(120, 160, 190, 0.07);
     border-color: var(--line);
 }
+
 .primary-button:disabled,
 .secondary-button:disabled {
     opacity: 0.35;
     cursor: not-allowed;
 }
+
 .progress-block {
     width: 100%;
     margin-top: 12px;
 }
+
 .progress-label {
     display: flex;
     justify-content: space-between;
@@ -249,6 +280,7 @@ h2 {
     color: var(--muted);
     font-size: 0.7rem;
 }
+
 .progress-track {
     height: 7px;
     overflow: hidden;
@@ -256,6 +288,7 @@ h2 {
     background: #06101c;
     border: 1px solid rgba(120, 190, 220, 0.1);
 }
+
 .progress-fill {
     height: 100%;
     width: 0;
@@ -263,21 +296,25 @@ h2 {
     background: linear-gradient(90deg, var(--blue), var(--cyan));
     transition: width 0.2s ease;
 }
+
 .item-list,
 .log-list {
     display: grid;
     gap: 10px;
     margin-top: 13px;
 }
+
 .list-item {
     padding: 13px;
     border: 1px solid rgba(105, 190, 224, 0.13);
     border-radius: 13px;
     background: rgba(5, 16, 28, 0.38);
 }
+
 .list-item.is-unlocked {
     border-color: rgba(98, 228, 244, 0.26);
 }
+
 .item-heading {
     display: flex;
     align-items: center;
@@ -285,9 +322,11 @@ h2 {
     flex-wrap: wrap;
     font-size: 0.83rem;
 }
+
 .item-icon {
     font-size: 1.1rem;
 }
+
 .status {
     margin-left: auto;
     color: #839aab;
@@ -295,15 +334,18 @@ h2 {
         0.57rem "DM Mono",
         monospace;
 }
+
 .status-found {
     color: #73edc1;
 }
+
 .item-description {
     margin: 8px 0 10px;
     color: var(--muted);
     font-size: 0.78rem;
     line-height: 1.5;
 }
+
 .cost-line {
     margin: 9px 0 11px;
     color: #a6c3d4;
@@ -311,9 +353,11 @@ h2 {
         0.66rem/1.5 "DM Mono",
         monospace;
 }
+
 .log-list {
     gap: 0;
 }
+
 .log-entry {
     display: flex;
     gap: 9px;
@@ -325,10 +369,12 @@ h2 {
         monospace;
     overflow-wrap: anywhere;
 }
+
 .log-marker {
     color: var(--cyan);
     font-size: 1rem;
 }
+
 .log-entry--important {
     border-left: 2px solid var(--accent-color, #7c83ff);
     padding-left: 8px;
@@ -345,6 +391,7 @@ h2 {
     margin: 12px 0;
     padding-bottom: 3px;
 }
+
 .tab-button {
     flex: 1 0 auto;
     border: 1px solid transparent;
@@ -357,11 +404,13 @@ h2 {
         monospace;
     white-space: nowrap;
 }
+
 .tab-button[aria-selected="true"] {
     color: var(--cyan);
     border-color: var(--line);
     background: rgba(98, 228, 244, 0.07);
 }
+
 @media (min-width: 600px) {
     .app-shell {
         padding: 22px;
@@ -390,18 +439,23 @@ h2 {
 html,
 body {
     width: 100%;
+    height: 100%;
     margin: 0;
 }
 
+html {
+    overflow: hidden;
+}
+
 body {
-    overflow-x: hidden;
+    min-height: 0;
+    overflow: hidden;
 }
 
 #app,
 .app-shell {
     width: 100%;
-    height: 100vh;
-    height: 100dvh;
+    height: var(--app-height, 100dvh);
     min-height: 0;
     overflow: hidden;
 }
@@ -428,7 +482,12 @@ body:not(.debug-mode) {
 .app-shell {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0;
+
+    /* Keep the top bar below the system status area. */
+    padding-top: env(safe-area-inset-top, 0px);
+    /* 
+    padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
+    */
 }
 
 .game-layout {

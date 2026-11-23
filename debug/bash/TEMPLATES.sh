@@ -197,3 +197,134 @@ grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
 
 
 
+The top bar's CSS
+.top-bar .world-workspace .world-viewport .navigation
+
+
+
+
+BEFORE...
+> [     "#app",     ".app-shell",     ".game-layout",     ".topbar",     ".world-workspace",     ".game-navigation-shell",     ".game-navigation" ].map(selector => {     const el = document.querySelector(selector);     if (!el) return { selector, missing: true };      const r = el.getBoundingClientRect();      return {         selector,         top: Math.round(r.top),         bottom: Math.round(r.bottom),         height: Math.round(r.height),         clientHeight: el.clientHeight,         scrollHeight: el.scrollHeight     }; });
+[
+  {
+    "selector": "#app",
+    "top": -420,
+    "bottom": 280,
+    "height": 699,
+    "clientHeight": 699,
+    "scrollHeight": 699
+  },
+  {
+    "selector": ".app-shell",
+    "top": -420,
+    "bottom": 280,
+    "height": 699,
+    "clientHeight": 699,
+    "scrollHeight": 699
+  },
+  {
+    "selector": ".game-layout",
+    "top": -420,
+    "bottom": 264,
+    "height": 683,
+    "clientHeight": 683,
+    "scrollHeight": 683
+  },
+  {
+    "selector": ".topbar",
+    "top": -420,
+    "bottom": -367,
+    "height": 53,
+    "clientHeight": 52,
+    "scrollHeight": 52
+  },
+  {
+    "selector": ".world-workspace",
+    "top": -367,
+    "bottom": 202,
+    "height": 568,
+    "clientHeight": 568,
+    "scrollHeight": 568
+  },
+  {
+    "selector": ".game-navigation-shell",
+    "top": 202,
+    "bottom": 264,
+    "height": 62,
+    "clientHeight": 62,
+    "scrollHeight": 62
+  },
+  {
+    "selector": ".game-navigation",
+    "top": 202,
+    "bottom": 264,
+    "height": 62,
+    "clientHeight": 61,
+    "scrollHeight": 61
+  }
+]
+
+RELOAD...
+> [     "#app",     ".app-shell",     ".game-layout",     ".topbar",     ".world-workspace",     ".game-navigation-shell",     ".game-navigation" ].map(selector => {     const el = document.querySelector(selector);     if (!el) return { selector, missing: true };      const r = el.getBoundingClientRect();      return {         selector,         top: Math.round(r.top),         bottom: Math.round(r.bottom),         height: Math.round(r.height),         clientHeight: el.clientHeight,         scrollHeight: el.scrollHeight     }; });
+[
+  {
+    "selector": "#app",
+    "top": -509,
+    "bottom": 246,
+    "height": 755,
+    "clientHeight": 755,
+    "scrollHeight": 755
+  },
+  {
+    "selector": ".app-shell",
+    "top": -509,
+    "bottom": 246,
+    "height": 755,
+    "clientHeight": 755,
+    "scrollHeight": 755
+  },
+  {
+    "selector": ".game-layout",
+    "top": -509,
+    "bottom": 230,
+    "height": 739,
+    "clientHeight": 739,
+    "scrollHeight": 739
+  },
+  {
+    "selector": ".topbar",
+    "top": -509,
+    "bottom": -456,
+    "height": 53,
+    "clientHeight": 52,
+    "scrollHeight": 52
+  },
+  {
+    "selector": ".world-workspace",
+    "top": -456,
+    "bottom": 168,
+    "height": 624,
+    "clientHeight": 624,
+    "scrollHeight": 624
+  },
+  {
+    "selector": ".game-navigation-shell",
+    "top": 168,
+    "bottom": 230,
+    "height": 62,
+    "clientHeight": 62,
+    "scrollHeight": 62
+  },
+  {
+    "selector": ".game-navigation",
+    "top": 168,
+    "bottom": 230,
+    "height": 62,
+    "clientHeight": 61,
+    "scrollHeight": 61
+  }
+]
+
+
+
+
