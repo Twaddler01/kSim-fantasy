@@ -2,8 +2,12 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#07111f" />
+        <link rel="manifest" href="./manifest.json" />
+        <meta name="theme-color" content="#101820" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
         <title>kSim — Fantasy RPG</title>
         <link rel="stylesheet" href="./styles/styles.css" />
         <link rel="stylesheet" href="./src/ui/panels/journal/journal.css" />
@@ -97,6 +101,33 @@
 
             // Start the game even if optional debugging tools fail.
             try {
+
+                // RESIZE FOR APP (RELOAD)
+                function updateAppViewport() {
+                    const height = window.visualViewport
+                        ? window.visualViewport.height
+                        : window.innerHeight;
+                
+                    document.documentElement.style.setProperty(
+                        "--app-height",
+                        `${height}px`
+                    );
+                }
+                
+                updateAppViewport();
+                
+                window.visualViewport?.addEventListener(
+                    "resize",
+                    updateAppViewport
+                );
+                
+                window.visualViewport?.addEventListener(
+                    "scroll",
+                    updateAppViewport
+                );
+                
+                window.addEventListener("resize", updateAppViewport);
+
                 await import("./main.js");
             } catch (error) {
                 showStartupError("Application Startup Failed", error);

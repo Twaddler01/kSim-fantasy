@@ -1,199 +1,263 @@
 import { el } from "./components/Element.js";
-import { Tabs } from "./navigation/Tabs/Tabs.js";
+import NavigationBar from "./navigation/NavigationBar.js";
 
-/**
- * Owns the game's tab navigation and active-tab presentation lifecycle.
- *
- * GameUI does not own gameplay rules or application workflows.
- * It receives panels and callbacks from the composition root.
- */
 export default class GameUI {
-    constructor({
-        getGame,
-        getCurrentStage,
-        unreadManager,
-        panels = {},
-        onTabChange
-    }) {
+    constructor({ getGame, unreadManager, overlayManager, panels = {} }) {
         this.getGame = getGame;
-        this.getCurrentStage = getCurrentStage;
         this.unreadManager = unreadManager;
+        this.overlayManager = overlayManager;
         this.panels = panels;
-        this.onTabChange = onTabChange;
 
-        this.activeTab = "camp";
-        this.tabs = null;
-        this.campContent = null;
+        this.activeDestinationId = null;
+        this.navigationBar = null;
+        this.navigationElement = null;
+        this.moreMenu = null;
+        this.moreMenuBadges = new Map();
+        this.moreOpen = false;
+
+        this.destinations = this.createDestinations();
     }
 
-    createTabDefinitions() {
-        const {
-            debugPanel,
-            worldPanel,
-            craftingPanel,
-            upgradePanel,
-            logPanel,
-            journalPanel
-        } = this.panels;
-
+    createDestinations() {
         return [
             {
-                id: "debug",
-                label: "DEBUG",
-                render: () => debugPanel.getElement()
+                id: "character",
+                label: "Character",
+                icon: "👤"
             },
             {
-                id: "camp",
-                label: "CAMP",
-                render: () => this.campContent
-            },
-            {
-                id: "world",
-                label: "WORLD",
-                render: () => worldPanel.getElement()
+                id: "inventory",
+                label: "Inventory",
+                icon: "🎒",
+                unread: true
             },
             {
                 id: "craft",
-                label: "CRAFT",
-                render: () => craftingPanel.getElement()
+                label: "Craft",
+                icon: "⚒️"
             },
             {
-                id: "equipment",
-                label: "EQUIPMENT",
-                render: () =>
-                    this.renderDatabasePanel(
-                        "Equipment",
-                        `${Object.values(this.getGame().upgrades).reduce(
-                            (a, b) => a + b,
-                            0
-                        )} levels`,
-                        upgradePanel.render()
-                    )
+                id: "map",
+                label: "Map",
+                icon: "🗺️",
+                unread: true,
+                unreadKey: "world"
             },
             {
-                id: "log",
-                label: "LOG",
-                render: () =>
-                    this.renderDatabasePanel(
-                        "Journey",
-                        `${this.getGame().log.length} entries`,
-                        logPanel.render()
-                    )
-            },
-            {
-                id: "journal",
-                label: "JOURNAL",
-                render: () => journalPanel.getElement()
+                id: "more",
+                label: "More",
+                icon: "⋯",
+                action: true,
+                unread: true,
+                unreadKey: "more"
             }
         ];
     }
 
-    createTabs() {
-        const definitions = this.createTabDefinitions();
-
-        this.tabs = new Tabs({
-            activeId: this.activeTab,
-            label: "Sections",
-            unreadManager: this.unreadManager,
-            tabs: definitions.map(tab => ({
-                ...tab,
-                unread: ["camp", "world", "equipment", "log"].includes(tab.id)
-            })),
-            onChange: id => {
-                this.activeTab = id;
-                this.onTabChange?.(id);
-            }
+    createMoreMenu() {
+        const menu = el("div", {
+            className: "game-more-menu",
+            "aria-label": "More game sections"
         });
 
-        return this.tabs.element;
-    }
-
-    renderDatabasePanel(title, count, content) {
-        return el("section", { className: "database-view" }, [
-            el("div", { className: "section-heading" }, [
-                el("div", {}, [
-                    el("div", {
-                        className: "eyebrow",
-                        text: "DATABASE"
-                    }),
-                    el("h2", { text: title })
-                ]),
-                el("span", {
-                    className: "count-pill",
-                    text: count
-                })
-            ]),
-            content
-        ]);
-    }
-
-    updateActiveTab() {
-        const game = this.getGame();
-        const {
-            debugPanel,
-            mainObjective,
-            worldPanel,
-            craftingPanel,
-            upgradePanel,
-            logPanel,
-            journalPanel
-        } = this.panels;
-
-        if (this.activeTab !== "world") {
-            worldPanel.deactivateZone?.();
-        }
-
-        if (this.activeTab === "camp") {
-            const stage = this.getCurrentStage(game);
-
-            if (stage) {
-                this.unreadManager.markRead("camp", `objective-${stage.id}`);
+        const entries = [
+            {
+                id: "equipment",
+                label: "Equipment",
+                icon: "🛡️"
+            },
+            {
+                id: "journal",
+                label: "Journal",
+                icon: "📖"
+            },
+            {
+                id: "log",
+                label: "Journey Log",
+                icon: "📜",
+                unread: true,
+                unreadDisplay: "count"
+            },
+            {
+                id: "debug",
+                label: "Debug",
+                icon: "🔧"
             }
+        ];
+
+        for (const entry of entries) {
+            if (!this.overlayManager?.panels?.[entry.id]) {
+                continue;
+            }
+
+            const button = el(
+                "button",
+                {
+                    type: "button",
+                    className: "game-more-menu-item",
+                    onClick: () => {
+                        this.closeMore();
+                        this.selectDestination(entry.id);
+                    }
+                },
+                [
+                    el("span", {
+                        className: "game-more-menu-icon",
+                        text: entry.icon,
+                        "aria-hidden": "true"
+                    }),
+                    el("span", {
+                        text: entry.label
+                    })
+                ]
+            );
+
+            if (entry.unread) {
+                const badge = el("span", {
+                    className: "navigation-unread-count",
+                    text: "0",
+                    hidden: true
+                });
+
+                button.append(badge);
+                this.moreMenuBadges.set(entry.id, badge);
+            }
+
+            menu.append(button);
         }
 
-        switch (this.activeTab) {
-            case "debug":
-                debugPanel.update();
-                break;
-            case "camp":
-                mainObjective?.update?.();
-                break;
-            case "world":
-                worldPanel.update();
-                break;
-            case "craft":
-                craftingPanel.update();
-                break;
-            case "equipment":
-                upgradePanel.update();
-                this.updateDatabaseCount(
-                    `${Object.values(game.upgrades).reduce(
-                        (a, b) => a + b,
-                        0
-                    )} levels`
-                );
-                break;
-            case "log":
-                logPanel.update();
-                this.updateDatabaseCount(`${game.log.length} entries`);
-                break;
-            case "journal":
-                journalPanel.update();
-                break;
-        }
+        menu.hidden = true;
+        return menu;
     }
 
-    updateDatabaseCount(count) {
-        const countPill = this.tabs?.panel?.querySelector(
-            ".database-view .count-pill"
+    createNavigation() {
+        this.navigationBar = new NavigationBar({
+            destinations: this.destinations,
+            unreadManager: this.unreadManager,
+            getUnreadCount: destination =>
+                destination.id === "more"
+                    ? this.getMoreUnreadCount()
+                    : undefined,
+            getActiveId: () =>
+                this.moreOpen ? "more" : this.activeDestinationId,
+            onSelect: id => this.selectDestination(id)
+        });
+
+        this.moreMenu = this.createMoreMenu();
+
+        this.navigationElement = el(
+            "div",
+            {
+                className: "game-navigation-shell"
+            },
+            [this.moreMenu, this.navigationBar.getElement()]
         );
 
-        if (countPill) {
-            countPill.textContent = count;
+        return this.navigationElement;
+    }
+
+    selectDestination(id) {
+        if (id === "more") {
+            this.toggleMore();
+            return true;
+        }
+
+        if (!this.overlayManager?.panels?.[id]) {
+            console.warn(`[GameUI] Unknown destination: ${id}`);
+            return false;
+        }
+
+        this.closeMore();
+
+        if (this.overlayManager.isOpen(id)) {
+            this.overlayManager.close();
+            return true;
+        }
+
+        return this.overlayManager.open(id);
+    }
+
+    toggleMore() {
+        if (this.moreOpen) {
+            this.closeMore();
+        } else {
+            this.openMore();
         }
     }
 
-    navigateTo(target = {}) {
-        return this.tabs?.setActiveTab?.(target.tab, { notify: true });
+    openMore() {
+        if (!this.moreMenu) return false;
+
+        this.updateMoreMenu();
+
+        this.moreOpen = true;
+        this.moreMenu.hidden = false;
+        this.navigationBar?.update();
+
+        return true;
+    }
+
+    closeMore() {
+        this.moreOpen = false;
+
+        if (this.moreMenu) {
+            this.moreMenu.hidden = true;
+        }
+
+        this.navigationBar?.update();
+    }
+
+    handleOverlayChange(id) {
+        this.activeDestinationId = id;
+        this.closeMore();
+        this.navigationBar?.update();
+    }
+
+    updateActiveDestination() {
+        this.overlayManager?.update();
+        this.navigationBar?.update();
+        this.updateMoreMenu();
+    }
+
+    updateNavigation() {
+        this.navigationBar?.update();
+        this.updateMoreMenu();
+    }
+
+    updateMoreMenu() {
+        for (const [id, badge] of this.moreMenuBadges) {
+            const count = this.unreadManager?.getUnreadCount(id) ?? 0;
+
+            badge.textContent = String(count);
+            badge.hidden = count === 0;
+        }
+    }
+
+    getMoreUnreadCount() {
+        return ["equipment", "journal", "log"].reduce(
+            (total, id) =>
+                total + (this.unreadManager?.getUnreadCount(id) ?? 0),
+            0
+        );
+    }
+
+    /**
+     * Route adapter used by itemNavigation.js.
+     *
+     * "world" is the persistent viewport, not a selectable
+     * overlay destination.
+     */
+    navigateToRoute(tab, pageId) {
+        if (tab === "world") {
+            if (pageId === "map") {
+                return true;
+            }
+
+            this.closeMore();
+            this.overlayManager?.close();
+            return true;
+        }
+
+        return this.selectDestination(tab);
     }
 }

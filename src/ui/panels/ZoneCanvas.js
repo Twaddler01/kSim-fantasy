@@ -173,6 +173,8 @@ export default class ZoneCanvas {
 
         this._loop = t => this.tick(t);
         this._onResize = () => this.resize();
+        
+        this.resizeObserver = null;
         this._onPointerDown = e => this.handlePointerDown(e);
         this._onPointerMove = e => this.handlePointerMove(e);
         this._onPointerUp = e => this.handlePointerUp(e);
@@ -200,8 +202,7 @@ export default class ZoneCanvas {
         Object.assign(this.canvas.style, {
             display: "block",
             width: "100%",
-            height: "340px",
-            borderRadius: "10px",
+            height: "100%",
             background: "#0b0f14",
             cursor: "grab",
             touchAction: "none"
@@ -216,6 +217,12 @@ export default class ZoneCanvas {
         this.element.className = "exploration-demo";
         this.element.appendChild(this.canvas);
         this.element.appendChild(this.playerEl);
+
+        // Observe the actual viewport container, not just window size.
+        if (typeof ResizeObserver !== "undefined") {
+            this.resizeObserver = new ResizeObserver(() => this.resize());
+            this.resizeObserver.observe(this.element);
+        }
 
         requestAnimationFrame(() => this.resize());
 
@@ -250,7 +257,6 @@ export default class ZoneCanvas {
         this.canvas.addEventListener("pointermove", this._onPointerMove);
         this.canvas.addEventListener("pointerup", this._onPointerUp);
         this.canvas.addEventListener("pointercancel", this._onPointerCancel);
-        window.addEventListener("resize", this._onResize);
 
         this.lastTime = performance.now();
         this.rafId = requestAnimationFrame(this._loop);
@@ -267,7 +273,6 @@ export default class ZoneCanvas {
             "pointercancel",
             this._onPointerCancel
         );
-        window.removeEventListener("resize", this._onResize);
         this.pointer = null;
     }
 
@@ -275,27 +280,60 @@ export default class ZoneCanvas {
     // Sizing / camera helpers
     // ---------------------------------------------------------------
 
-    resize() {
-        if (!this.canvas) return;
-        const rect = this.canvas.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
+resize() {
+    if (!this.canvas || !this.ctx) return;
 
-        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-        this.width = rect.width;
-        this.height = rect.height;
+    const rect = this.canvas.getBoundingClientRect();
 
-        this.canvas.width = Math.round(this.width * this.dpr);
-        this.canvas.height = Math.round(this.height * this.dpr);
-        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (!rect.width || !rect.height) return;
 
-        if (!this.cameraInitialized) {
-            this.centerCameraOnPlayer();
-            this.cameraInitialized = true;
-        } else {
-            this.camera.x = this.clampCameraX(this.camera.x);
-            this.camera.y = this.clampCameraY(this.camera.y);
-        }
+    const previousWidth = this.width;
+    const previousHeight = this.height;
+
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    this.width = rect.width;
+    this.height = rect.height;
+
+    const pixelWidth = Math.round(this.width * this.dpr);
+    const pixelHeight = Math.round(this.height * this.dpr);
+
+    // Only reset the canvas backing store when necessary.
+    if (
+        this.canvas.width !== pixelWidth ||
+        this.canvas.height !== pixelHeight
+    ) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
     }
+
+    this.ctx.setTransform(
+        this.dpr,
+        0,
+        0,
+        this.dpr,
+        0,
+        0
+    );
+
+    if (!this.cameraInitialized) {
+        this.centerCameraOnPlayer();
+        this.cameraInitialized = true;
+        return;
+    }
+
+    // Preserve the current camera center during resizing.
+    const centerX = this.camera.x + previousWidth / 2;
+    const centerY = this.camera.y + previousHeight / 2;
+
+    this.camera.x = this.clampCameraX(
+        centerX - this.width / 2
+    );
+
+    this.camera.y = this.clampCameraY(
+        centerY - this.height / 2
+    );
+}
 
     centerCameraOnPlayer() {
         this.camera.x = this.clampCameraX(this.player.x - this.width / 2);

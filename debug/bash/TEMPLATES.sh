@@ -51,6 +51,41 @@ git push --follow-tags
 
 
 
+# === NEW BRANCH / PULL REQUEST ===
+# 1. Create development branch (one-time setup)
+git switch -c development
+git push -u origin development
+
+# 2. Work on development
+<updates>
+git add .
+git commit -m "Your update"
+git push
+
+# 3. Merge development into main
+# Create and merge PR on GitHub
+# Add notes to PR
+
+# 4. Update local main
+git switch main
+git pull origin main
+
+# 5. Tag release
+uktag v0.5.0 "World & Character Update"
+git push origin v0.5.0
+
+# 6. Sync development
+git switch development
+git merge main
+git push
+
+
+
+
+
+# === BACKUP bash debug folder
+cp -r ~/.bash_functions /data/data/com.termux/files/home/storage/shared/Documents/kSim-fantasy/debug/bash
+
 # COPY: rsync -av \
 mkdir -p releases/v1.0.1
 rsync -avn \
@@ -94,7 +129,10 @@ multiple...
 grep -rnE "effects.js" --include="*.js" .
 grep -rnE "toast" --include="*.css" .
 
-craftRecipe() and applyEffects() a
+# sed line range
+sed -n 'START,ENDp' styles/styles.css
+
+
 
 # MORE:
 # Include line numbers
@@ -138,8 +176,8 @@ grep -RIn 'panel' \
 
 
 
-grep -rn "recoverMaterial" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
-
+grep -rn "unread\|badge" styles/styles.css --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
+sed -n '4144,4256p' styles/styles.css
 
 
 
@@ -171,3 +209,25 @@ live_reload: true
 exclude_git: true
 launch_browser: true
 browser_package: org.mozilla.firefox
+
+
+
+fc src/data/zones.js \
+src/data/initialGameData.js \
+src/ui/panels/ZoneCanvas.js \
+src/ui/navigation/Tabs/Tabs.js 
+
+
+
+
+# WorldPanel remaining lifecycle
+sed -n '120,250p' src/ui/panels/WorldPanel.js
+# Character update and surrounding methods
+sed -n '385,430p' src/ui/panels/Character.js
+# Inventory update and surrounding methods
+sed -n '175,235p' src/ui/panels/Inventory.js
+
+grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
+  src/ui/panels/WorldMapPanel.js
+
+

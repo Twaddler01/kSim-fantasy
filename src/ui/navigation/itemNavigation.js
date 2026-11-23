@@ -30,18 +30,13 @@ export function itemDomId(tab, itemId) {
     return `ksim-item-${tab}-${encodeURIComponent(String(itemId))}`;
 }
 
-/**
-
-* Register a page with an optional activation handler and
-
-* optional page-specific item-navigation handler.
-  */
 export function registerPage(tab, pageId, handlers = {}) {
     if (!tab || !pageId) {
         throw new TypeError("registerPage requires tab and pageId.");
     }
 
     const key = pageKey(tab, pageId);
+
     pageRegistry.set(key, {
         activate: handlers.activate,
         navigateToItem: handlers.navigateToItem
@@ -62,22 +57,16 @@ export function unregisterPage(tab, pageId) {
 }
 
 /**
- * Navigate to a tab, an optional registered page, and an optional item.
- * Returns true on success and false if the destination cannot be resolved.
+ * Navigate to a destination, optional registered page,
+ * and optional item within that page.
+ *
+ * gameUI is the destination coordinator.
  */
-
-export async function navigateTo(tabs, target = {}) {
+export async function navigateTo(gameUI, target = {}) {
     const { tab, pageId, itemId } = target;
 
-    if (!tabs || !tab) {
+    if (!gameUI || !tab) {
         warnNavigationFailure(target, "invalid-destination");
-        return false;
-    }
-
-    const tabExists = tabs.tabs?.some(item => item.id === tab);
-
-    if (!tabExists) {
-        warnNavigationFailure(target, "tab-not-found");
         return false;
     }
 
@@ -92,7 +81,12 @@ export async function navigateTo(tabs, target = {}) {
         }
     }
 
-    tabs.setActiveTab(tab, { notify: true });
+    const navigated = gameUI.navigateToRoute(tab, pageId);
+
+    if (navigated === false) {
+        warnNavigationFailure(target, "destination-not-found");
+        return false;
+    }
 
     if (page?.activate) {
         let activated;
@@ -104,17 +98,13 @@ export async function navigateTo(tabs, target = {}) {
                 reason: "page-activation-failed",
                 error
             });
+
             return false;
         }
 
         if (activated === false) {
-            // Page handlers can log a more specific reason themselves.
             return false;
         }
-    }
-
-    if (page) {
-        tabs.setScrollPosition(0);
     }
 
     if (itemId == null) {
@@ -123,10 +113,10 @@ export async function navigateTo(tabs, target = {}) {
 
     await waitForRender();
 
-    let navigated = false;
+    let itemNavigated = false;
 
     if (page?.navigateToItem) {
-        navigated = await page.navigateToItem(itemId);
+        itemNavigated = await page.navigateToItem(itemId);
     } else {
         const element = document.getElementById(itemDomId(tab, itemId));
 
@@ -139,11 +129,11 @@ export async function navigateTo(tabs, target = {}) {
                 block: isLastItem ? "end" : "center"
             });
 
-            navigated = true;
+            itemNavigated = true;
         }
     }
 
-    if (!navigated) {
+    if (!itemNavigated) {
         warnNavigationFailure(target, "item-not-found");
         return false;
     }
@@ -151,17 +141,11 @@ export async function navigateTo(tabs, target = {}) {
     return true;
 }
 
-/**
-
-* Backwards-compatible entry point for existing item-navigation callers.
-
-* It also accepts pageId when a page-specific destination is needed.
-  */
-export function navigateToItem(tabs, target = {}) {
+export function navigateToItem(gameUI, target = {}) {
     if (target.itemId == null) {
         warnNavigationFailure(target, "item-id-required");
         return Promise.resolve(false);
     }
 
-    return navigateTo(tabs, target);
+    return navigateTo(gameUI, target);
 }

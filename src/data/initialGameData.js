@@ -62,7 +62,9 @@ export const initialGameData = {
     },
     unlocks: {},
     appState: {
-        navigation: { activeZoneId: null },
+        navigation: {
+            activeZoneId: "whisperingMeadow"
+        },
         trackerEnabled: false
     },
     progression: {
