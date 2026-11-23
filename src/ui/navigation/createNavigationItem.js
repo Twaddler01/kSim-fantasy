@@ -7,7 +7,7 @@ import { el } from "../components/Element.js";
 
 export function createNavigationItem(
     destination,
-    { active = false, unreadManager, onSelect } = {}
+    { active = false, unreadManager, unreadCount, onSelect } = {}
 ) {
     const button = el("button", {
         type: "button",
@@ -45,9 +45,11 @@ export function createNavigationItem(
 
     if (destination.unread) {
         const count =
+            unreadCount ??
             unreadManager?.getUnreadCount(
                 destination.unreadKey ?? destination.id
-            ) ?? 0;
+            ) ??
+            0;
 
         if (count > 0) {
             button.append(

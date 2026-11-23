@@ -761,7 +761,8 @@ export function startGame() {
         showToast,
         showAnnouncement,
         logEvent,
-        processProgression
+        processProgression,
+        resetGame
     });
 
     const _showMap = new DebugButton({

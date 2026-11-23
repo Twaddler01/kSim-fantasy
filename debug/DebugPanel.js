@@ -28,7 +28,8 @@ export default class DebugPanel {
         showToast,
         showAnnouncement,
         logEvent,
-        processProgression
+        processProgression,
+        resetGame
     }) {
         this.getGame = getGame;
         this.save = save;
@@ -37,6 +38,8 @@ export default class DebugPanel {
         this.showAnnouncement = showAnnouncement;
         this.logEvent = logEvent;
         this.processProgression = processProgression;
+        this.resetGame = resetGame;
+        
         this.actions = [];
 
         this.element = null;
@@ -51,6 +54,10 @@ export default class DebugPanel {
 
     addActions() {
         this.actions = [
+            {
+                label: 'RESET GAME',
+                run: () => this.resetGame()
+            },
             {
                 label: "Queue 3 Announcements",
                 run: () => {

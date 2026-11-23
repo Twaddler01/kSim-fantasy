@@ -12,12 +12,14 @@ export default class NavigationBar {
         destinations = [],
         unreadManager,
         getActiveId,
-        onSelect
+        onSelect,
+        getUnreadCount
     } = {}) {
         this.destinations = destinations;
         this.unreadManager = unreadManager;
         this.getActiveId = getActiveId;
         this.onSelect = onSelect;
+        this.getUnreadCount = getUnreadCount;
 
         this.element = el("nav", {
             className: "game-navigation",
@@ -35,6 +37,7 @@ export default class NavigationBar {
                 createNavigationItem(destination, {
                     active: destination.id === activeId,
                     unreadManager: this.unreadManager,
+                    unreadCount: this.getUnreadCount?.(destination),
                     onSelect: this.onSelect
                 })
             )

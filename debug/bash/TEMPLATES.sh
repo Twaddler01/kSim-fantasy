@@ -97,6 +97,8 @@ grep -rnE "toast" --include="*.css" .
 # sed line range
 sed -n 'START,ENDp' styles/styles.css
 
+
+
 # MORE:
 # Include line numbers
 grep -n "function" main.js
@@ -140,7 +142,7 @@ grep -RIn 'panel' \
 
 
 grep -rn "unread\|badge" styles/styles.css --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=mobile-dev-console --exclude-dir=ideas --exclude-dir=debug
-
+sed -n '4144,4256p' styles/styles.css
 
 
 

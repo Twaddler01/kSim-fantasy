@@ -12,6 +12,7 @@ export default class GameUI {
         this.navigationBar = null;
         this.navigationElement = null;
         this.moreMenu = null;
+        this.moreMenuBadges = new Map();
         this.moreOpen = false;
 
         this.destinations = this.createDestinations();
@@ -46,7 +47,9 @@ export default class GameUI {
                 id: "more",
                 label: "More",
                 icon: "⋯",
-                action: true
+                action: true,
+                unread: true,
+                unreadKey: "more"
             }
         ];
     }
@@ -110,16 +113,14 @@ export default class GameUI {
             );
 
             if (entry.unread) {
-                const count = this.unreadManager?.getUnreadCount(entry.id) ?? 0;
+                const badge = el("span", {
+                    className: "navigation-unread-count",
+                    text: "0",
+                    hidden: true
+                });
 
-                if (count > 0) {
-                    button.append(
-                        el("span", {
-                            className: "navigation-unread-count",
-                            text: String(count)
-                        })
-                    );
-                }
+                button.append(badge);
+                this.moreMenuBadges.set(entry.id, badge);
             }
 
             menu.append(button);
@@ -133,6 +134,10 @@ export default class GameUI {
         this.navigationBar = new NavigationBar({
             destinations: this.destinations,
             unreadManager: this.unreadManager,
+            getUnreadCount: destination =>
+                destination.id === "more"
+                    ? this.getMoreUnreadCount()
+                    : undefined,
             getActiveId: () =>
                 this.moreOpen ? "more" : this.activeDestinationId,
             onSelect: id => this.selectDestination(id)
@@ -183,6 +188,8 @@ export default class GameUI {
     openMore() {
         if (!this.moreMenu) return false;
 
+        this.updateMoreMenu();
+
         this.moreOpen = true;
         this.moreMenu.hidden = false;
         this.navigationBar?.update();
@@ -209,10 +216,29 @@ export default class GameUI {
     updateActiveDestination() {
         this.overlayManager?.update();
         this.navigationBar?.update();
+        this.updateMoreMenu();
     }
 
     updateNavigation() {
         this.navigationBar?.update();
+        this.updateMoreMenu();
+    }
+
+    updateMoreMenu() {
+        for (const [id, badge] of this.moreMenuBadges) {
+            const count = this.unreadManager?.getUnreadCount(id) ?? 0;
+
+            badge.textContent = String(count);
+            badge.hidden = count === 0;
+        }
+    }
+
+    getMoreUnreadCount() {
+        return ["equipment", "journal", "log"].reduce(
+            (total, id) =>
+                total + (this.unreadManager?.getUnreadCount(id) ?? 0),
+            0
+        );
     }
 
     /**
