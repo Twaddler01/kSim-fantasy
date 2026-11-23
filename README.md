@@ -4,9 +4,10 @@ A mobile-first native HTML/CSS/JavaScript RPG game.
 
 ## Updates
 
-- Migration: updating core from a sci-fi genre to fantasy RPG.
+Latest alpha (in development) release:
+https://github.com/Twaddler01/kSim-fantasy/releases/tag/v0.5.0-alpha
 
 ## Run
 
 - Serve the project over HTTP (for example, with the included DevServer from /mobile-dev-console) and open `index.html`. 
-- Web release coming soon.
+- Install PWA when prompted (optional).
