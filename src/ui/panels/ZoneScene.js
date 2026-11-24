@@ -27,6 +27,7 @@ import ZoneCanvas from "./ZoneCanvas.js";
 import { materials } from "../../data/materials.js";
 import { getEnemy } from "../../data/enemies.js";
 import { getCrumbColors } from "../../assets/icons/materials/materialDrawings.js";
+import { WORLD_DEBUG } from "../../data/zones.js";
 import { buildBackgroundCache } from "../../data/backgroundCache.js";
 
 // Deterministic per-zone RNG so a zone looks the same across renders.
@@ -97,7 +98,9 @@ export default class ZoneScene {
             onInteract: (entity, screenPos, actionId) =>
                 this.handleInteract(entity, screenPos, actionId),
             onRespawn: entity => this.buildRespawn(entity),
-            showToast: null
+            showToast: null,
+            regions: this.zone.regions ?? [],
+            showBoundaries: WORLD_DEBUG.showBoundaries
         });
 
         this.collected = 0;
@@ -123,40 +126,55 @@ export default class ZoneScene {
         const rand = seededRandom(hashString(this.zone.id));
         const list = [];
 
+        let index = 0;
+
+        // 1. Guaranteed zone placements.
         const guaranteed = this.zone.guaranteedSpawns ?? [];
+
         const guaranteedCount = guaranteed.reduce(
             (s, g) => s + (g.count ?? 0),
             0
         );
-        const weightedCount = Math.max(0, this.entityCount - guaranteedCount);
 
-        let index = 0;
-
-        // 1. Guaranteed spawns are placed first, in declaration order.
-        //    Every zone can force presence of key entities (quest mobs,
-        //    guaranteed ore veins, a cache, a cave) regardless of RNG.
         for (const spec of guaranteed) {
-            const count = spec.count ?? 0;
-            for (let i = 0; i < count; i++) {
+            for (let i = 0; i < (spec.count ?? 0); i++) {
                 const spawn = {
-                    type: spec.type,
-                    materialId: spec.materialId,
-                    enemyId: spec.enemyId,
-                    lootTableId: spec.lootTableId,
-                    dungeonId: spec.dungeonId,
-                    respawnSeconds: spec.respawnSeconds,
+                    ...spec,
                     weight: 1
                 };
+
                 const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+
                 this.placeEntity(entity, list, rand);
                 list.push(entity);
             }
         }
 
-        // 2. Fill the remaining slots from the weighted spawn table.
-        for (let i = 0; i < weightedCount; i++) {
+        // 2. Regional populations.
+        for (const region of this.zone.regions ?? []) {
+            const count = region.entityCount ?? 0;
+
+            for (let i = 0; i < count; i++) {
+                const spawn = this.pickSpawn(rand, region.spawnTable, false);
+
+                if (!spawn) continue;
+
+                const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+
+                entity.regionId = region.id;
+
+                this.placeEntity(entity, list, rand, region);
+                list.push(entity);
+            }
+        }
+
+        // 3. Remaining world population.
+        const worldCount = Math.max(0, this.entityCount - guaranteedCount);
+
+        for (let i = 0; i < worldCount; i++) {
             const spawn = this.pickSpawn(rand);
             const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+
             this.placeEntity(entity, list, rand);
             list.push(entity);
         }
@@ -168,25 +186,99 @@ export default class ZoneScene {
      * Place an entity at a random world position, respecting margin and
      * minimum spacing from already-placed entities. Mutates entity.x / y.
      */
-    placeEntity(entity, list, rand) {
+    placeEntity(entity, list, rand, region = null) {
         const { margin, minSpacing } = this;
         const ww = this.world.width;
         const wh = this.world.height;
 
-        let x,
-            y,
-            attempts = 0;
-        do {
+        let x;
+        let y;
+
+        for (let attempts = 0; attempts < 100; attempts++) {
+            if (region) {
+                const point = this.getRandomRegionPoint(region, rand);
+                if (!point) break;
+
+                x = point.x;
+                y = point.y;
+            } else {
+                x = margin + rand() * (ww - margin * 2);
+                y = margin + rand() * (wh - margin * 2);
+            }
+
+            const tooClose = list.some(
+                e =>
+                    e.active !== false &&
+                    Math.hypot(e.x - x, e.y - y) < minSpacing
+            );
+
+            if (!tooClose) break;
+        }
+
+        // If a region couldn't produce a point, use the world as a fallback.
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
             x = margin + rand() * (ww - margin * 2);
             y = margin + rand() * (wh - margin * 2);
-            attempts++;
-        } while (
-            attempts < 40 &&
-            list.some(e => Math.hypot(e.x - x, e.y - y) < minSpacing)
-        );
+        }
 
         entity.x = x;
         entity.y = y;
+    }
+    getRandomRegionPoint(region, rand) {
+        const shape = region.shape;
+
+        if (!shape) return null;
+
+        // Circle: uniform random distribution within the circle.
+        if (shape.type === "circle") {
+            const angle = rand() * Math.PI * 2;
+            const distance = Math.sqrt(rand()) * shape.radius;
+
+            return {
+                x: shape.x + Math.cos(angle) * distance,
+                y: shape.y + Math.sin(angle) * distance
+            };
+        }
+
+        // Polygon: rejection sampling within its bounding rectangle.
+        if (shape.type === "polygon" && shape.points?.length >= 3) {
+            const points = shape.points;
+
+            const minX = Math.min(...points.map(p => p.x));
+            const maxX = Math.max(...points.map(p => p.x));
+            const minY = Math.min(...points.map(p => p.y));
+            const maxY = Math.max(...points.map(p => p.y));
+
+            for (let i = 0; i < 100; i++) {
+                const point = {
+                    x: minX + rand() * (maxX - minX),
+                    y: minY + rand() * (maxY - minY)
+                };
+
+                if (this.isPointInPolygon(point, points)) {
+                    return point;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    isPointInPolygon(point, points) {
+        let inside = false;
+
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const a = points[i];
+            const b = points[j];
+
+            const intersects =
+                a.y > point.y !== b.y > point.y &&
+                point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x;
+
+            if (intersects) inside = !inside;
+        }
+
+        return inside;
     }
 
     buildEntityFromSpawn(spawn, rand, index) {
@@ -294,11 +386,18 @@ export default class ZoneScene {
 
     buildRespawn(oldEntity) {
         const rand = Math.random;
-        const { margin } = this;
-        const ww = this.world.width;
-        const wh = this.world.height;
 
-        const spawn = {
+        const region = oldEntity.regionId
+            ? this.zone.regions?.find(r => r.id === oldEntity.regionId)
+            : null;
+
+        const spawn = region
+            ? this.pickSpawn(rand, region.spawnTable, false)
+            : this.pickSpawn(rand);
+
+        // If the original table is no longer valid, reconstruct
+        // the previous entity type as a fallback.
+        const fallbackSpawn = {
             type: oldEntity.type,
             materialId: oldEntity.materialId,
             enemyId: oldEntity.enemyId,
@@ -309,11 +408,23 @@ export default class ZoneScene {
             weight: 1
         };
 
-        const entity = this.buildEntityFromSpawn(spawn, rand, 0);
+        const entity = this.buildEntityFromSpawn(
+            spawn ?? fallbackSpawn,
+            rand,
+            0
+        );
+
         entity.id = oldEntity.id;
 
-        entity.x = margin + rand() * (ww - margin * 2);
-        entity.y = margin + rand() * (wh - margin * 2);
+        if (region) {
+            entity.regionId = region.id;
+        }
+
+        const nearbyEntities = (this.canvas?.entities ?? []).filter(
+            e => e !== oldEntity
+        );
+
+        this.placeEntity(entity, nearbyEntities, rand, region);
 
         return entity;
     }
@@ -322,15 +433,21 @@ export default class ZoneScene {
     // Spawn selection
     // -----------------------------------------------------------------
 
-    pickSpawn(rand = Math.random) {
-        const table = this.zone.spawnTable ?? [];
-        const valid = table.filter(
+    pickSpawn(
+        rand = Math.random,
+        table = this.zone.spawnTable,
+        allowFallback = true
+    ) {
+        const valid = (table ?? []).filter(
             entry => entry.weight > 0 && this.isValidSpawn(entry)
         );
 
         if (valid.length === 0) {
+            if (!allowFallback) return null;
+
             // Legacy fallback: zone declares a single materialId.
             const m = materials.find(m => m.id === this.zone.materialId);
+
             return {
                 type: "gather",
                 materialId: m?.id ?? this.rawMaterials[0]?.id,
@@ -340,10 +457,12 @@ export default class ZoneScene {
 
         const total = valid.reduce((s, e) => s + e.weight, 0);
         let roll = rand() * total;
-        for (const e of valid) {
-            roll -= e.weight;
-            if (roll < 0) return e;
+
+        for (const entry of valid) {
+            roll -= entry.weight;
+            if (roll < 0) return entry;
         }
+
         return valid[valid.length - 1];
     }
 
@@ -436,7 +555,7 @@ export default class ZoneScene {
 
     performAction(actionId, entity) {
         if (!entity || !entity.active) return;
-    
+
         this.canvas.requestAction(entity, actionId);
     }
 
@@ -445,7 +564,7 @@ export default class ZoneScene {
             this.canvas.setSelectedAction(null, null);
             return;
         }
-    
+
         this.canvas.setSelectedAction(actionId, entity);
     }
 

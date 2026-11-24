@@ -1,3 +1,7 @@
+export const WORLD_DEBUG = {
+    showBoundaries: true
+};
+
 export const ZONE_DEFINITIONS = [
     {
         id: "whisperingMeadow",
@@ -27,6 +31,61 @@ export const ZONE_DEFINITIONS = [
         entityCount: 10,
         respawnSeconds: 5,
         world: { width: 1200, height: 900 },
+        regions: [
+            {
+                id: "flowerMeadow",
+                name: "Flower Meadow",
+                entityCount: 4,
+
+                shape: {
+                    type: "circle",
+                    x: 300,
+                    y: 300,
+                    radius: 140
+                },
+
+                debugColor: "#4ade80",
+
+                label: {
+                    x: 300,
+                    y: 170
+                },
+
+                spawnTable: [
+                    { type: "gather", materialId: "sunpetal", weight: 70 },
+                    { type: "gather", materialId: "moonbloom", weight: 30 }
+                ]
+            },
+
+            {
+                id: "wolfTerritory",
+                name: "Wolf Territory",
+                entityCount: 3,
+
+                shape: {
+                    type: "polygon",
+                    points: [
+                        { x: 620, y: 140 },
+                        { x: 850, y: 170 },
+                        { x: 900, y: 340 },
+                        { x: 790, y: 480 },
+                        { x: 610, y: 410 },
+                        { x: 560, y: 260 }
+                    ]
+                },
+
+                debugColor: "#f87171",
+
+                label: {
+                    x: 730,
+                    y: 190
+                },
+
+                spawnTable: [
+                    { type: "enemy", enemyId: "meadowWolf", weight: 100 }
+                ]
+            }
+        ],
         margin: 80,
         minSpacing: 100,
         entityRadius: 22,
@@ -37,14 +96,16 @@ export const ZONE_DEFINITIONS = [
         guaranteedSpawns: [
             { type: "enemy", enemyId: "meadowWolf", count: 2 },
             { type: "cache", lootTableId: "meadowCache", count: 1 },
-            { type: "cave", dungeonId: "whisperingCave", lootTableId: "whisperingCaveLoot", count: 1 },
+            {
+                type: "cave",
+                dungeonId: "whisperingCave",
+                lootTableId: "whisperingCaveLoot",
+                count: 1
+            }
         ],
 
         spawnTable: [
-            { type: "enemy", enemyId: "meadowWolf", weight: 15 },
-            { type: "gather", materialId: "sunpetal", weight: 45 },
             { type: "gather", materialId: "oakLog", weight: 22 },
-            { type: "gather", materialId: "moonbloom", weight: 10 },
             { type: "cache", lootTableId: "meadowCache", weight: 8 }
         ],
         richnessTable: [
@@ -116,14 +177,19 @@ export const ZONE_DEFINITIONS = [
         description:
             "A small settlement nestled in the valley. A welcome refuge for travelers.",
         unlockTrigger: null
-    },
+    }
 ];
 
 export function getZoneIconMaterialId(zone) {
     if (!zone) return null;
     if (zone.materialId) return zone.materialId;
 
-    const spawn = [...(zone.spawnTable ?? [])]
+    const entries = [
+        ...(zone.spawnTable ?? []),
+        ...(zone.regions ?? []).flatMap(r => r.spawnTable ?? [])
+    ];
+
+    const spawn = entries
         .filter(e => (e.type ?? "gather") === "gather" && e.weight > 0)
         .sort((a, b) => b.weight - a.weight)[0];
 
@@ -147,9 +213,10 @@ export function getZoneSpawnBreakdown(zone) {
             }))
         );
 
-    const weightedGathers = (zone.spawnTable ?? []).filter(
-        e => (e.type ?? "gather") === "gather" && e.weight > 0
-    );
+    const weightedGathers = [
+        ...(zone.spawnTable ?? []),
+        ...(zone.regions ?? []).flatMap(r => r.spawnTable ?? [])
+    ].filter(e => (e.type ?? "gather") === "gather" && e.weight > 0);
 
     const combined = [...guaranteedGathers, ...weightedGathers];
     const total = combined.reduce((s, e) => s + e.weight, 0);

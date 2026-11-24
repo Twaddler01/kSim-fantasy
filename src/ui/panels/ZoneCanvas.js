@@ -137,6 +137,8 @@ export default class ZoneCanvas {
     constructor({
         entities = [],
         world = { width: 1200, height: 900 },
+        regions = [],
+        showBoundaries = false,
         respawnDelay = 3,
         backgroundCanvas = null,
         fallbackEntityCount = 10,
@@ -168,6 +170,8 @@ export default class ZoneCanvas {
         this.world = { width: world.width, height: world.height };
         this.respawnDelay = respawnDelay;
         this.backgroundCanvas = backgroundCanvas;
+        this.regions = regions;
+        this.showBoundaries = showBoundaries;
         this.fallbackEntityCount = fallbackEntityCount;
 
         this.camera = { x: 0, y: 0 };
@@ -599,6 +603,65 @@ export default class ZoneCanvas {
         ctx.stroke();
     }
 
+    drawDebugBoundaries() {
+        if (!this.showBoundaries || this.regions.length === 0) return;
+
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 6]);
+        ctx.lineJoin = "round";
+
+        for (const region of this.regions) {
+            const shape = region.shape;
+            if (!shape) continue;
+
+            ctx.strokeStyle = region.debugColor ?? "#ffffff";
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+
+            if (shape.type === "circle") {
+                ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
+            } else if (shape.type === "polygon" && shape.points?.length >= 3) {
+                ctx.moveTo(shape.points[0].x, shape.points[0].y);
+
+                for (let i = 1; i < shape.points.length; i++) {
+                    ctx.lineTo(shape.points[i].x, shape.points[i].y);
+                }
+
+                ctx.closePath();
+            } else {
+                continue;
+            }
+
+            ctx.stroke();
+
+            if (region.label) {
+                ctx.save();
+            
+                ctx.setLineDash([]);
+                ctx.font = "bold 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+            
+                ctx.fillStyle = region.debugColor ?? "#ffffff";
+                ctx.shadowColor = "#000000";
+                ctx.shadowBlur = 5;
+            
+                ctx.fillText(
+                    region.name,
+                    region.label.x,
+                    region.label.y
+                );
+            
+                ctx.restore();
+            }
+        }
+
+        ctx.restore();
+    }
+
     drawWorld() {
         const ctx = this.ctx;
         const cam = this.camera;
@@ -635,6 +698,9 @@ export default class ZoneCanvas {
         ctx.strokeStyle = "rgba(120,200,255,0.25)";
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, ww, wh);
+
+        // Debug geography — drawn in world coordinates.
+        this.drawDebugBoundaries();
 
         // Destination marker.
         ctx.strokeStyle = "rgba(120,200,255,0.45)";
