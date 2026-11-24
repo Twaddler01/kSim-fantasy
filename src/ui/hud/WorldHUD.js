@@ -1,15 +1,17 @@
 import { el } from "../components/Element.js";
 import PlayerStatusPanel from "./PlayerStatusPanel.js";
-import TargetStatusPanel from "./TargetStatusPanel.js";
+import SelectedEntityPanel from "./SelectedEntityPanel.js";
 
 export default class WorldHUD {
-    constructor({ getPlayer, getEquipment }) {
+    constructor({ getPlayer, getEquipment, onEntityAction = null }) {
         this.playerPanel = new PlayerStatusPanel({
             getPlayer,
             getEquipment
         });
 
-        this.targetPanel = new TargetStatusPanel();
+        this.targetPanel = new SelectedEntityPanel({
+            onAction: onEntityAction
+        });
 
         this.element = el("div", { className: "world-hud" }, [
             this.playerPanel.getElement(),

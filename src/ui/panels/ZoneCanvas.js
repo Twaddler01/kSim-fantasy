@@ -127,10 +127,12 @@ export default class ZoneCanvas {
         title = null,
         onInteract,
         onRespawn,
+        onSelect,
         showToast
     } = {}) {
         this.onInteract = onInteract;
         this.onRespawn = onRespawn;
+        this.onSelect = onSelect;
         this.showToast = showToast;
         this.title = title;
 
@@ -173,14 +175,15 @@ export default class ZoneCanvas {
 
         this._loop = t => this.tick(t);
         this._onResize = () => this.resize();
-        
+
         this.resizeObserver = null;
         this._onPointerDown = e => this.handlePointerDown(e);
         this._onPointerMove = e => this.handlePointerMove(e);
         this._onPointerUp = e => this.handlePointerUp(e);
         this._onPointerCancel = e => this.handlePointerCancel(e);
 
-        this.approachingEntity = null;
+        this.pendingAction = null;
+        this.selectedEntity = null;
     }
 
     setBackground(canvas) {
@@ -280,60 +283,49 @@ export default class ZoneCanvas {
     // Sizing / camera helpers
     // ---------------------------------------------------------------
 
-resize() {
-    if (!this.canvas || !this.ctx) return;
+    resize() {
+        if (!this.canvas || !this.ctx) return;
 
-    const rect = this.canvas.getBoundingClientRect();
+        const rect = this.canvas.getBoundingClientRect();
 
-    if (!rect.width || !rect.height) return;
+        if (!rect.width || !rect.height) return;
 
-    const previousWidth = this.width;
-    const previousHeight = this.height;
+        const previousWidth = this.width;
+        const previousHeight = this.height;
 
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    this.width = rect.width;
-    this.height = rect.height;
+        this.width = rect.width;
+        this.height = rect.height;
 
-    const pixelWidth = Math.round(this.width * this.dpr);
-    const pixelHeight = Math.round(this.height * this.dpr);
+        const pixelWidth = Math.round(this.width * this.dpr);
+        const pixelHeight = Math.round(this.height * this.dpr);
 
-    // Only reset the canvas backing store when necessary.
-    if (
-        this.canvas.width !== pixelWidth ||
-        this.canvas.height !== pixelHeight
-    ) {
-        this.canvas.width = pixelWidth;
-        this.canvas.height = pixelHeight;
+        // Only reset the canvas backing store when necessary.
+        if (
+            this.canvas.width !== pixelWidth ||
+            this.canvas.height !== pixelHeight
+        ) {
+            this.canvas.width = pixelWidth;
+            this.canvas.height = pixelHeight;
+        }
+
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+        if (!this.cameraInitialized) {
+            this.centerCameraOnPlayer();
+            this.cameraInitialized = true;
+            return;
+        }
+
+        // Preserve the current camera center during resizing.
+        const centerX = this.camera.x + previousWidth / 2;
+        const centerY = this.camera.y + previousHeight / 2;
+
+        this.camera.x = this.clampCameraX(centerX - this.width / 2);
+
+        this.camera.y = this.clampCameraY(centerY - this.height / 2);
     }
-
-    this.ctx.setTransform(
-        this.dpr,
-        0,
-        0,
-        this.dpr,
-        0,
-        0
-    );
-
-    if (!this.cameraInitialized) {
-        this.centerCameraOnPlayer();
-        this.cameraInitialized = true;
-        return;
-    }
-
-    // Preserve the current camera center during resizing.
-    const centerX = this.camera.x + previousWidth / 2;
-    const centerY = this.camera.y + previousHeight / 2;
-
-    this.camera.x = this.clampCameraX(
-        centerX - this.width / 2
-    );
-
-    this.camera.y = this.clampCameraY(
-        centerY - this.height / 2
-    );
-}
 
     centerCameraOnPlayer() {
         this.camera.x = this.clampCameraX(this.player.x - this.width / 2);
@@ -453,13 +445,14 @@ resize() {
             const worldX = screenX + this.camera.x;
             const worldY = screenY + this.camera.y;
 
-            const hit = this.hitTestEntity(worldX, worldY);
+            const hit = this.hitEntity(worldX, worldY);
             if (hit) {
-                this.tryInteract(hit);
+                this.selectEntity(hit);
             } else {
+                this.clearSelection();
+
                 this.player.tx = this.clampWorldX(worldX);
                 this.player.ty = this.clampWorldY(worldY);
-                this.approachingEntity = null;
             }
         }
 
@@ -506,14 +499,15 @@ resize() {
 
         this.playerEl.classList.toggle("is-moving", moving);
 
-        // Auto-interact when the player reaches an approached entity.
-        if (this.approachingEntity) {
-            const e = this.approachingEntity;
-            if (!e.active) {
-                this.approachingEntity = null;
-            } else if (this.inReach(e)) {
-                this.strikeEntity(e);
-                this.approachingEntity = null;
+        // Execute the explicitly requested action when in reach.
+        if (this.pendingAction) {
+            const { entity, actionId } = this.pendingAction;
+
+            if (!entity.active) {
+                this.pendingAction = null;
+            } else if (this.inReach(entity)) {
+                this.pendingAction = null;
+                this.executeAction(entity, actionId);
             }
         }
 
@@ -714,19 +708,19 @@ resize() {
                 ctx.restore();
             } else if (e.icon) {
                 ctx.save();
-            
+
                 // Backdrop tint. Always rendered for emoji entities —
                 // it anchors the emoji, and the interaction ring sits
                 // around it as the type signal.
                 ctx.fillStyle =
                     ENTITY_FALLBACK_COLORS[e.type] ??
                     ENTITY_FALLBACK_COLORS.gather;
-                ctx.globalAlpha = 0.20;
+                ctx.globalAlpha = 0.2;
                 ctx.beginPath();
                 ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.globalAlpha = 1;
-            
+
                 // Emoji on top.
                 ctx.fillStyle = "#ffffff";
                 ctx.font = `${Math.round(
@@ -828,7 +822,7 @@ resize() {
      * the sprite.
      */
     drawInteractionIndicator(ctx, entity, drawX, drawY) {
-        if (!entity.showInteractionIndicator) return;
+        if (this.selectedEntity !== entity) return;
 
         const colors =
             ENTITY_RING_COLORS[entity.type] ?? ENTITY_RING_COLORS.gather;
@@ -923,13 +917,37 @@ resize() {
         ctx.fill();
     }
 
-    hitTestEntity(worldX, worldY) {
+    hitEntity(worldX, worldY) {
         for (const e of this.entities) {
             if (!e.active) continue;
             const r = (e.r ?? 22) * TAP_HIT_RADIUS;
             if (Math.hypot(worldX - e.x, worldY - e.y) <= r) return e;
         }
         return null;
+    }
+
+    selectEntity(entity) {
+        if (!entity?.active) return;
+
+        // Tapping the selected entity again deselects it.
+        if (this.selectedEntity === entity) {
+            this.clearSelection();
+            return;
+        }
+
+        this.pendingAction = null;
+        this.selectedEntity = entity;
+
+        this.onSelect?.(entity);
+    }
+
+    clearSelection() {
+        if (!this.selectedEntity) return;
+        
+        this.pendingAction = null;
+        this.selectedEntity = null;
+
+        this.onSelect?.(null);
     }
 
     inReach(entity) {
@@ -940,24 +958,42 @@ resize() {
         );
     }
 
-    tryInteract(entity) {
+    requestAction(entity, actionId) {
+        if (!entity?.active) return;
+
+        const p = this.player;
+
         if (this.inReach(entity)) {
-            this.strikeEntity(entity);
+            this.executeAction(entity, actionId);
             return;
         }
 
-        // Walk to entity edge; auto-interact once on arrival.
-        const p = this.player;
         const dx = entity.x - p.x;
         const dy = entity.y - p.y;
         const dist = Math.hypot(dx, dy);
+
         const stopDist = p.r + (entity.r ?? 22) + INTERACT_REACH * 0.5;
 
         if (dist > stopDist) {
             p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
+
             p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
         }
-        this.approachingEntity = entity;
+
+        this.pendingAction = { entity, actionId };
+    }
+
+    executeAction(entity, actionId) {
+        if (!entity?.active) return;
+
+        // Gathering retains its existing multi-strike progression.
+        if (entity.type === "gather" && actionId === "gather") {
+            this.strikeEntity(entity);
+            return;
+        }
+
+        // Other entity actions are dispatched directly to ZoneScene.
+        this.completeEntity(entity, actionId);
     }
 
     strikeEntity(entity) {
@@ -975,7 +1011,7 @@ resize() {
         }
 
         if (entity.strikesLanded >= required) {
-            this.completeEntity(entity);
+            this.completeEntity(entity, "gather");
         }
     }
 
@@ -988,7 +1024,7 @@ resize() {
         };
     }
 
-    completeEntity(entity) {
+    completeEntity(entity, actionId) {
         const rect = this.canvas.getBoundingClientRect();
         const screenPos = {
             clientX: rect.left + (entity.x - this.camera.x),
@@ -998,7 +1034,8 @@ resize() {
         // The scene decides whether this interaction consumes the entity.
         // Returning false (or omitting a handler) leaves the entity in
         // place so it can be retried once the scene wires its callback.
-        const consumed = this.onInteract?.(entity, screenPos) !== false;
+        const consumed =
+            this.onInteract?.(entity, screenPos, actionId) !== false;
 
         if (!consumed) {
             entity.strikesLanded = 0;
@@ -1007,6 +1044,9 @@ resize() {
         }
 
         entity.active = false;
+        if (this.selectedEntity === entity) {
+            this.clearSelection();
+        }
         entity.respawnAt =
             entity.respawnSeconds === null
                 ? Infinity

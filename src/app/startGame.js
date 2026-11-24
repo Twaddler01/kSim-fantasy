@@ -160,7 +160,14 @@ export function startGame() {
 
     const worldHUD = new WorldHUD({
         getPlayer: () => game.player,
-        getEquipment: () => game.equipment
+        getEquipment: () => game.equipment,
+    
+        onEntityAction: (actionId, selectedData) => {
+            const zoneId = game.appState.navigation.activeZoneId;
+            const scene = worldPanel?.zoneViews?.get(zoneId);
+    
+            scene?.performAction(actionId, selectedData?.entity);
+        }
     });
 
     let materialSprites = {};
@@ -342,6 +349,13 @@ export function startGame() {
                 zone,
                 getSprites: () => materialSprites,
                 getTiles: () => getTileCache(),
+                onSelect: target => {
+                    if (target) {
+                        worldHUD.setTarget(target);
+                    } else {
+                        worldHUD.clearTarget();
+                    }
+                },
                 onGather: zoneActions.handleGather,
                 onEncounter: zoneActions.handleEncounter,
                 onOpenCache: zoneActions.handleOpenCache,

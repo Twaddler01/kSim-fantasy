@@ -1357,22 +1357,6 @@ body:not(.debug-mode) {
     margin-bottom: 0;
 }
 
-/* WORLD upgrade-card test layout */
-.zone-upgrade-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.zone-upgrade-grid .card {
-    min-width: 0;
-}
-
-.zone-upgrade-grid .card-body p {
-    margin-bottom: 0;
-}
-
 /* ========================================
    Reusable Card Components
 ======================================== */
@@ -4719,6 +4703,33 @@ ZONE
     border-radius: 4px;
 }
 
+.status-panel-subtitle {
+    font-size: 0.7rem;
+    line-height: 1;
+    color: var(--text-muted);
+}
+
+/* Selected entity type colors */
+.status-panel-enemy {
+    color: #e46c70;
+}
+
+.status-panel-gather {
+    color: #63b77b;
+}
+
+.status-panel-cache {
+    color: #d9ae54;
+}
+
+.status-panel-cave {
+    color: #75a9d3;
+}
+
+.status-panel-unknown {
+    color: var(--text-muted);
+}
+
 .status-panel-info {
     display: flex;
     flex-direction: column;
@@ -4737,6 +4748,30 @@ ZONE
 
     white-space: nowrap;
     text-overflow: ellipsis;
+}
+
+/* selected entity action buttons */
+.selected-entity-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.selected-entity-action {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.selected-entity-action:active {
+    transform: scale(0.97);
 }
 
 /* =========================================
