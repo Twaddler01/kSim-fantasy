@@ -239,5 +239,9 @@ grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
 ├── 
 └── 
 
+fcss .world-hud \
+.battle-backdrop \
+.battle-modal \
+.battle-actions \
 
-
+fc -clip ZoneCanvas

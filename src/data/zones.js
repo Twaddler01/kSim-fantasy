@@ -35,7 +35,12 @@ export const ZONE_DEFINITIONS = [
             {
                 id: "flowerMeadow",
                 name: "Flower Meadow",
-                entityCount: 4,
+
+                population: {
+                    initial: 6,
+                    max: 6,
+                    respawnSeconds: 20
+                },
 
                 shape: {
                     type: "circle",
@@ -60,7 +65,12 @@ export const ZONE_DEFINITIONS = [
             {
                 id: "wolfTerritory",
                 name: "Wolf Territory",
-                entityCount: 3,
+
+                population: {
+                    initial: 4,
+                    max: 4,
+                    respawnSeconds: 60
+                },
 
                 shape: {
                     type: "polygon",

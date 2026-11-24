@@ -150,23 +150,44 @@ export default class ZoneScene {
             }
         }
 
-        // 2. Regional populations.
-        for (const region of this.zone.regions ?? []) {
-            const count = region.entityCount ?? 0;
+// 2. Regional populations.
+for (const region of this.zone.regions ?? []) {
+    const population = region.population ?? {};
 
-            for (let i = 0; i < count; i++) {
-                const spawn = this.pickSpawn(rand, region.spawnTable, false);
+    const initial = Math.max(
+        0,
+        Math.floor(population.initial ?? region.entityCount ?? 0)
+    );
 
-                if (!spawn) continue;
+    const max = Math.max(
+        0,
+        Math.floor(population.max ?? initial)
+    );
 
-                const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+    // Initial population can never exceed the region's maximum.
+    const count = Math.min(initial, max);
 
-                entity.regionId = region.id;
+    for (let i = 0; i < count; i++) {
+        const spawn = this.pickSpawn(rand, region.spawnTable, false);
 
-                this.placeEntity(entity, list, rand, region);
-                list.push(entity);
-            }
+        if (!spawn) continue;
+
+        const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+
+        entity.regionId = region.id;
+
+        // All regional entities use their region's respawn cycle.
+        if (Number.isFinite(population.respawnSeconds)) {
+            entity.respawnSeconds = Math.max(
+                0,
+                population.respawnSeconds
+            );
         }
+
+        this.placeEntity(entity, list, rand, region);
+        list.push(entity);
+    }
+}
 
         // 3. Remaining world population.
         const worldCount = Math.max(0, this.entityCount - guaranteedCount);
@@ -418,6 +439,12 @@ export default class ZoneScene {
 
         if (region) {
             entity.regionId = region.id;
+        
+            const respawnSeconds = region.population?.respawnSeconds;
+        
+            if (Number.isFinite(respawnSeconds)) {
+                entity.respawnSeconds = Math.max(0, respawnSeconds);
+            }
         }
 
         const nearbyEntities = (this.canvas?.entities ?? []).filter(
