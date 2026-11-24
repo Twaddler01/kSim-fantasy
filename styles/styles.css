@@ -4639,14 +4639,75 @@ ZONE
     z-index: 10;
 
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 6px;
 
     padding: 10px;
+}
+
+/* Everything in the HUD lets pointer events pass through */
+.world-hud,
+.world-hud * {
+    pointer-events: none !important;
+}
+
+/* The Change button remains clickable */
+.world-hud .action-selector-change {
+    pointer-events: auto !important;
+}
+
+.world-hud-status-panels {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.world-hud-status-panels > * {
+    flex: 1;
+    min-width: 0;
+}
+
+/* =========================================
+   ACTION SELECTOR
+========================================= */
+
+.action-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
 
-    pointer-events: none;
+    padding: 8px 12px;
+
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+
+    background: var(--surface-raised);
+
+    /* Keep the active action visually distinct. */
+    pointer-events: auto;
+}
+
+.action-selector-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.action-selector-change {
+    flex-shrink: 0;
+
+    padding: 6px 10px;
+
+    border: 0;
+    border-radius: 6px;
+
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+
+    font: inherit;
+    cursor: pointer;
 }
 
 /* =========================================
@@ -4839,4 +4900,8 @@ ZONE
 
     background: #e5b64d;
     transition: width 0.2s ease;
+}
+
+.item-sheet-backdrop.is-visible > .item-sheet {
+    transform: translateY(0) !important;
 }

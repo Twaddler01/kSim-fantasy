@@ -440,6 +440,15 @@ export default class ZoneScene {
         this.canvas.requestAction(entity, actionId);
     }
 
+    setSelectedAction(actionId, entity) {
+        if (!entity || !entity.active) {
+            this.canvas.setSelectedAction(null, null);
+            return;
+        }
+    
+        this.canvas.setSelectedAction(actionId, entity);
+    }
+
     // -----------------------------------------------------------------
     // Interaction dispatch
     // -----------------------------------------------------------------

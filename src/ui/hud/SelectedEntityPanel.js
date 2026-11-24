@@ -5,16 +5,8 @@ const DEFAULT_PORTRAIT = new URL(
     import.meta.url
 ).href;
 
-const ENTITY_ACTIONS = {
-    enemy: [{ id: "attack", label: "Attack" }],
-    gather: [{ id: "gather", label: "Gather" }],
-    cache: [{ id: "loot", label: "Loot" }],
-    cave: [{ id: "enter", label: "Enter" }]
-};
-
 export default class SelectedEntityPanel {
-    constructor({ onAction = null } = {}) {
-        this.onAction = onAction;
+    constructor() {
         this.selectedEntity = null;
 
         this.portrait = el("img", {
@@ -50,15 +42,10 @@ export default class SelectedEntityPanel {
             healthTrack
         ]);
 
-        this.actionsElement = el("div", {
-            className: "selected-entity-actions"
-        });
-
         const info = el("div", { className: "status-panel-info" }, [
             this.nameElement,
             this.subtitleElement,
-            this.bars,
-            this.actionsElement
+            this.bars
         ]);
 
         const main = el("div", { className: "status-panel-main" }, [
@@ -87,7 +74,6 @@ export default class SelectedEntityPanel {
 
         if (!target) {
             this.element.classList.add("is-hidden");
-            this.updateActions(null);
             return;
         }
 
@@ -130,26 +116,6 @@ export default class SelectedEntityPanel {
             );
 
             this.healthFill.style.width = `${ratio * 100}%`;
-        }
-
-        this.updateActions(target);
-    }
-
-    updateActions(target) {
-        this.actionsElement.replaceChildren();
-
-        const actions = ENTITY_ACTIONS[target?.type] ?? [];
-
-        for (const action of actions) {
-            const button = el("button", {
-                className: "selected-entity-action",
-                textContent: action.label,
-                onclick: () => {
-                    this.onAction?.(action.id, this.selectedEntity);
-                }
-            });
-
-            this.actionsElement.append(button);
         }
     }
 }

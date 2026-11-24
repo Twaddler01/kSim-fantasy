@@ -184,6 +184,7 @@ export default class ZoneCanvas {
 
         this.pendingAction = null;
         this.selectedEntity = null;
+        this.selectedActionId = null;
     }
 
     setBackground(canvas) {
@@ -263,6 +264,12 @@ export default class ZoneCanvas {
 
         this.lastTime = performance.now();
         this.rafId = requestAnimationFrame(this._loop);
+
+console.log("[ZoneCanvas] Activated", {
+    active: this.active,
+    selectedEntity: this.selectedEntity?.type,
+    selectedActionId: this.selectedActionId
+});
     }
 
     deactivate() {
@@ -926,26 +933,51 @@ export default class ZoneCanvas {
         return null;
     }
 
-    selectEntity(entity) {
-        if (!entity?.active) return;
-
-        // Tapping the selected entity again deselects it.
-        if (this.selectedEntity === entity) {
-            this.clearSelection();
+    setSelectedAction(actionId, entity) {
+        if (!entity || entity !== this.selectedEntity || !entity.active) {
+            this.selectedActionId = null;
             return;
         }
 
+        if (this.selectedActionId !== actionId) {
+            this.pendingAction = null;
+        }
+
+        this.selectedActionId = actionId;
+    }
+
+    selectEntity(entity) {
+console.log("[ZoneCanvas] Entity tapped", {
+    active: this.active,
+    sameEntity: this.selectedEntity === entity,
+    selectedActionId: this.selectedActionId,
+    entityActive: entity?.active
+});
+        if (!entity?.active) return;
+
+        // Tapping the already-selected entity executes its active action.
+        if (this.selectedEntity === entity) {
+            if (this.selectedActionId) {
+                this.requestAction(entity, this.selectedActionId);
+            }
+            return;
+        }
+
+        // Selecting a different entity cancels any previous action.
         this.pendingAction = null;
+        this.selectedActionId = null;
         this.selectedEntity = entity;
 
+        // The HUD will choose the new entity's default action.
         this.onSelect?.(entity);
     }
 
     clearSelection() {
         if (!this.selectedEntity) return;
-        
+
         this.pendingAction = null;
         this.selectedEntity = null;
+        this.selectedActionId = null;
 
         this.onSelect?.(null);
     }
@@ -964,6 +996,7 @@ export default class ZoneCanvas {
         const p = this.player;
 
         if (this.inReach(entity)) {
+            this.pendingAction = null;
             this.executeAction(entity, actionId);
             return;
         }

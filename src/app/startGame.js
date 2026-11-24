@@ -162,11 +162,14 @@ export function startGame() {
         getPlayer: () => game.player,
         getEquipment: () => game.equipment,
     
-        onEntityAction: (actionId, selectedData) => {
+        onActionChange: (actionId, selectedData) => {
             const zoneId = game.appState.navigation.activeZoneId;
             const scene = worldPanel?.zoneViews?.get(zoneId);
     
-            scene?.performAction(actionId, selectedData?.entity);
+            scene?.setSelectedAction(
+                actionId,
+                selectedData?.entity
+            );
         }
     });
 
