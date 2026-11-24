@@ -25,7 +25,6 @@ export default class CaveModal {
         this.currentRewards = null;
         this.visible = false;
         this.lastNewlyDiscovered = [];
-        this.ignoreNextBackdropClick = false;
 
         this.buildDOM();
         document.body.append(this.element);
@@ -45,14 +44,8 @@ export default class CaveModal {
         this.backdrop = el("div", {
             className: "item-sheet-backdrop",
             role: "presentation",
-            onClick: event => {
+            onPointerDown: event => {
                 if (event.target !== this.backdrop) return;
-
-                if (this.ignoreNextBackdropClick) {
-                    this.ignoreNextBackdropClick = false;
-                    return;
-                }
-
                 this.hide();
             }
         });
@@ -81,7 +74,6 @@ export default class CaveModal {
         this.lastNewlyDiscovered = [];
 
         this.render();
-        this.ignoreNextBackdropClick = true;
 
         this.element.classList.add("is-visible");
         document.body.classList.add("modal-open", "sheet-open");
