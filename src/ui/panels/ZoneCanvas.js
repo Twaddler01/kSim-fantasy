@@ -24,57 +24,73 @@ const PLAYER_SPEED = 200; // world units / second
 
 const PLAYER_SVG = `
 <svg class="sprite" viewBox="0 0 48 48" aria-hidden="true">
-  <!-- Backpack (behind body) -->
-  <path d="M15 28 Q15 40 24 41 Q33 40 33 28 L30 26 L18 26 Z"
-        fill="#3a4453" stroke="#2a3240" stroke-width="1" stroke-linejoin="round"/>
 
-  <!-- Chemistry vial on the strap -->
-  <rect x="21" y="31" width="3" height="6" rx="1"
-        fill="#88e0b0" stroke="#5a6474" stroke-width="0.6"/>
-  <rect x="22" y="30" width="1" height="1.2" fill="#5a4a3a"/>
+  <!-- Legs -->
+  <path d="M17 35 L31 35 L30 43 L26 45 L22 45 L18 43 Z"
+        fill="#493b35" stroke="#302923" stroke-width="1"/>
 
-  <!-- Shoulders -->
-  <path d="M11 22 Q11 19 14 18 L14 30 Q11 31 11 26 Z"
-        fill="#dfe4ea" stroke="#5a6474" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M37 22 Q37 19 34 18 L34 30 Q37 31 37 26 Z"
-        fill="#dfe4ea" stroke="#5a6474" stroke-width="1" stroke-linejoin="round"/>
+  <!-- Boots -->
+  <path d="M17 41 L24 41 L24 46 L15 46 Q14 44 17 41 Z"
+        fill="#65452f" stroke="#382b24" stroke-width="1"/>
+  <path d="M25 41 L31 41 Q34 44 32 46 L24 46 Z"
+        fill="#65452f" stroke="#382b24" stroke-width="1"/>
 
-  <!-- Coat back -->
-  <path d="M14 20 Q20 21 24 21 Q28 21 34 20 Q35 30 24 34 Q13 30 14 20 Z"
-        fill="#f0f3f7" stroke="#5a6474" stroke-width="1" stroke-linejoin="round"/>
-  <!-- Left highlight facet -->
-  <path d="M16 22 Q20 22 22 24 L22 30 Q18 29 16 26 Z"
-        fill="#ffffff" opacity="0.75"/>
-  <!-- Right shadow facet -->
-  <path d="M32 22 Q28 22 26 24 L26 30 Q30 29 32 26 Z"
-        fill="#c5cdd6" opacity="0.65"/>
+  <!-- Tunic -->
+  <path d="M13 23 Q16 20 21 20 L27 20 Q32 20 35 23
+           L38 39 Q31 42 24 42 Q17 42 10 39 Z"
+        fill="#587d91" stroke="#354f60" stroke-width="1.2"
+        stroke-linejoin="round"/>
 
-  <!-- Pickaxe shaft -->
-  <line x1="9" y1="34" x2="39" y2="27"
-        stroke="#8a6a3c" stroke-width="2.2" stroke-linecap="round"/>
-  <!-- Pickaxe head -->
-  <path d="M37 23 L44 29 L36 33 L35 27 Z"
-        fill="#aeb7c2" stroke="#5a6474" stroke-width="0.8" stroke-linejoin="round"/>
+  <!-- Tunic shading -->
+  <path d="M15 25 Q19 23 21 24 L21 39 Q16 39 12 38 Z"
+        fill="#7394a5" opacity="0.55"/>
+  <path d="M33 25 Q29 23 27 24 L27 39 Q32 39 36 38 Z"
+        fill="#3f6378" opacity="0.55"/>
 
-  <!-- Gloves gripping the shaft -->
-  <circle cx="10" cy="33" r="2.6" fill="#3a4453" stroke="#2a3240" stroke-width="0.8"/>
-  <circle cx="38" cy="27" r="2.6" fill="#3a4453" stroke="#2a3240" stroke-width="0.8"/>
+  <!-- Neck -->
+  <path d="M20 18 L20 24 Q24 28 28 24 L28 18 Z"
+        fill="#c99470"/>
 
-  <!-- Helmet brim (front edge of dome) -->
-  <path d="M15 18 Q24 22 33 18 L32 20 Q24 24 16 20 Z" fill="#a88020"/>
+  <!-- Head -->
+  <ellipse cx="24" cy="15" rx="9" ry="10"
+           fill="#d5a77e" stroke="#a77b5d" stroke-width="0.7"/>
 
-  <!-- Helmet dome -->
-  <ellipse cx="24" cy="15" rx="8.5" ry="7.5"
-           fill="#e0b030" stroke="#a88020" stroke-width="1"/>
-  <path d="M18 12 Q21 9 24 9 Q22 12 20 13 Z" fill="#f5d566"/>
-  <path d="M30 12 Q27 9 24 9 Q26 12 28 13 Z" fill="#c89820"/>
+  <!-- Ears -->
+  <ellipse cx="15" cy="16" rx="2" ry="3" fill="#d5a77e"/>
+  <ellipse cx="33" cy="16" rx="2" ry="3" fill="#d5a77e"/>
 
-  <!-- Headlamp housing -->
-  <circle cx="24" cy="10.5" r="3.2" fill="#5a4a2a"
-          stroke="#a88020" stroke-width="0.6"/>
-  <!-- Headlamp glow + core -->
-  <circle class="lamp-glow" cx="24" cy="10.5" r="2.2" fill="#fffbe0"/>
-  <circle cx="24" cy="10.5" r="1.1" fill="#ffffff"/>
+  <!-- Hair -->
+  <path d="M15 17
+           Q13 8 19 5
+           Q25 1 31 7
+           Q35 11 33 19
+           L30 14
+           L27 11
+           L22 10
+           L17 14 Z"
+        fill="#49352d" stroke="#34251f" stroke-width="0.8"
+        stroke-linejoin="round"/>
+
+  <!-- Hair fringe -->
+  <path d="M16 13 Q19 8 23 9 Q27 7 31 12
+           L27 14 L23 12 L19 15 Z"
+        fill="#49352d"/>
+
+  <!-- Eyes -->
+  <circle cx="20.5" cy="16" r="0.8" fill="#392c27"/>
+  <circle cx="27.5" cy="16" r="0.8" fill="#392c27"/>
+
+  <!-- Simple mouth -->
+  <path d="M22 21 Q24 22 26 21"
+        fill="none" stroke="#98664f" stroke-width="0.8"
+        stroke-linecap="round"/>
+
+  <!-- Belt -->
+  <path d="M12 35 Q24 38 36 35 L36 38 Q24 41 12 38 Z"
+        fill="#795333" stroke="#513b29" stroke-width="0.8"/>
+  <rect x="22" y="36" width="4" height="3" rx="0.5"
+        fill="#c6a45f" stroke="#75552f" stroke-width="0.6"/>
+
 </svg>
 `;
 
@@ -264,12 +280,6 @@ export default class ZoneCanvas {
 
         this.lastTime = performance.now();
         this.rafId = requestAnimationFrame(this._loop);
-
-console.log("[ZoneCanvas] Activated", {
-    active: this.active,
-    selectedEntity: this.selectedEntity?.type,
-    selectedActionId: this.selectedActionId
-});
     }
 
     deactivate() {
@@ -947,12 +957,6 @@ console.log("[ZoneCanvas] Activated", {
     }
 
     selectEntity(entity) {
-console.log("[ZoneCanvas] Entity tapped", {
-    active: this.active,
-    sameEntity: this.selectedEntity === entity,
-    selectedActionId: this.selectedActionId,
-    entityActive: entity?.active
-});
         if (!entity?.active) return;
 
         // Tapping the already-selected entity executes its active action.
