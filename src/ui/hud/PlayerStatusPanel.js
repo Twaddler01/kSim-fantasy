@@ -83,12 +83,21 @@ export default class PlayerStatusPanel {
         return this.element;
     }
 
-    update() {
+    update(combatHp = null, combatMaxHp = null) {
         const data = getCharacterData(this.getPlayer(), this.getEquipment());
 
         this.nameElement.textContent = `${data.name} (Lv. ${data.level})`;
 
-        this.setFill(this.healthFill, data.hp, data.maxHealth);
+        // Use live battle health when supplied.
+        if (
+            Number.isFinite(combatHp) &&
+            Number.isFinite(combatMaxHp) &&
+            combatMaxHp > 0
+        ) {
+            this.setFill(this.healthFill, combatHp, combatMaxHp);
+        } else {
+            this.setFill(this.healthFill, data.hp, data.maxHealth);
+        }
 
         this.setFill(this.resourceFill, data.resource, data.maxResource);
 

@@ -119,6 +119,25 @@ export default class SelectedEntityPanel {
         }
     }
 
+    updateCombatHealth(current, maximum) {
+        if (
+            !Number.isFinite(current) ||
+            !Number.isFinite(maximum) ||
+            maximum <= 0
+        ) {
+            return;
+        }
+
+        this.bars.style.display = "";
+
+        const ratio = Math.max(
+            0,
+            Math.min(1, current / maximum)
+        );
+
+        this.healthFill.style.width = `${ratio * 100}%`;
+    }
+    
     setCombat(active) {
         this.element.classList.toggle("is-in-combat", active);
     }

@@ -23,8 +23,11 @@ import CraftingPanel from "../ui/panels/CraftingPanel.js";
 import UpgradePanel from "../ui/panels/UpgradePanel.js";
 import LogPanel from "../ui/panels/LogPanel.js";
 import JournalPanel from "../ui/panels/journal/JournalPanel.js";
-import BattleModal from "../ui/panels/BattleModal.js";
 import Character from "../ui/panels/Character.js";
+
+import BattleModal from "../ui/panels/BattleModal.js";
+import BattleController from "../systems/BattleController.js";
+import BattleControls from "../ui/hud/BattleControls.js";
 
 import MainObjective from "../ui/panels/MainObjective.js";
 import ObjectiveTracker from "../ui/panels/ObjectiveTracker.js";
@@ -309,6 +312,8 @@ export function startGame() {
     let battleModal;
     let lootModal;
     let caveModal;
+    let battleController = null;
+    let battleControls = null;
 
     const zoneActions = new ZoneActions({
         getGame: () => game,
@@ -322,7 +327,8 @@ export function startGame() {
 
         presentation: {
             deactivateZone: () => worldPanel?.deactivateZone?.(),
-            showBattle: battle => battleModal.show(battle),
+            startBattle: (enemyId, entity, scene) =>
+                battleController?.start(enemyId, entity, scene) ?? false,
             showLoot: rewards => lootModal.show(rewards),
             showCave: dungeonId => caveModal.show(dungeonId),
             createMaterialSymbol: materialId =>
@@ -361,6 +367,11 @@ export function startGame() {
                 },
                 onGather: zoneActions.handleGather,
                 onEncounter: zoneActions.handleEncounter,
+                onUpdate: (dt, scene) => {
+                    battleController?.update(dt, scene);
+                    battleControls?.update(battleController?.battle);
+                    worldHUD.update();
+                },
                 onOpenCache: zoneActions.handleOpenCache,
                 onEnterCave: zoneActions.handleEnterCave
             });
@@ -369,6 +380,32 @@ export function startGame() {
     });
 
     ui.worldPanel = worldPanel;
+
+    battleController = new BattleController({
+        getGame: () => game,
+        worldHUD,
+        save,
+        refreshUI,
+        showToast,
+    
+        onFinish: battle => {
+            zoneActions.announceDiscoveriesFrom(
+                battle.rewards?.items
+            );
+        }
+    });
+
+    battleControls = new BattleControls({
+        onAttack: () => {
+            battleController?.beginAttack();
+            battleControls?.update(battleController?.battle);
+        },
+    
+        onFlee: () => {
+            battleController?.flee();
+            battleControls?.update(battleController?.battle);
+        }
+    });
 
     // Initialize the world viewport from the saved location.
     worldPanel.showZone(game.appState.navigation.activeZoneId);
@@ -720,6 +757,7 @@ export function startGame() {
             [
                 worldPanel.getElement(),
                 worldHUD.getElement(),
+                battleControls.getElement(),
                 ui.overlayManager.getElement()
             ]
         );

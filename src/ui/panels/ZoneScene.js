@@ -638,8 +638,10 @@ for (const region of this.zone.regions ?? []) {
                     );
                     return false;
                 }
-                const handled = this.onEncounter(this.zone, screenPos, {
-                    enemyId: entity.enemyId
+                this.onEncounter(this.zone, screenPos, {
+                    enemyId: entity.enemyId,
+                    entity,
+                    scene: this
                 });
                 
                 // Starting combat does not consume the enemy.

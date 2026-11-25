@@ -67,10 +67,12 @@ export function startBattle(game, enemyId) {
             playerCooldownRemaining: 0,
 
             // Enemy attack timing.
+            // Enemy waits until the player's first attack lands.
             enemyAttackInterval,
             enemyWindupDuration: 0.8,
-            enemyWindupRemaining: 0.8,
+            enemyWindupRemaining: 0,
             enemyCooldownRemaining: 0,
+            enemyCanAttack: false,
 
             // Progress values used by the UI.
             playerWindupProgress: 0,
@@ -117,7 +119,6 @@ export function beginPlayerAttack(battle) {
     return ok({ battle });
 }
 
-
 export function updateBattle(game, battle, dt) {
     if (!battle || battle.finished || dt <= 0) {
         return { battle, newEvents: [] };
@@ -128,6 +129,8 @@ export function updateBattle(game, battle, dt) {
     // ----------------------------------------------
     // PLAYER ATTACK
     // ----------------------------------------------
+
+    let playerAttackResolved = false;
 
     battle.playerCooldownRemaining = Math.max(
         0,
@@ -142,6 +145,7 @@ export function updateBattle(game, battle, dt) {
 
         if (battle.playerWindupRemaining <= 0) {
             resolvePlayerAttack(game, battle);
+            playerAttackResolved = true;
         }
     }
 
@@ -159,23 +163,27 @@ export function updateBattle(game, battle, dt) {
     // ENEMY ATTACK
     // ----------------------------------------------
 
-    if (battle.enemyWindupRemaining > 0) {
-        battle.enemyWindupRemaining = Math.max(
-            0,
-            battle.enemyWindupRemaining - dt
-        );
+    // The enemy cannot act until the player's first
+    // attack has successfully landed.
+    if (battle.enemyCanAttack && !playerAttackResolved) {
+        if (battle.enemyWindupRemaining > 0) {
+            battle.enemyWindupRemaining = Math.max(
+                0,
+                battle.enemyWindupRemaining - dt
+            );
 
-        if (battle.enemyWindupRemaining <= 0) {
-            resolveRealtimeEnemyAttack(game, battle);
-        }
-    } else {
-        battle.enemyCooldownRemaining = Math.max(
-            0,
-            battle.enemyCooldownRemaining - dt
-        );
+            if (battle.enemyWindupRemaining <= 0) {
+                resolveRealtimeEnemyAttack(game, battle);
+            }
+        } else {
+            battle.enemyCooldownRemaining = Math.max(
+                0,
+                battle.enemyCooldownRemaining - dt
+            );
 
-        if (battle.enemyCooldownRemaining <= 0) {
-            battle.enemyWindupRemaining = battle.enemyWindupDuration;
+            if (battle.enemyCooldownRemaining <= 0) {
+                battle.enemyWindupRemaining = battle.enemyWindupDuration;
+            }
         }
     }
 
@@ -186,7 +194,6 @@ export function updateBattle(game, battle, dt) {
         newEvents: battle.log.slice(previousLogLength)
     };
 }
-
 
 export function fleeBattle(game, battle) {
     if (!battle || battle.finished) {
@@ -211,7 +218,6 @@ export function fleeBattle(game, battle) {
     });
 }
 
-
 // ==================================================
 // REAL-TIME ATTACK RESOLUTION
 // ==================================================
@@ -225,10 +231,7 @@ function resolvePlayerAttack(game, battle) {
         battle.playerStats.crit
     );
 
-    battle.enemyHp = Math.max(
-        0,
-        battle.enemyHp - result.damage
-    );
+    battle.enemyHp = Math.max(0, battle.enemyHp - result.damage);
 
     battle.log.push({
         kind: result.critical ? "player-crit" : "player-attack",
@@ -247,9 +250,16 @@ function resolvePlayerAttack(game, battle) {
         });
 
         finalizeVictory(game, battle);
+        return;
+    }
+
+    // The enemy gets its first attack opportunity
+    // only after surviving the player's first hit.
+    if (!battle.enemyCanAttack) {
+        battle.enemyCanAttack = true;
+        battle.enemyWindupRemaining = battle.enemyWindupDuration;
     }
 }
-
 
 function resolveRealtimeEnemyAttack(game, battle) {
     if (battle.finished) return;
@@ -260,10 +270,7 @@ function resolveRealtimeEnemyAttack(game, battle) {
         battle.enemy.crit ?? 0.05
     );
 
-    battle.playerHp = Math.max(
-        0,
-        battle.playerHp - result.damage
-    );
+    battle.playerHp = Math.max(0, battle.playerHp - result.damage);
 
     battle.log.push({
         kind: result.critical ? "enemy-crit" : "enemy-attack",
@@ -290,7 +297,6 @@ function resolveRealtimeEnemyAttack(game, battle) {
     // Begin the enemy's next cooldown.
     battle.enemyCooldownRemaining = battle.enemyAttackInterval;
 }
-
 
 function updateBattleProgress(battle) {
     battle.playerWindupProgress =

@@ -33,7 +33,19 @@ export default class WorldHUD {
     }
 
     update() {
-        this.playerPanel.update();
+        if (this.battle) {
+            this.playerPanel.update(
+                this.battle.playerHp,
+                this.battle.playerMaxHp
+            );
+
+            this.targetPanel.updateCombatHealth(
+                this.battle.enemyHp,
+                this.battle.enemyMaxHp
+            );
+        } else {
+            this.playerPanel.update();
+        }
     }
 
     setTarget(target) {

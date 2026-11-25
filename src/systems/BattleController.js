@@ -54,6 +54,9 @@ export default class BattleController {
 
         this.worldHUD.setCombat(this.battle);
 
+        // Automatically begin the player's opening attack.
+        beginPlayerAttack(this.battle);
+        
         return true;
     }
 

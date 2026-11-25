@@ -4917,3 +4917,129 @@ ZONE
 .item-sheet-backdrop.is-visible > .item-sheet {
     transform: translateY(0) !important;
 }
+
+/* ===================================
+   BATTLE CONTROLS
+=================================== */
+
+.battle-controls {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+
+    background: linear-gradient(
+        to top,
+        rgba(12, 16, 22, 0.97),
+        rgba(12, 16, 22, 0.88),
+        transparent
+    );
+
+    pointer-events: none;
+}
+
+.battle-controls.is-hidden {
+    display: none;
+}
+
+.battle-progress-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.battle-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    min-width: 0;
+}
+
+.battle-progress-label {
+    color: #e1e5e9;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.battle-progress-track {
+    height: 9px;
+    width: 100%;
+    overflow: hidden;
+
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+}
+
+.battle-progress-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+
+    transition: width 50ms linear;
+}
+
+.player-progress-fill {
+    background: linear-gradient(
+        90deg,
+        #c58a38,
+        #f2c66d
+    );
+}
+
+.enemy-progress-fill {
+    background: linear-gradient(
+        90deg,
+        #a73535,
+        #ef6666
+    );
+}
+
+.battle-button-row {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.battle-button {
+    min-height: 46px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.battle-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.attack-button {
+    flex: 1;
+    background: linear-gradient(
+        180deg,
+        #a94a3d,
+        #7c302b
+    );
+    border-color: #d46a5a;
+}
+
+.flee-button {
+    flex: 0 0 88px;
+    background: rgba(70, 78, 88, 0.95);
+    border-color: rgba(180, 190, 200, 0.35);
+}
