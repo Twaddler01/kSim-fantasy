@@ -11,9 +11,13 @@ export const initialGameData = {
         herbalistsKit: 0
     },
     player: {
+        name: "Adventurer",
         level: 1,
         xp: 0,
-        hp: null
+        hp: null,
+
+        resource: 100,
+        maxResource: 100
     },
     equipment: {
         head: null,

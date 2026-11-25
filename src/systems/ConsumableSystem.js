@@ -29,30 +29,47 @@ export function consumeItem(game, itemId, { battle = null } = {}) {
 
     switch (effect) {
         case "restoreHealth": {
+            const hasPercentage = percentage !== undefined;
+            const hasAmount = amount !== undefined;
+
             if (
-                    (percentage !== undefined && percentage <= 0 || percentage > 1) ||
-                    (amount !== undefined && !Number.isFinite(amount))
-               ) {
+                (hasPercentage &&
+                    (!Number.isFinite(percentage) ||
+                        percentage <= 0 ||
+                        percentage > 1)) ||
+                (hasAmount && (!Number.isFinite(amount) || amount <= 0)) ||
+                (!hasPercentage && !hasAmount)
+            ) {
                 return fail("invalid-effect");
             }
-            
-            const stats = getDerivedStats(game);
 
+            const stats = getDerivedStats(
+                game.player,
+                game.equipment
+            );
             const maxHealth = battle ? battle.playerMaxHp : stats.maxHealth;
 
             const currentHp = battle
                 ? battle.playerHp
                 : (game.player.hp ?? maxHealth);
 
+            if (
+                !Number.isFinite(maxHealth) ||
+                maxHealth <= 0 ||
+                !Number.isFinite(currentHp)
+            ) {
+                return fail("invalid-health");
+            }
+
             if (currentHp >= maxHealth) {
                 return fail("health-full");
             }
 
-            const isPercentage = percentage < 1 && percentage >= 0;
-            const restored = Math.min(
-                Math.round(isPercentage ? maxHealth * percentage : amount),
-                maxHealth - currentHp
-            );
+            const restoreAmount = hasPercentage
+                ? Math.round(maxHealth * percentage)
+                : amount;
+
+            const restored = Math.min(restoreAmount, maxHealth - currentHp);
 
             const removal = removeItem(game, itemId, 1);
 

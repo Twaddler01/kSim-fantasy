@@ -12,6 +12,8 @@
 //     shared by town doors, future NPCs, and any POI that otherwise
 //     blends into the background.
 
+import { isWithinRange, getDistance } from "../../systems/CombatRange.js";
+
 const INTERACT_REACH = 12; // px beyond touching that counts as "in reach"
 const TAP_HIT_RADIUS = 1.6; // tap hit detection, × entity.r
 
@@ -24,57 +26,73 @@ const PLAYER_SPEED = 200; // world units / second
 
 const PLAYER_SVG = `
 <svg class="sprite" viewBox="0 0 48 48" aria-hidden="true">
-  <!-- Backpack (behind body) -->
-  <path d="M15 28 Q15 40 24 41 Q33 40 33 28 L30 26 L18 26 Z"
-        fill="#3a4453" stroke="#2a3240" stroke-width="1" stroke-linejoin="round"/>
 
-  <!-- Chemistry vial on the strap -->
-  <rect x="21" y="31" width="3" height="6" rx="1"
-        fill="#88e0b0" stroke="#5a6474" stroke-width="0.6"/>
-  <rect x="22" y="30" width="1" height="1.2" fill="#5a4a3a"/>
+  <!-- Legs -->
+  <path d="M17 35 L31 35 L30 43 L26 45 L22 45 L18 43 Z"
+        fill="#493b35" stroke="#302923" stroke-width="1"/>
 
-  <!-- Shoulders -->
-  <path d="M11 22 Q11 19 14 18 L14 30 Q11 31 11 26 Z"
-        fill="#dfe4ea" stroke="#5a6474" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M37 22 Q37 19 34 18 L34 30 Q37 31 37 26 Z"
-        fill="#dfe4ea" stroke="#5a6474" stroke-width="1" stroke-linejoin="round"/>
+  <!-- Boots -->
+  <path d="M17 41 L24 41 L24 46 L15 46 Q14 44 17 41 Z"
+        fill="#65452f" stroke="#382b24" stroke-width="1"/>
+  <path d="M25 41 L31 41 Q34 44 32 46 L24 46 Z"
+        fill="#65452f" stroke="#382b24" stroke-width="1"/>
 
-  <!-- Coat back -->
-  <path d="M14 20 Q20 21 24 21 Q28 21 34 20 Q35 30 24 34 Q13 30 14 20 Z"
-        fill="#f0f3f7" stroke="#5a6474" stroke-width="1" stroke-linejoin="round"/>
-  <!-- Left highlight facet -->
-  <path d="M16 22 Q20 22 22 24 L22 30 Q18 29 16 26 Z"
-        fill="#ffffff" opacity="0.75"/>
-  <!-- Right shadow facet -->
-  <path d="M32 22 Q28 22 26 24 L26 30 Q30 29 32 26 Z"
-        fill="#c5cdd6" opacity="0.65"/>
+  <!-- Tunic -->
+  <path d="M13 23 Q16 20 21 20 L27 20 Q32 20 35 23
+           L38 39 Q31 42 24 42 Q17 42 10 39 Z"
+        fill="#587d91" stroke="#354f60" stroke-width="1.2"
+        stroke-linejoin="round"/>
 
-  <!-- Pickaxe shaft -->
-  <line x1="9" y1="34" x2="39" y2="27"
-        stroke="#8a6a3c" stroke-width="2.2" stroke-linecap="round"/>
-  <!-- Pickaxe head -->
-  <path d="M37 23 L44 29 L36 33 L35 27 Z"
-        fill="#aeb7c2" stroke="#5a6474" stroke-width="0.8" stroke-linejoin="round"/>
+  <!-- Tunic shading -->
+  <path d="M15 25 Q19 23 21 24 L21 39 Q16 39 12 38 Z"
+        fill="#7394a5" opacity="0.55"/>
+  <path d="M33 25 Q29 23 27 24 L27 39 Q32 39 36 38 Z"
+        fill="#3f6378" opacity="0.55"/>
 
-  <!-- Gloves gripping the shaft -->
-  <circle cx="10" cy="33" r="2.6" fill="#3a4453" stroke="#2a3240" stroke-width="0.8"/>
-  <circle cx="38" cy="27" r="2.6" fill="#3a4453" stroke="#2a3240" stroke-width="0.8"/>
+  <!-- Neck -->
+  <path d="M20 18 L20 24 Q24 28 28 24 L28 18 Z"
+        fill="#c99470"/>
 
-  <!-- Helmet brim (front edge of dome) -->
-  <path d="M15 18 Q24 22 33 18 L32 20 Q24 24 16 20 Z" fill="#a88020"/>
+  <!-- Head -->
+  <ellipse cx="24" cy="15" rx="9" ry="10"
+           fill="#d5a77e" stroke="#a77b5d" stroke-width="0.7"/>
 
-  <!-- Helmet dome -->
-  <ellipse cx="24" cy="15" rx="8.5" ry="7.5"
-           fill="#e0b030" stroke="#a88020" stroke-width="1"/>
-  <path d="M18 12 Q21 9 24 9 Q22 12 20 13 Z" fill="#f5d566"/>
-  <path d="M30 12 Q27 9 24 9 Q26 12 28 13 Z" fill="#c89820"/>
+  <!-- Ears -->
+  <ellipse cx="15" cy="16" rx="2" ry="3" fill="#d5a77e"/>
+  <ellipse cx="33" cy="16" rx="2" ry="3" fill="#d5a77e"/>
 
-  <!-- Headlamp housing -->
-  <circle cx="24" cy="10.5" r="3.2" fill="#5a4a2a"
-          stroke="#a88020" stroke-width="0.6"/>
-  <!-- Headlamp glow + core -->
-  <circle class="lamp-glow" cx="24" cy="10.5" r="2.2" fill="#fffbe0"/>
-  <circle cx="24" cy="10.5" r="1.1" fill="#ffffff"/>
+  <!-- Hair -->
+  <path d="M15 17
+           Q13 8 19 5
+           Q25 1 31 7
+           Q35 11 33 19
+           L30 14
+           L27 11
+           L22 10
+           L17 14 Z"
+        fill="#49352d" stroke="#34251f" stroke-width="0.8"
+        stroke-linejoin="round"/>
+
+  <!-- Hair fringe -->
+  <path d="M16 13 Q19 8 23 9 Q27 7 31 12
+           L27 14 L23 12 L19 15 Z"
+        fill="#49352d"/>
+
+  <!-- Eyes -->
+  <circle cx="20.5" cy="16" r="0.8" fill="#392c27"/>
+  <circle cx="27.5" cy="16" r="0.8" fill="#392c27"/>
+
+  <!-- Simple mouth -->
+  <path d="M22 21 Q24 22 26 21"
+        fill="none" stroke="#98664f" stroke-width="0.8"
+        stroke-linecap="round"/>
+
+  <!-- Belt -->
+  <path d="M12 35 Q24 38 36 35 L36 38 Q24 41 12 38 Z"
+        fill="#795333" stroke="#513b29" stroke-width="0.8"/>
+  <rect x="22" y="36" width="4" height="3" rx="0.5"
+        fill="#c6a45f" stroke="#75552f" stroke-width="0.6"/>
+
 </svg>
 `;
 
@@ -121,16 +139,23 @@ export default class ZoneCanvas {
     constructor({
         entities = [],
         world = { width: 1200, height: 900 },
+        regions = [],
+        showBoundaries = false,
+        showCombatRanges = false,
         respawnDelay = 3,
         backgroundCanvas = null,
         fallbackEntityCount = 10,
         title = null,
         onInteract,
         onRespawn,
+        onSelect,
+        onUpdate,
         showToast
     } = {}) {
         this.onInteract = onInteract;
         this.onRespawn = onRespawn;
+        this.onSelect = onSelect;
+        this.onUpdate = onUpdate;
         this.showToast = showToast;
         this.title = title;
 
@@ -150,6 +175,9 @@ export default class ZoneCanvas {
         this.world = { width: world.width, height: world.height };
         this.respawnDelay = respawnDelay;
         this.backgroundCanvas = backgroundCanvas;
+        this.regions = regions;
+        this.showBoundaries = showBoundaries;
+        this.showCombatRanges = showCombatRanges;
         this.fallbackEntityCount = fallbackEntityCount;
 
         this.camera = { x: 0, y: 0 };
@@ -173,14 +201,16 @@ export default class ZoneCanvas {
 
         this._loop = t => this.tick(t);
         this._onResize = () => this.resize();
-        
+
         this.resizeObserver = null;
         this._onPointerDown = e => this.handlePointerDown(e);
         this._onPointerMove = e => this.handlePointerMove(e);
         this._onPointerUp = e => this.handlePointerUp(e);
         this._onPointerCancel = e => this.handlePointerCancel(e);
 
-        this.approachingEntity = null;
+        this.pendingAction = null;
+        this.selectedEntity = null;
+        this.selectedActionId = null;
     }
 
     setBackground(canvas) {
@@ -280,60 +310,49 @@ export default class ZoneCanvas {
     // Sizing / camera helpers
     // ---------------------------------------------------------------
 
-resize() {
-    if (!this.canvas || !this.ctx) return;
+    resize() {
+        if (!this.canvas || !this.ctx) return;
 
-    const rect = this.canvas.getBoundingClientRect();
+        const rect = this.canvas.getBoundingClientRect();
 
-    if (!rect.width || !rect.height) return;
+        if (!rect.width || !rect.height) return;
 
-    const previousWidth = this.width;
-    const previousHeight = this.height;
+        const previousWidth = this.width;
+        const previousHeight = this.height;
 
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    this.width = rect.width;
-    this.height = rect.height;
+        this.width = rect.width;
+        this.height = rect.height;
 
-    const pixelWidth = Math.round(this.width * this.dpr);
-    const pixelHeight = Math.round(this.height * this.dpr);
+        const pixelWidth = Math.round(this.width * this.dpr);
+        const pixelHeight = Math.round(this.height * this.dpr);
 
-    // Only reset the canvas backing store when necessary.
-    if (
-        this.canvas.width !== pixelWidth ||
-        this.canvas.height !== pixelHeight
-    ) {
-        this.canvas.width = pixelWidth;
-        this.canvas.height = pixelHeight;
+        // Only reset the canvas backing store when necessary.
+        if (
+            this.canvas.width !== pixelWidth ||
+            this.canvas.height !== pixelHeight
+        ) {
+            this.canvas.width = pixelWidth;
+            this.canvas.height = pixelHeight;
+        }
+
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+        if (!this.cameraInitialized) {
+            this.centerCameraOnPlayer();
+            this.cameraInitialized = true;
+            return;
+        }
+
+        // Preserve the current camera center during resizing.
+        const centerX = this.camera.x + previousWidth / 2;
+        const centerY = this.camera.y + previousHeight / 2;
+
+        this.camera.x = this.clampCameraX(centerX - this.width / 2);
+
+        this.camera.y = this.clampCameraY(centerY - this.height / 2);
     }
-
-    this.ctx.setTransform(
-        this.dpr,
-        0,
-        0,
-        this.dpr,
-        0,
-        0
-    );
-
-    if (!this.cameraInitialized) {
-        this.centerCameraOnPlayer();
-        this.cameraInitialized = true;
-        return;
-    }
-
-    // Preserve the current camera center during resizing.
-    const centerX = this.camera.x + previousWidth / 2;
-    const centerY = this.camera.y + previousHeight / 2;
-
-    this.camera.x = this.clampCameraX(
-        centerX - this.width / 2
-    );
-
-    this.camera.y = this.clampCameraY(
-        centerY - this.height / 2
-    );
-}
 
     centerCameraOnPlayer() {
         this.camera.x = this.clampCameraX(this.player.x - this.width / 2);
@@ -453,13 +472,14 @@ resize() {
             const worldX = screenX + this.camera.x;
             const worldY = screenY + this.camera.y;
 
-            const hit = this.hitTestEntity(worldX, worldY);
+            const hit = this.hitEntity(worldX, worldY);
             if (hit) {
-                this.tryInteract(hit);
+                this.selectEntity(hit);
             } else {
+                this.clearSelection();
+
                 this.player.tx = this.clampWorldX(worldX);
                 this.player.ty = this.clampWorldY(worldY);
-                this.approachingEntity = null;
             }
         }
 
@@ -492,6 +512,10 @@ resize() {
     step(dt) {
         this.time += dt;
 
+        // Allow external systems (such as combat) to update
+        // using the same clock as world movement and animation.
+        this.onUpdate?.(dt);
+
         const p = this.player;
         const dx = p.tx - p.x;
         const dy = p.ty - p.y;
@@ -506,14 +530,22 @@ resize() {
 
         this.playerEl.classList.toggle("is-moving", moving);
 
-        // Auto-interact when the player reaches an approached entity.
-        if (this.approachingEntity) {
-            const e = this.approachingEntity;
-            if (!e.active) {
-                this.approachingEntity = null;
-            } else if (this.inReach(e)) {
-                this.strikeEntity(e);
-                this.approachingEntity = null;
+        // Execute the explicitly requested action when in reach.
+        if (this.pendingAction) {
+            const { entity, actionId } = this.pendingAction;
+
+            if (!entity.active) {
+                this.pendingAction = null;
+            } else {
+                const inRange =
+                    actionId === "attack" && entity.type === "enemy"
+                        ? this.isEnemyInAttackRange(entity)
+                        : this.inReach(entity);
+
+                if (inRange) {
+                    this.pendingAction = null;
+                    this.executeAction(entity, actionId);
+                }
             }
         }
 
@@ -588,6 +620,106 @@ resize() {
         ctx.stroke();
     }
 
+    drawDebugBoundaries() {
+        if (!this.showBoundaries || this.regions.length === 0) return;
+
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 6]);
+        ctx.lineJoin = "round";
+
+        for (const region of this.regions) {
+            const shape = region.shape;
+            if (!shape) continue;
+
+            ctx.strokeStyle = region.debugColor ?? "#ffffff";
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+
+            if (shape.type === "circle") {
+                ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
+            } else if (shape.type === "polygon" && shape.points?.length >= 3) {
+                ctx.moveTo(shape.points[0].x, shape.points[0].y);
+
+                for (let i = 1; i < shape.points.length; i++) {
+                    ctx.lineTo(shape.points[i].x, shape.points[i].y);
+                }
+
+                ctx.closePath();
+            } else {
+                continue;
+            }
+
+            ctx.stroke();
+
+            if (region.label) {
+                ctx.save();
+
+                ctx.setLineDash([]);
+                ctx.font = "bold 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                ctx.fillStyle = region.debugColor ?? "#ffffff";
+                ctx.shadowColor = "#000000";
+                ctx.shadowBlur = 5;
+
+                ctx.fillText(region.name, region.label.x, region.label.y);
+
+                ctx.restore();
+            }
+        }
+
+        ctx.restore();
+    }
+
+    drawDebugCombatRanges() {
+        if (!this.showCombatRanges) return;
+
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+
+        for (const entity of this.entities) {
+            if (!entity.active || entity.type !== "enemy") continue;
+
+            const ranges = [
+                {
+                    radius: entity.attackRange,
+                    color: "#ff4545"
+                },
+                {
+                    radius: entity.detectionRange,
+                    color: "#ffad42"
+                },
+                {
+                    radius: entity.pursuitRange,
+                    color: "#4da6ff"
+                }
+            ];
+
+            for (const range of ranges) {
+                if (!Number.isFinite(range.radius) || range.radius <= 0) {
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.strokeStyle = range.color;
+                ctx.globalAlpha = 0.8;
+
+                ctx.arc(entity.x, entity.y, range.radius, 0, Math.PI * 2);
+
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+
     drawWorld() {
         const ctx = this.ctx;
         const cam = this.camera;
@@ -624,6 +756,10 @@ resize() {
         ctx.strokeStyle = "rgba(120,200,255,0.25)";
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, ww, wh);
+
+        // Debug areas — drawn in world coordinates.
+        this.drawDebugBoundaries();
+        this.drawDebugCombatRanges();
 
         // Destination marker.
         ctx.strokeStyle = "rgba(120,200,255,0.45)";
@@ -714,19 +850,19 @@ resize() {
                 ctx.restore();
             } else if (e.icon) {
                 ctx.save();
-            
+
                 // Backdrop tint. Always rendered for emoji entities —
                 // it anchors the emoji, and the interaction ring sits
                 // around it as the type signal.
                 ctx.fillStyle =
                     ENTITY_FALLBACK_COLORS[e.type] ??
                     ENTITY_FALLBACK_COLORS.gather;
-                ctx.globalAlpha = 0.20;
+                ctx.globalAlpha = 0.2;
                 ctx.beginPath();
                 ctx.arc(drawX, drawY, (e.r ?? 22) * 0.9, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.globalAlpha = 1;
-            
+
                 // Emoji on top.
                 ctx.fillStyle = "#ffffff";
                 ctx.font = `${Math.round(
@@ -746,8 +882,10 @@ resize() {
                 ctx.fill();
             }
 
-            // 4. Interaction indicator — the universal "tap here" ring.
-            //    Only entities with showInteractionIndicator render it.
+            // 4. Combat aggro indicator.
+            this.drawAggroIndicator(ctx, e, drawX, drawY);
+
+            // 5. Interaction indicator.
             this.drawInteractionIndicator(ctx, e, drawX, drawY);
 
             // Cracks (gather only; enemies never add them).
@@ -813,6 +951,51 @@ resize() {
     }
 
     /**
+     * Animated red aggro rays around enemies currently
+     * engaged in combat with the player.
+     */
+    drawAggroIndicator(ctx, entity, drawX, drawY) {
+        if (entity.type !== "enemy" || !entity.inCombat) {
+            return;
+        }
+
+        const radius = entity.indicatorRadius ?? entity.r ?? 20;
+
+        const rayCount = 12;
+        const innerRadius = radius + 5;
+
+        // Subtle pulsing effect.
+        const pulse = 0.75 + 0.25 * Math.sin(this.time * 4);
+
+        ctx.save();
+
+        ctx.strokeStyle = `rgba(255, 55, 55, ${0.65 * pulse})`;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+
+        for (let i = 0; i < rayCount; i++) {
+            const angle = (i / rayCount) * Math.PI * 2 + this.time * 0.12;
+
+            // Alternate ray lengths for a slightly irregular
+            // sunburst appearance.
+            const length = i % 2 === 0 ? 9 : 6;
+
+            const x1 = drawX + Math.cos(angle) * innerRadius;
+            const y1 = drawY + Math.sin(angle) * innerRadius;
+
+            const x2 = drawX + Math.cos(angle) * (innerRadius + length);
+            const y2 = drawY + Math.sin(angle) * (innerRadius + length);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    /**
      * Universal interaction indicator.
      * A subtle green ring drawn over any entity with
      * `showInteractionIndicator: true`. Anchor point is the entity's
@@ -828,7 +1011,7 @@ resize() {
      * the sprite.
      */
     drawInteractionIndicator(ctx, entity, drawX, drawY) {
-        if (!entity.showInteractionIndicator) return;
+        if (this.selectedEntity !== entity) return;
 
         const colors =
             ENTITY_RING_COLORS[entity.type] ?? ENTITY_RING_COLORS.gather;
@@ -923,7 +1106,7 @@ resize() {
         ctx.fill();
     }
 
-    hitTestEntity(worldX, worldY) {
+    hitEntity(worldX, worldY) {
         for (const e of this.entities) {
             if (!e.active) continue;
             const r = (e.r ?? 22) * TAP_HIT_RADIUS;
@@ -932,6 +1115,50 @@ resize() {
         return null;
     }
 
+    setSelectedAction(actionId, entity) {
+        if (!entity || entity !== this.selectedEntity || !entity.active) {
+            this.selectedActionId = null;
+            return;
+        }
+
+        if (this.selectedActionId !== actionId) {
+            this.pendingAction = null;
+        }
+
+        this.selectedActionId = actionId;
+    }
+
+    selectEntity(entity) {
+        if (!entity?.active) return;
+
+        // Tapping the already-selected entity executes its active action.
+        if (this.selectedEntity === entity) {
+            if (this.selectedActionId) {
+                this.requestAction(entity, this.selectedActionId);
+            }
+            return;
+        }
+
+        // Selecting a different entity cancels any previous action.
+        this.pendingAction = null;
+        this.selectedActionId = null;
+        this.selectedEntity = entity;
+
+        // The HUD will choose the new entity's default action.
+        this.onSelect?.(entity);
+    }
+
+    clearSelection() {
+        if (!this.selectedEntity) return;
+
+        this.pendingAction = null;
+        this.selectedEntity = null;
+        this.selectedActionId = null;
+
+        this.onSelect?.(null);
+    }
+
+    // Non-enemy entity range checker
     inReach(entity) {
         const p = this.player;
         return (
@@ -940,24 +1167,94 @@ resize() {
         );
     }
 
-    tryInteract(entity) {
-        if (this.inReach(entity)) {
-            this.strikeEntity(entity);
+    // Measure distance between player and entity
+    getDistanceTo(entity) {
+        return getDistance(this.player, entity);
+    }
+
+    // Enemy range checker
+    isEnemyInAttackRange(entity) {
+        if (!entity || entity.type !== "enemy") {
+            return false;
+        }
+
+        return isWithinRange(this.player, entity, entity.attackRange);
+    }
+
+    requestAction(entity, actionId) {
+        if (!entity?.active) return;
+
+        // Combat uses its own center-to-center attack range.
+        if (actionId === "attack" && entity.type === "enemy") {
+            this.requestCombatAction(entity, actionId);
             return;
         }
 
-        // Walk to entity edge; auto-interact once on arrival.
+        // All ordinary interactions retain their existing behavior.
         const p = this.player;
+
+        if (this.inReach(entity)) {
+            this.pendingAction = null;
+            this.executeAction(entity, actionId);
+            return;
+        }
+
         const dx = entity.x - p.x;
         const dy = entity.y - p.y;
         const dist = Math.hypot(dx, dy);
+
         const stopDist = p.r + (entity.r ?? 22) + INTERACT_REACH * 0.5;
 
         if (dist > stopDist) {
             p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
             p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
         }
-        this.approachingEntity = entity;
+
+        this.pendingAction = { entity, actionId };
+    }
+
+    requestCombatAction(entity, actionId) {
+        if (!entity?.active || !Number.isFinite(entity.attackRange)) {
+            return;
+        }
+
+        // Already close enough: execute the attack request.
+        if (this.isEnemyInAttackRange(entity)) {
+            this.pendingAction = null;
+            this.executeAction(entity, actionId);
+            return;
+        }
+
+        const p = this.player;
+
+        const dx = entity.x - p.x;
+        const dy = entity.y - p.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist === 0) return;
+
+        // Stop slightly inside the range boundary to avoid
+        // floating-point precision issues at the exact edge.
+        const stopDist = Math.max(0, entity.attackRange - 2);
+
+        p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
+
+        p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
+
+        this.pendingAction = { entity, actionId };
+    }
+
+    executeAction(entity, actionId) {
+        if (!entity?.active) return;
+
+        // Gathering retains its existing multi-strike progression.
+        if (entity.type === "gather" && actionId === "gather") {
+            this.strikeEntity(entity);
+            return;
+        }
+
+        // Other entity actions are dispatched directly to ZoneScene.
+        this.completeEntity(entity, actionId);
     }
 
     strikeEntity(entity) {
@@ -975,7 +1272,7 @@ resize() {
         }
 
         if (entity.strikesLanded >= required) {
-            this.completeEntity(entity);
+            this.completeEntity(entity, "gather");
         }
     }
 
@@ -988,7 +1285,7 @@ resize() {
         };
     }
 
-    completeEntity(entity) {
+    completeEntity(entity, actionId) {
         const rect = this.canvas.getBoundingClientRect();
         const screenPos = {
             clientX: rect.left + (entity.x - this.camera.x),
@@ -996,9 +1293,8 @@ resize() {
         };
 
         // The scene decides whether this interaction consumes the entity.
-        // Returning false (or omitting a handler) leaves the entity in
-        // place so it can be retried once the scene wires its callback.
-        const consumed = this.onInteract?.(entity, screenPos) !== false;
+        const consumed =
+            this.onInteract?.(entity, screenPos, actionId) !== false;
 
         if (!consumed) {
             entity.strikesLanded = 0;
@@ -1006,15 +1302,35 @@ resize() {
             return;
         }
 
+        this.consumeEntity(entity);
+    }
+
+    consumeEntity(entity, message = null) {
+        if (!entity?.active) return false;
+
+        // Cancel any pending action involving this entity.
+        if (this.pendingAction?.entity === entity) {
+            this.pendingAction = null;
+        }
+
+        // Clear selection if this was the selected entity.
+        if (this.selectedEntity === entity) {
+            this.clearSelection();
+        }
+
         entity.active = false;
+
         entity.respawnAt =
             entity.respawnSeconds === null
                 ? Infinity
                 : this.time + (entity.respawnSeconds ?? this.respawnDelay);
+
         entity.strikesLanded = 0;
         entity.cracks = [];
 
-        this.showToast?.(`${entity.label ?? "Object"} recovered`);
+        this.showToast?.(message ?? `${entity.label ?? "Object"} recovered`);
+
+        return true;
     }
 
     makeSparkles(tier, radius) {

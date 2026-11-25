@@ -1357,22 +1357,6 @@ body:not(.debug-mode) {
     margin-bottom: 0;
 }
 
-/* WORLD upgrade-card test layout */
-.zone-upgrade-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.zone-upgrade-grid .card {
-    min-width: 0;
-}
-
-.zone-upgrade-grid .card-body p {
-    margin-bottom: 0;
-}
-
 /* ========================================
    Reusable Card Components
 ======================================== */
@@ -4637,4 +4621,492 @@ ZONE
 .game-more-menu-icon {
     width: 22px;
     text-align: center;
+}
+
+
+/* =========================================
+   WORLD HUD
+========================================= */
+
+.world-workspace {
+    position: relative;
+    container-type: inline-size;
+}
+
+.world-hud {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 6px;
+
+    padding: 10px;
+}
+
+/* Everything in the HUD lets pointer events pass through */
+.world-hud,
+.world-hud * {
+    pointer-events: none !important;
+}
+
+/* The Change button remains clickable */
+.world-hud .action-selector-change {
+    pointer-events: auto !important;
+}
+
+.world-hud-status-panels {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.world-hud-status-panels > * {
+    flex: 1;
+    min-width: 0;
+}
+
+/* =========================================
+   ACTION SELECTOR
+========================================= */
+
+.action-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+
+    background: var(--surface-raised);
+
+    /* Keep the active action visually distinct. */
+    pointer-events: auto;
+}
+
+.action-selector-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.action-selector-change {
+    flex-shrink: 0;
+
+    padding: 6px 10px;
+
+    border: 0;
+    border-radius: 6px;
+
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+
+    font: inherit;
+    cursor: pointer;
+}
+
+/* =========================================
+   STATUS PANELS
+========================================= */
+
+.player-status-panel,
+.target-status-panel {
+    position: relative;
+
+    width: calc((100% - 8px) / 2);
+    height: 48px;
+    flex: 0 0 calc((100% - 8px) / 2);
+
+    box-sizing: border-box;
+
+    background: rgba(20, 25, 32, 0.95);
+    border: 1px solid rgba(180, 190, 200, 0.3);
+    border-radius: 8px;
+
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+.target-status-panel.is-hidden {
+    visibility: hidden;
+}
+
+/* =========================================
+   ACTIVE COMBAT INDICATOR
+   ========================================= */
+
+.player-status-panel.is-in-combat,
+.target-status-panel.is-in-combat {
+    border-color: #dc5555;
+    box-shadow:
+        inset 0 0 0 1px #dc5555,
+        0 0 8px rgba(220, 85, 85, 0.25);
+}
+
+/* =========================================
+   PANEL CONTENT
+========================================= */
+
+.status-panel-main {
+    display: flex;
+    align-items: center;
+
+    height: 100%;
+    min-width: 0;
+
+    gap: 5px;
+    padding: 1px 3px 3px;
+
+    box-sizing: border-box;
+}
+
+.status-panel-portrait {
+    display: block;
+
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.status-panel-subtitle {
+    font-size: 0.7rem;
+    line-height: 1;
+    color: var(--text-muted);
+}
+
+/* Selected entity type colors */
+.status-panel-enemy {
+    color: #e46c70;
+}
+
+.status-panel-gather {
+    color: #63b77b;
+}
+
+.status-panel-cache {
+    color: #d9ae54;
+}
+
+.status-panel-cave {
+    color: #75a9d3;
+}
+
+.status-panel-unknown {
+    color: var(--text-muted);
+}
+
+.status-panel-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+}
+
+.status-panel-name {
+    overflow: hidden;
+
+    font-size: 11px;
+    line-height: 1;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* selected entity action buttons */
+.selected-entity-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.selected-entity-action {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.selected-entity-action:active {
+    transform: scale(0.97);
+}
+
+/* =========================================
+   HEALTH / RESOURCE BARS
+========================================= */
+
+.status-panel-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.status-bar {
+    height: 5px;
+
+    overflow: hidden;
+    border-radius: 999px;
+
+    background: #3b4148;
+}
+
+.status-bar-fill {
+    width: 0;
+    height: 100%;
+
+    border-radius: inherit;
+    transition: width 0.2s ease;
+}
+
+.status-bar-health .status-bar-fill {
+    background: #45bd70;
+}
+
+.status-bar-resource .status-bar-fill {
+    background: #55a9e8;
+}
+
+/* Target health uses red instead of green. */
+
+.target-status-panel .status-bar-health .status-bar-fill {
+    background: #d65353;
+}
+
+/* =========================================
+   XP STRIP
+========================================= */
+
+.status-panel-xp {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 2px;
+
+    height: 2px;
+
+    overflow: hidden;
+    border-radius: 999px;
+
+    background: #55472b;
+}
+
+.status-panel-xp-fill {
+    width: 0;
+    height: 100%;
+
+    background: #e5b64d;
+    transition: width 0.2s ease;
+}
+
+.item-sheet-backdrop.is-visible > .item-sheet {
+    transform: translateY(0) !important;
+}
+
+/* ===================================
+   BATTLE CONTROLS
+=================================== */
+
+.battle-controls {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+
+    background: linear-gradient(
+        to top,
+        rgba(12, 16, 22, 0.97),
+        rgba(12, 16, 22, 0.88),
+        transparent
+    );
+
+    pointer-events: none;
+}
+
+.battle-controls.is-hidden {
+    display: none;
+}
+
+.battle-progress-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.battle-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    min-width: 0;
+}
+
+.battle-progress-label {
+    color: #e1e5e9;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.battle-progress-track {
+    height: 9px;
+    width: 100%;
+    overflow: hidden;
+
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+}
+
+.battle-progress-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+
+    transition: width 50ms linear;
+}
+
+.player-progress-fill {
+    background: linear-gradient(
+        90deg,
+        #c58a38,
+        #f2c66d
+    );
+}
+
+.enemy-progress-fill {
+    background: linear-gradient(
+        90deg,
+        #a73535,
+        #ef6666
+    );
+}
+
+.battle-button-row {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.battle-button {
+    min-height: 46px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.battle-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.attack-button {
+    flex: 1;
+    background: linear-gradient(
+        180deg,
+        #a94a3d,
+        #7c302b
+    );
+    border-color: #d46a5a;
+}
+
+.flee-button {
+    flex: 0 0 88px;
+    background: rgba(70, 78, 88, 0.95);
+    border-color: rgba(180, 190, 200, 0.35);
+}
+
+/* Battle header */
+.battle-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    pointer-events: auto;
+}
+
+.battle-title {
+    color: #e45d5d;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.battle-enemy-focus {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+
+    color: #fff;
+    font-size: 21px;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 8px;
+
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.battle-enemy-focus:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95);
+}
+
+.battle-range-label {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.battle-range-label.is-in-range {
+    color: #79c98b;
+}
+
+.battle-range-label.is-out-of-range {
+    color: #d17b7b;
+}
+
+/* Enemy attack progress */
+
+.battle-progress-enemy {
+    transition: opacity 150ms ease;
+}
+
+.battle-progress-enemy.is-inactive {
+    opacity: 0.35;
+}
+
+.battle-progress-enemy.is-inactive .battle-progress-label {
+    color: #89919a;
 }

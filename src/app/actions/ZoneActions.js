@@ -5,7 +5,6 @@
 // UI access is provided through the presentation interface.
 
 import { gatherMaterial } from "../../systems/MaterialGathering.js";
-import { startBattle } from "../../systems/BattleSystem.js";
 import { getLootTable } from "../../data/lootTables.js";
 import { rollFromLootTable } from "../../systems/loot.js";
 import { materials } from "../../data/materials.js";
@@ -72,18 +71,8 @@ export default class ZoneActions {
         return true;
     }
 
-    handleEncounter(zone, screenPos, { enemyId }) {
-        const result = startBattle(this.getGame(), enemyId);
-
-        if (!result.ok) {
-            this.showToast(getResultMessage(result.reason));
-            return false;
-        }
-
-        this.presentation.deactivateZone();
-        this.presentation.showBattle(result.battle);
-
-        return true;
+    handleEncounter(zone, screenPos, { enemyId, entity, scene }) {
+        return this.presentation.startBattle(enemyId, entity, scene);
     }
 
     handleOpenCache(zone, screenPos, { lootTableId }) {

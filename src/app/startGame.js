@@ -16,14 +16,18 @@ import DebugButton from "../../debug/DebugButtons.js";
 
 // Overlay
 import OverlayManager from "../ui/overlays/OverlayManager.js";
+import WorldHUD from "../ui/hud/WorldHUD.js";
 
 // Panels
 import CraftingPanel from "../ui/panels/CraftingPanel.js";
 import UpgradePanel from "../ui/panels/UpgradePanel.js";
 import LogPanel from "../ui/panels/LogPanel.js";
 import JournalPanel from "../ui/panels/journal/JournalPanel.js";
-import BattleModal from "../ui/panels/BattleModal.js";
 import Character from "../ui/panels/Character.js";
+
+import BattleModal from "../ui/panels/BattleModal.js";
+import BattleController from "../systems/BattleController.js";
+import BattleControls from "../ui/hud/BattleControls.js";
 
 import MainObjective from "../ui/panels/MainObjective.js";
 import ObjectiveTracker from "../ui/panels/ObjectiveTracker.js";
@@ -156,6 +160,21 @@ export function startGame() {
 
     let gameUI = null;
     let ui = {};
+
+    const worldHUD = new WorldHUD({
+        getPlayer: () => game.player,
+        getEquipment: () => game.equipment,
+    
+        onActionChange: (actionId, selectedData) => {
+            const zoneId = game.appState.navigation.activeZoneId;
+            const scene = worldPanel?.zoneViews?.get(zoneId);
+    
+            scene?.setSelectedAction(
+                actionId,
+                selectedData?.entity
+            );
+        }
+    });
 
     let materialSprites = {};
     buildMaterialSprites()
@@ -293,6 +312,8 @@ export function startGame() {
     let battleModal;
     let lootModal;
     let caveModal;
+    let battleController = null;
+    let battleControls = null;
 
     const zoneActions = new ZoneActions({
         getGame: () => game,
@@ -306,7 +327,8 @@ export function startGame() {
 
         presentation: {
             deactivateZone: () => worldPanel?.deactivateZone?.(),
-            showBattle: battle => battleModal.show(battle),
+            startBattle: (enemyId, entity, scene) =>
+                battleController?.start(enemyId, entity, scene) ?? false,
             showLoot: rewards => lootModal.show(rewards),
             showCave: dungeonId => caveModal.show(dungeonId),
             createMaterialSymbol: materialId =>
@@ -336,8 +358,20 @@ export function startGame() {
                 zone,
                 getSprites: () => materialSprites,
                 getTiles: () => getTileCache(),
+                onSelect: target => {
+                    if (target) {
+                        worldHUD.setTarget(target);
+                    } else {
+                        worldHUD.clearTarget();
+                    }
+                },
                 onGather: zoneActions.handleGather,
                 onEncounter: zoneActions.handleEncounter,
+                onUpdate: (dt, scene) => {
+                    battleController?.update(dt, scene);
+                    updateBattleControls();
+                    worldHUD.update();
+                },
                 onOpenCache: zoneActions.handleOpenCache,
                 onEnterCave: zoneActions.handleEnterCave
             });
@@ -346,6 +380,53 @@ export function startGame() {
     });
 
     ui.worldPanel = worldPanel;
+
+    battleController = new BattleController({
+        getGame: () => game,
+        worldHUD,
+        save,
+        refreshUI,
+        showToast,
+    
+        onFinish: battle => {
+            zoneActions.announceDiscoveriesFrom(
+                battle.rewards?.items
+            );
+        }
+    });
+
+    battleControls = new BattleControls({
+        onAttack: () => {
+            battleController?.beginAttack();
+            updateBattleControls();
+        },
+    
+        onFlee: () => {
+            battleController?.flee();
+            updateBattleControls();
+        },
+    
+        onFocusEnemy: () => {
+            battleController?.scene?.focusEntity(
+                battleController?.enemyEntity
+            );
+        }
+    });
+    
+    function updateBattleControls() {
+        const battle = battleController?.battle;
+        const enemy = battleController?.enemyEntity;
+        const scene = battleController?.scene;
+    
+        const inRange = Boolean(
+            enemy && scene?.isEnemyInAttackRange(enemy)
+        );
+    
+        battleControls?.update(battle, {
+            enemy,
+            inRange
+        });
+    }
 
     // Initialize the world viewport from the saved location.
     worldPanel.showZone(game.appState.navigation.activeZoneId);
@@ -452,7 +533,7 @@ export function startGame() {
 
     function updateSharedUI() {
         syncInventoryDiscovery(game);
-
+        worldHUD.update();
         //ui.character?.update();
         //ui.inventory?.update();
     }
@@ -694,7 +775,12 @@ export function startGame() {
             {
                 className: "world-workspace"
             },
-            [worldPanel.getElement(), ui.overlayManager.getElement()]
+            [
+                worldPanel.getElement(),
+                worldHUD.getElement(),
+                battleControls.getElement(),
+                ui.overlayManager.getElement()
+            ]
         );
 
         ui.worldWorkspace = worldWorkspace;

@@ -44,8 +44,9 @@ export default class CaveModal {
         this.backdrop = el("div", {
             className: "item-sheet-backdrop",
             role: "presentation",
-            onClick: event => {
-                if (event.target === this.backdrop) this.hide();
+            onPointerDown: event => {
+                if (event.target !== this.backdrop) return;
+                this.hide();
             }
         });
 
@@ -53,7 +54,8 @@ export default class CaveModal {
             className: "item-sheet",
             role: "dialog",
             "aria-modal": "true",
-            "aria-labelledby": "cave-sheet-name"
+            "aria-labelledby": "cave-sheet-name",
+            onClick: event => event.stopPropagation()
         });
 
         this.backdrop.append(this.panel);
@@ -72,6 +74,7 @@ export default class CaveModal {
         this.lastNewlyDiscovered = [];
 
         this.render();
+
         this.element.classList.add("is-visible");
         document.body.classList.add("modal-open", "sheet-open");
         this.visible = true;
@@ -168,7 +171,7 @@ export default class CaveModal {
         }
 
         const alreadySearched = this.hasSearched(cave.id);
-        
+
         if (this.currentRewards) {
             // Show search result inline.
             if (cave.searchNarrative) {

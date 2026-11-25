@@ -30,7 +30,7 @@ export default class LootModal {
         this.backdrop = el("div", {
             className: "item-sheet-backdrop",
             role: "presentation",
-            onClick: event => {
+            onPointerDown: event => {
                 if (event.target === this.backdrop) this.hide();
             }
         });

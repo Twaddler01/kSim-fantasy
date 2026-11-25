@@ -3,18 +3,11 @@
 // Player character: base stats, derived combat stats, XP, level, HP.
 //
 // State ownership:
-//   player    — level, xp, hp
+//   player    — name, level, xp, hp, resource, maxResource
 //   equipment — equipped items and their stat bonuses
 //
-// This module never accesses the complete game object or inventory.
-//
-// Stat model (warrior only for v1):
-//   strength  — base attack contribution
-//   agility   — attack + crit contribution
-//   vitality  — max health + defense contribution
-//
-// XP, max HP, attack, defense, and crit are derived or calculated.
-// Only level, current XP, and current HP are stored.
+// Max HP, attack, defense, and crit are derived or calculated.
+// Character progression and current resource values are stored.
 
 // --------------------------------------------------
 // TUNING CONSTANTS
@@ -33,6 +26,7 @@ const WARRIOR_LEVEL_GAINS = {
 };
 
 const BASE_HEALTH = 40;
+const BASE_RESOURCE = 100;
 const HP_PER_VITALITY = 5;
 const DEFENSE_PER_VITALITY = 0.3;
 const ATTACK_PER_STRENGTH = 1;
@@ -156,8 +150,19 @@ export function getCharacterData(player, equipment) {
     const level = getPlayerLevel(player);
     const xp = getPlayerXp(player);
     const xpToNext = computeXpToNext(level);
+    const maxResource =
+        Number.isFinite(player?.maxResource) && player.maxResource > 0
+            ? player.maxResource
+            : BASE_RESOURCE;
+
+    const resource = Math.max(
+        0,
+        Math.min(maxResource, Number(player?.resource) || 0)
+    );
 
     return {
+        name: player?.name || "Adventurer",
+
         level,
         xp,
         xpToNext,
@@ -166,6 +171,10 @@ export function getCharacterData(player, equipment) {
 
         hp: player?.hp ?? stats.maxHealth,
         maxHealth: stats.maxHealth,
+
+        resource,
+        maxResource,
+        resourceProgress: resource / maxResource,
 
         stats
     };
@@ -193,10 +202,32 @@ export function ensurePlayerInitialized(player, equipment) {
 
     const stats = getDerivedStats(player, equipment);
 
+    // Health
     if (player.hp == null || !Number.isFinite(player.hp)) {
         player.hp = stats.maxHealth;
     } else {
         player.hp = Math.max(0, Math.min(stats.maxHealth, player.hp));
+    }
+
+    // Name
+    player.name =
+        typeof player.name === "string" && player.name.trim()
+            ? player.name.trim()
+            : "Adventurer";
+
+    // Resource
+    player.maxResource =
+        Number.isFinite(player.maxResource) && player.maxResource > 0
+            ? player.maxResource
+            : BASE_RESOURCE;
+
+    if (!Number.isFinite(player.resource)) {
+        player.resource = player.maxResource;
+    } else {
+        player.resource = Math.max(
+            0,
+            Math.min(player.maxResource, player.resource)
+        );
     }
 
     return player;
