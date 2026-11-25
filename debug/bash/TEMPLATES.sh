@@ -234,6 +234,7 @@ grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
 
 fcss .player-status-panel .target-status-panel .action-selector
 fc -clip startGame.js character.js WorldHUD.js SelectedEntityPanel.js
+fjs getDistance calculateDamage
 
 
 

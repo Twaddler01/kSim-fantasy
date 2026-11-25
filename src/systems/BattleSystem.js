@@ -47,6 +47,7 @@ export function startBattle(game, enemyId) {
         battle: {
             enemyId,
             enemy,
+            combatStarted: false,
 
             enemyHp: enemy.hp,
             enemyMaxHp: enemy.hp,
@@ -119,7 +120,12 @@ export function beginPlayerAttack(battle) {
     return ok({ battle });
 }
 
-export function updateBattle(game, battle, dt) {
+export function updateBattle(
+    game,
+    battle,
+    dt,
+    { isPlayerInRange = () => true } = {}
+) {
     if (!battle || battle.finished || dt <= 0) {
         return { battle, newEvents: [] };
     }
@@ -131,6 +137,7 @@ export function updateBattle(game, battle, dt) {
     // ----------------------------------------------
 
     let playerAttackResolved = false;
+    let playerOutOfRange = false;
 
     battle.playerCooldownRemaining = Math.max(
         0,
@@ -144,8 +151,17 @@ export function updateBattle(game, battle, dt) {
         );
 
         if (battle.playerWindupRemaining <= 0) {
-            resolvePlayerAttack(game, battle);
+            const result = resolvePlayerAttack(
+                game,
+                battle,
+                isPlayerInRange
+            );
+        
             playerAttackResolved = true;
+        
+            if (result === "out-of-range") {
+                playerOutOfRange = true;
+            }
         }
     }
 
@@ -155,7 +171,8 @@ export function updateBattle(game, battle, dt) {
 
         return {
             battle,
-            newEvents: battle.log.slice(previousLogLength)
+            newEvents: battle.log.slice(previousLogLength),
+            playerOutOfRange
         };
     }
 
@@ -173,7 +190,11 @@ export function updateBattle(game, battle, dt) {
             );
 
             if (battle.enemyWindupRemaining <= 0) {
-                resolveRealtimeEnemyAttack(game, battle);
+                resolveRealtimeEnemyAttack(
+                    game,
+                    battle,
+                    isPlayerInRange
+                );
             }
         } else {
             battle.enemyCooldownRemaining = Math.max(
@@ -191,7 +212,8 @@ export function updateBattle(game, battle, dt) {
 
     return {
         battle,
-        newEvents: battle.log.slice(previousLogLength)
+        newEvents: battle.log.slice(previousLogLength),
+        playerOutOfRange
     };
 }
 
@@ -222,8 +244,13 @@ export function fleeBattle(game, battle) {
 // REAL-TIME ATTACK RESOLUTION
 // ==================================================
 
-function resolvePlayerAttack(game, battle) {
-    if (battle.finished) return;
+function resolvePlayerAttack(game, battle, isPlayerInRange) {
+    if (battle.finished) return "finished";
+
+    // Validate distance at the exact moment of impact.
+    if (!isPlayerInRange()) {
+        return "out-of-range";
+    }
 
     const result = rollDamage(
         battle.playerStats.attack,
@@ -232,6 +259,9 @@ function resolvePlayerAttack(game, battle) {
     );
 
     battle.enemyHp = Math.max(0, battle.enemyHp - result.damage);
+
+    // The opening hit officially starts combat.
+    battle.combatStarted = true;
 
     battle.log.push({
         kind: result.critical ? "player-crit" : "player-attack",
@@ -250,7 +280,7 @@ function resolvePlayerAttack(game, battle) {
         });
 
         finalizeVictory(game, battle);
-        return;
+        return "hit";
     }
 
     // The enemy gets its first attack opportunity
@@ -259,10 +289,19 @@ function resolvePlayerAttack(game, battle) {
         battle.enemyCanAttack = true;
         battle.enemyWindupRemaining = battle.enemyWindupDuration;
     }
+
+    return "hit";
 }
 
-function resolveRealtimeEnemyAttack(game, battle) {
+function resolveRealtimeEnemyAttack(game, battle, isPlayerInRange) {
     if (battle.finished) return;
+
+    // Enemy attacks are silently cancelled if the player
+    // has moved outside the enemy's attack range.
+    if (!isPlayerInRange()) {
+        battle.enemyCooldownRemaining = battle.enemyAttackInterval;
+        return;
+    }
 
     const result = rollDamage(
         battle.enemy.attack,

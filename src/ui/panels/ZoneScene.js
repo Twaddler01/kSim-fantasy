@@ -803,4 +803,20 @@ export default class ZoneScene {
         }
         return crumbs;
     }
+
+    getDistanceTo(entity) {
+        return this.canvas.getDistanceTo(entity);
+    }
+    
+    isEnemyInAttackRange(entity) {
+        return this.canvas.isEnemyInAttackRange(entity);
+    }
+
+    focusEntity(entity) {
+        if (!entity?.active) return;
+    
+        // Update the target panel only.
+        // Do not change canvas.selectedEntity.
+        this.onSelect?.(this.getSelectedEntityData(entity));
+    }
 }

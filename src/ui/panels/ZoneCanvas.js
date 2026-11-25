@@ -12,6 +12,8 @@
 //     shared by town doors, future NPCs, and any POI that otherwise
 //     blends into the background.
 
+import { isWithinRange, getDistance } from "../../systems/CombatRange.js";
+
 const INTERACT_REACH = 12; // px beyond touching that counts as "in reach"
 const TAP_HIT_RADIUS = 1.6; // tap hit detection, × entity.r
 
@@ -534,9 +536,16 @@ export default class ZoneCanvas {
 
             if (!entity.active) {
                 this.pendingAction = null;
-            } else if (this.inReach(entity)) {
-                this.pendingAction = null;
-                this.executeAction(entity, actionId);
+            } else {
+                const inRange =
+                    actionId === "attack" && entity.type === "enemy"
+                        ? this.isEnemyInAttackRange(entity)
+                        : this.inReach(entity);
+
+                if (inRange) {
+                    this.pendingAction = null;
+                    this.executeAction(entity, actionId);
+                }
             }
         }
 
@@ -873,8 +882,10 @@ export default class ZoneCanvas {
                 ctx.fill();
             }
 
-            // 4. Interaction indicator — the universal "tap here" ring.
-            //    Only entities with showInteractionIndicator render it.
+            // 4. Combat aggro indicator.
+            this.drawAggroIndicator(ctx, e, drawX, drawY);
+
+            // 5. Interaction indicator.
             this.drawInteractionIndicator(ctx, e, drawX, drawY);
 
             // Cracks (gather only; enemies never add them).
@@ -934,6 +945,51 @@ export default class ZoneCanvas {
                     ctx.fill();
                 }
             }
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Animated red aggro rays around enemies currently
+     * engaged in combat with the player.
+     */
+    drawAggroIndicator(ctx, entity, drawX, drawY) {
+        if (entity.type !== "enemy" || !entity.inCombat) {
+            return;
+        }
+
+        const radius = entity.indicatorRadius ?? entity.r ?? 20;
+
+        const rayCount = 12;
+        const innerRadius = radius + 5;
+
+        // Subtle pulsing effect.
+        const pulse = 0.75 + 0.25 * Math.sin(this.time * 4);
+
+        ctx.save();
+
+        ctx.strokeStyle = `rgba(255, 55, 55, ${0.65 * pulse})`;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+
+        for (let i = 0; i < rayCount; i++) {
+            const angle = (i / rayCount) * Math.PI * 2 + this.time * 0.12;
+
+            // Alternate ray lengths for a slightly irregular
+            // sunburst appearance.
+            const length = i % 2 === 0 ? 9 : 6;
+
+            const x1 = drawX + Math.cos(angle) * innerRadius;
+            const y1 = drawY + Math.sin(angle) * innerRadius;
+
+            const x2 = drawX + Math.cos(angle) * (innerRadius + length);
+            const y2 = drawY + Math.sin(angle) * (innerRadius + length);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
         }
 
         ctx.restore();
@@ -1102,6 +1158,7 @@ export default class ZoneCanvas {
         this.onSelect?.(null);
     }
 
+    // Non-enemy entity range checker
     inReach(entity) {
         const p = this.player;
         return (
@@ -1110,9 +1167,30 @@ export default class ZoneCanvas {
         );
     }
 
+    // Measure distance between player and entity
+    getDistanceTo(entity) {
+        return getDistance(this.player, entity);
+    }
+
+    // Enemy range checker
+    isEnemyInAttackRange(entity) {
+        if (!entity || entity.type !== "enemy") {
+            return false;
+        }
+
+        return isWithinRange(this.player, entity, entity.attackRange);
+    }
+
     requestAction(entity, actionId) {
         if (!entity?.active) return;
 
+        // Combat uses its own center-to-center attack range.
+        if (actionId === "attack" && entity.type === "enemy") {
+            this.requestCombatAction(entity, actionId);
+            return;
+        }
+
+        // All ordinary interactions retain their existing behavior.
         const p = this.player;
 
         if (this.inReach(entity)) {
@@ -1129,9 +1207,39 @@ export default class ZoneCanvas {
 
         if (dist > stopDist) {
             p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
-
             p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
         }
+
+        this.pendingAction = { entity, actionId };
+    }
+
+    requestCombatAction(entity, actionId) {
+        if (!entity?.active || !Number.isFinite(entity.attackRange)) {
+            return;
+        }
+
+        // Already close enough: execute the attack request.
+        if (this.isEnemyInAttackRange(entity)) {
+            this.pendingAction = null;
+            this.executeAction(entity, actionId);
+            return;
+        }
+
+        const p = this.player;
+
+        const dx = entity.x - p.x;
+        const dy = entity.y - p.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist === 0) return;
+
+        // Stop slightly inside the range boundary to avoid
+        // floating-point precision issues at the exact edge.
+        const stopDist = Math.max(0, entity.attackRange - 2);
+
+        p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
+
+        p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
 
         this.pendingAction = { entity, actionId };
     }

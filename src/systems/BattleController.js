@@ -32,18 +32,22 @@ export default class BattleController {
     }
 
     get isActive() {
-        return Boolean(this.battle && !this.battle.finished);
+        return Boolean(
+            this.battle && this.battle.combatStarted && !this.battle.finished
+        );
     }
 
     start(enemyId, entity, scene) {
         // If combat is already active, tapping the current enemy
         // acts as the player's next attack command.
-        if (this.isActive) {
+        if (this.battle && !this.battle.finished) {
             if (this.enemyEntity === entity) {
-                const result = this.beginAttack();
+                // The opening attack is still resolving.
+                if (!this.battle.combatStarted) {
+                    return false;
+                }
 
-                // A failed attempt is expected during windup/cooldown.
-                return result.ok;
+                return this.beginAttack();
             }
 
             this.showToast("You are already in combat.");
@@ -61,9 +65,8 @@ export default class BattleController {
         this.enemyEntity = entity;
         this.scene = scene;
 
-        this.worldHUD.setCombat(this.battle);
-
-        // Automatically begin the player's opening attack.
+        // Automatically begin the opening attack.
+        // Combat itself does not start until this attack lands.
         beginPlayerAttack(this.battle);
 
         return true;
@@ -76,17 +79,63 @@ export default class BattleController {
     }
 
     update(dt, scene = this.scene) {
-        if (!this.isActive) return;
+        // Continue updating while the opening attack is resolving,
+        // even though combat has not officially started yet.
+        if (!this.battle || this.battle.finished) return;
 
         if (scene) {
             this.scene = scene;
         }
 
-        updateBattle(this.getGame(), this.battle, dt);
+        const result = updateBattle(this.getGame(), this.battle, dt, {
+            isPlayerInRange: () =>
+                this.scene?.isEnemyInAttackRange(this.enemyEntity) ?? false
+        });
+
+        // Activate combat only after the first successful hit.
+        if (this.battle.combatStarted && !this.enemyEntity.inCombat) {
+            this.enemyEntity.inCombat = true;
+            this.worldHUD.setCombat(this.battle);
+        }
+
+        // A successful enemy strike pulls the target panel's
+        // focus back to the enemy, without changing world selection.
+        const enemyLandedHit = result.newEvents.some(
+            event =>
+                event.kind === "enemy-attack" || event.kind === "enemy-crit"
+        );
+
+        if (enemyLandedHit) {
+            this.scene?.focusEntity(this.enemyEntity);
+        }
+
+        if (result.playerOutOfRange) {
+            this.showToast("⚠️ Out of range!");
+
+            // If the opening attack failed, discard the pending encounter.
+            // The player can initiate a fresh encounter by clicking again.
+            if (!this.battle.combatStarted) {
+                this.cancelPendingEncounter();
+                return;
+            }
+        }
 
         if (this.battle.finished) {
             this.finish();
         }
+    }
+
+    cancelPendingEncounter() {
+        if (!this.battle || this.battle.combatStarted) return;
+
+        // The opening attack never connected, so combat never began.
+        if (this.enemyEntity) {
+            this.enemyEntity.inCombat = false;
+        }
+
+        this.battle = null;
+        this.enemyEntity = null;
+        this.scene = null;
     }
 
     flee() {
@@ -104,6 +153,11 @@ export default class BattleController {
         if (!this.battle) return;
 
         const battle = this.battle;
+
+        // Remove the aggro indicator when combat ends.
+        if (this.enemyEntity) {
+            this.enemyEntity.inCombat = false;
+        }
 
         // Only victory consumes the world enemy.
         if (battle.victory && this.enemyEntity) {
