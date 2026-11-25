@@ -5,7 +5,7 @@ A mobile-first native HTML/CSS/JavaScript RPG game.
 ## Updates
 
 Latest alpha (in development) release:
-https://github.com/Twaddler01/kSim-fantasy/releases/tag/v0.5.0-alpha
+https://github.com/Twaddler01/kSim-fantasy/releases/tag/v0.6.0-alpha
 
 ## Run
 
