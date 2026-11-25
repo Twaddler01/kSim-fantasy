@@ -95,7 +95,7 @@ export default class BattleController {
         // Activate combat only after the first successful hit.
         if (this.battle.combatStarted && !this.enemyEntity.inCombat) {
             this.enemyEntity.inCombat = true;
-            this.worldHUD.setCombat(this.battle);
+            this.worldHUD.setCombat(this.battle, this.enemyEntity);
         }
 
         // A successful enemy strike pulls the target panel's
@@ -165,6 +165,12 @@ export default class BattleController {
                 this.enemyEntity,
                 `${battle.enemy.name} defeated`
             );
+        }
+
+        // Fleeing clears the target panel only if it is displaying
+        // the enemy we just fled from.
+        if (battle.fled && this.enemyEntity) {
+            this.worldHUD.clearTargetIf(this.enemyEntity);
         }
 
         this.worldHUD.clearCombat();

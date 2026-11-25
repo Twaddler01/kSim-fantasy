@@ -1,21 +1,27 @@
 import { el } from "../components/Element.js";
 
 export default class BattleControls {
-    constructor({ onAttack, onFlee }) {
+    constructor({ onAttack, onFlee, onFocusEnemy }) {
         this.onAttack = onAttack;
         this.onFlee = onFlee;
+        this.onFocusEnemy = onFocusEnemy;
 
-        this.playerFill = el("div", {
-            className: "battle-progress-fill player-progress-fill"
+        this.enemyIcon = el("button", {
+            className: "battle-enemy-focus",
+            type: "button",
+            text: "❔",
+            title: "Focus battle enemy",
+            "aria-label": "Focus battle enemy",
+            onClick: () => this.onFocusEnemy?.()
+        });
+
+        this.rangeLabel = el("span", {
+            className: "battle-range-label",
+            text: "OUT OF RANGE"
         });
 
         this.enemyFill = el("div", {
             className: "battle-progress-fill enemy-progress-fill"
-        });
-
-        this.playerLabel = el("span", {
-            className: "battle-progress-label",
-            text: "Your attack"
         });
 
         this.enemyLabel = el("span", {
@@ -37,16 +43,21 @@ export default class BattleControls {
             onClick: () => this.onFlee?.()
         });
 
-        this.playerBar = this.createProgressBar(
-            this.playerLabel,
-            this.playerFill,
-            "player"
-        );
-
-        this.enemyBar = this.createProgressBar(
-            this.enemyLabel,
-            this.enemyFill,
-            "enemy"
+        this.enemyBar = el(
+            "div",
+            {
+                className: "battle-progress battle-progress-enemy"
+            },
+            [
+                this.enemyLabel,
+                el(
+                    "div",
+                    {
+                        className: "battle-progress-track"
+                    },
+                    [this.enemyFill]
+                )
+            ]
         );
 
         this.element = el(
@@ -58,10 +69,19 @@ export default class BattleControls {
                 el(
                     "div",
                     {
-                        className: "battle-progress-group"
+                        className: "battle-header"
                     },
-                    [this.playerBar, this.enemyBar]
+                    [
+                        el("span", {
+                            className: "battle-title",
+                            text: "BATTLE"
+                        }),
+                        this.enemyIcon,
+                        this.rangeLabel
+                    ]
                 ),
+
+                this.enemyBar,
 
                 el(
                     "div",
@@ -76,71 +96,52 @@ export default class BattleControls {
         this.update(null);
     }
 
-    createProgressBar(label, fill, type) {
-        return el(
-            "div",
-            {
-                className: `battle-progress battle-progress-${type}`
-            },
-            [
-                label,
-                el(
-                    "div",
-                    {
-                        className: "battle-progress-track"
-                    },
-                    [fill]
-                )
-            ]
-        );
-    }
-
-    update(battle) {
+    update(battle, { enemy = null, inRange = false } = {}) {
         const active = Boolean(battle && !battle.finished);
 
         this.element.classList.toggle("is-hidden", !active);
 
         if (!active) {
-            this.setProgress(this.playerFill, 0);
-            this.setProgress(this.enemyFill, 0);
-            this.playerLabel.textContent = "Your attack";
-            this.enemyLabel.textContent = "Enemy attack";
+            this.setProgress(0);
             this.attackButton.disabled = true;
+            this.enemyIcon.textContent = "❔";
+            this.setRange(false);
             return;
         }
 
-        const playerWindingUp = battle.playerWindupRemaining > 0;
-        const playerCoolingDown = battle.playerCooldownRemaining > 0;
+        this.enemyIcon.textContent = enemy?.icon ?? battle.enemy?.icon ?? "❔";
+
+        this.setRange(inRange);
 
         const enemyWindingUp = battle.enemyWindupRemaining > 0;
 
         this.setProgress(
-            this.playerFill,
-            playerWindingUp ? battle.playerWindupProgress : 0
+            inRange && enemyWindingUp ? battle.enemyWindupProgress : 0
         );
-
-        this.setProgress(
-            this.enemyFill,
-            enemyWindingUp ? battle.enemyWindupProgress : 0
-        );
-
-        this.playerLabel.textContent = playerWindingUp
-            ? "Your attack..."
-            : playerCoolingDown
-              ? "Recovering..."
-              : "Ready to attack";
 
         this.enemyLabel.textContent = enemyWindingUp
-            ? `${battle.enemy.name} attacking...`
+            ? "Enemy attacking..."
             : "Enemy attack";
+
+        this.enemyBar.classList.toggle("is-inactive", !inRange);
+
+        const playerWindingUp = battle.playerWindupRemaining > 0;
+        const playerCoolingDown = battle.playerCooldownRemaining > 0;
 
         this.attackButton.disabled = playerWindingUp || playerCoolingDown;
     }
 
-    setProgress(fill, progress) {
+    setRange(inRange) {
+        this.rangeLabel.textContent = inRange ? "IN RANGE" : "OUT OF RANGE";
+
+        this.rangeLabel.classList.toggle("is-in-range", inRange);
+        this.rangeLabel.classList.toggle("is-out-of-range", !inRange);
+    }
+
+    setProgress(progress) {
         const percent = Math.max(0, Math.min(1, Number(progress) || 0)) * 100;
 
-        fill.style.width = `${percent}%`;
+        this.enemyFill.style.width = `${percent}%`;
     }
 
     getElement() {

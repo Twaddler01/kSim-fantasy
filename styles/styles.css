@@ -5043,3 +5043,70 @@ ZONE
     background: rgba(70, 78, 88, 0.95);
     border-color: rgba(180, 190, 200, 0.35);
 }
+
+/* Battle header */
+.battle-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    pointer-events: auto;
+}
+
+.battle-title {
+    color: #e45d5d;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.battle-enemy-focus {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+
+    color: #fff;
+    font-size: 21px;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 8px;
+
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.battle-enemy-focus:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95);
+}
+
+.battle-range-label {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.battle-range-label.is-in-range {
+    color: #79c98b;
+}
+
+.battle-range-label.is-out-of-range {
+    color: #d17b7b;
+}
+
+/* Enemy attack progress */
+
+.battle-progress-enemy {
+    transition: opacity 150ms ease;
+}
+
+.battle-progress-enemy.is-inactive {
+    opacity: 0.35;
+}
+
+.battle-progress-enemy.is-inactive .battle-progress-label {
+    color: #89919a;
+}

@@ -369,7 +369,7 @@ export function startGame() {
                 onEncounter: zoneActions.handleEncounter,
                 onUpdate: (dt, scene) => {
                     battleController?.update(dt, scene);
-                    battleControls?.update(battleController?.battle);
+                    updateBattleControls();
                     worldHUD.update();
                 },
                 onOpenCache: zoneActions.handleOpenCache,
@@ -398,14 +398,35 @@ export function startGame() {
     battleControls = new BattleControls({
         onAttack: () => {
             battleController?.beginAttack();
-            battleControls?.update(battleController?.battle);
+            updateBattleControls();
         },
     
         onFlee: () => {
             battleController?.flee();
-            battleControls?.update(battleController?.battle);
+            updateBattleControls();
+        },
+    
+        onFocusEnemy: () => {
+            battleController?.scene?.focusEntity(
+                battleController?.enemyEntity
+            );
         }
     });
+    
+    function updateBattleControls() {
+        const battle = battleController?.battle;
+        const enemy = battleController?.enemyEntity;
+        const scene = battleController?.scene;
+    
+        const inRange = Boolean(
+            enemy && scene?.isEnemyInAttackRange(enemy)
+        );
+    
+        battleControls?.update(battle, {
+            enemy,
+            inRange
+        });
+    }
 
     // Initialize the world viewport from the saved location.
     worldPanel.showZone(game.appState.navigation.activeZoneId);

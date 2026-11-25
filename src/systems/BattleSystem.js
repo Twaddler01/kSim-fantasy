@@ -184,26 +184,38 @@ export function updateBattle(
     // attack has successfully landed.
     if (battle.enemyCanAttack && !playerAttackResolved) {
         if (battle.enemyWindupRemaining > 0) {
-            battle.enemyWindupRemaining = Math.max(
-                0,
-                battle.enemyWindupRemaining - dt
-            );
-
-            if (battle.enemyWindupRemaining <= 0) {
-                resolveRealtimeEnemyAttack(
-                    game,
-                    battle,
-                    isPlayerInRange
+            // Cancel an attack if the player leaves range during windup.
+            if (!isPlayerInRange()) {
+                battle.enemyWindupRemaining = 0;
+                battle.enemyCooldownRemaining = battle.enemyAttackInterval;
+            } else {
+                battle.enemyWindupRemaining = Math.max(
+                    0,
+                    battle.enemyWindupRemaining - dt
                 );
+    
+                if (battle.enemyWindupRemaining <= 0) {
+                    // Final range check is still performed by the resolver.
+                    resolveRealtimeEnemyAttack(
+                        game,
+                        battle,
+                        isPlayerInRange
+                    );
+                }
             }
         } else {
             battle.enemyCooldownRemaining = Math.max(
                 0,
                 battle.enemyCooldownRemaining - dt
             );
-
-            if (battle.enemyCooldownRemaining <= 0) {
-                battle.enemyWindupRemaining = battle.enemyWindupDuration;
+    
+            // Only begin a windup when the player is actually in range.
+            if (
+                battle.enemyCooldownRemaining <= 0 &&
+                isPlayerInRange()
+            ) {
+                battle.enemyWindupRemaining =
+                    battle.enemyWindupDuration;
             }
         }
     }

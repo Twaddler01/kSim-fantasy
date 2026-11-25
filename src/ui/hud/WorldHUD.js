@@ -16,6 +16,10 @@ export default class WorldHUD {
             onChange: onActionChange
         });
 
+        this.target = null;
+        this.battle = null;
+        this.battleEnemyEntity = null;
+
         this.statusPanels = el(
             "div",
             { className: "world-hud-status-panels" },
@@ -32,39 +36,70 @@ export default class WorldHUD {
         return this.element;
     }
 
+    isBattleTarget() {
+        return Boolean(
+            this.battle &&
+            this.battleEnemyEntity &&
+            this.target?.entity === this.battleEnemyEntity
+        );
+    }
+
     update() {
         if (this.battle) {
             this.playerPanel.update(
                 this.battle.playerHp,
                 this.battle.playerMaxHp
             );
+        } else {
+            this.playerPanel.update();
+        }
 
+        const isBattleTarget = this.isBattleTarget();
+
+        this.targetPanel.setCombat(isBattleTarget);
+
+        if (isBattleTarget) {
             this.targetPanel.updateCombatHealth(
                 this.battle.enemyHp,
                 this.battle.enemyMaxHp
             );
-        } else {
-            this.playerPanel.update();
         }
     }
 
     setTarget(target) {
+        this.target = target;
+
         this.targetPanel.update(target);
         this.actionSelector.update(target);
+
+        this.update();
     }
 
     clearTarget() {
+        this.target = null;
+
         this.targetPanel.update(null);
+        this.targetPanel.setCombat(false);
         this.actionSelector.update(null);
     }
 
-    setCombat(battle) {
-        this.battle = battle ?? null;
-        this.isInCombat = Boolean(battle);
+    clearTargetIf(entity) {
+        if (this.target?.entity !== entity) return false;
 
-        this.playerPanel.setCombat(this.isInCombat);
-        this.targetPanel.setCombat(this.isInCombat);
-        this.actionSelector.setCombat(this.isInCombat);
+        this.clearTarget();
+        return true;
+    }
+
+    setCombat(battle, enemyEntity = null) {
+        this.battle = battle ?? null;
+        this.battleEnemyEntity = battle ? enemyEntity : null;
+
+        const active = Boolean(battle);
+
+        this.playerPanel.setCombat(active);
+        this.actionSelector.setCombat(active);
+
+        this.update();
     }
 
     clearCombat() {
