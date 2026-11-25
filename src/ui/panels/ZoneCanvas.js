@@ -146,11 +146,13 @@ export default class ZoneCanvas {
         onInteract,
         onRespawn,
         onSelect,
+        onUpdate,
         showToast
     } = {}) {
         this.onInteract = onInteract;
         this.onRespawn = onRespawn;
         this.onSelect = onSelect;
+        this.onUpdate = onUpdate;
         this.showToast = showToast;
         this.title = title;
 
@@ -506,6 +508,10 @@ export default class ZoneCanvas {
     step(dt) {
         this.time += dt;
 
+        // Allow external systems (such as combat) to update
+        // using the same clock as world movement and animation.
+        this.onUpdate?.(dt);
+
         const p = this.player;
         const dx = p.tx - p.x;
         const dy = p.ty - p.y;
@@ -639,22 +645,18 @@ export default class ZoneCanvas {
 
             if (region.label) {
                 ctx.save();
-            
+
                 ctx.setLineDash([]);
                 ctx.font = "bold 16px sans-serif";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-            
+
                 ctx.fillStyle = region.debugColor ?? "#ffffff";
                 ctx.shadowColor = "#000000";
                 ctx.shadowBlur = 5;
-            
-                ctx.fillText(
-                    region.name,
-                    region.label.x,
-                    region.label.y
-                );
-            
+
+                ctx.fillText(region.name, region.label.x, region.label.y);
+
                 ctx.restore();
             }
         }
@@ -1135,8 +1137,6 @@ export default class ZoneCanvas {
         };
 
         // The scene decides whether this interaction consumes the entity.
-        // Returning false (or omitting a handler) leaves the entity in
-        // place so it can be retried once the scene wires its callback.
         const consumed =
             this.onInteract?.(entity, screenPos, actionId) !== false;
 
@@ -1146,20 +1146,39 @@ export default class ZoneCanvas {
             return;
         }
 
-        entity.active = false;
-        if (this.selectedEntity === entity) {
-            this.clearSelection();
-        }
-        entity.respawnAt =
-            entity.respawnSeconds === null
-                ? Infinity
-                : this.time + (entity.respawnSeconds ?? this.respawnDelay);
-        entity.strikesLanded = 0;
-        entity.cracks = [];
-
-        this.showToast?.(`${entity.label ?? "Object"} recovered`);
+        this.consumeEntity(entity);
     }
 
+consumeEntity(entity, message = null) {
+    if (!entity?.active) return false;
+
+    // Cancel any pending action involving this entity.
+    if (this.pendingAction?.entity === entity) {
+        this.pendingAction = null;
+    }
+
+    // Clear selection if this was the selected entity.
+    if (this.selectedEntity === entity) {
+        this.clearSelection();
+    }
+
+    entity.active = false;
+
+    entity.respawnAt =
+        entity.respawnSeconds === null
+            ? Infinity
+            : this.time + (entity.respawnSeconds ?? this.respawnDelay);
+
+    entity.strikesLanded = 0;
+    entity.cracks = [];
+
+    this.showToast?.(
+        message ?? `${entity.label ?? "Object"} recovered`
+    );
+
+    return true;
+}
+    
     makeSparkles(tier, radius) {
         const count = [0, 2, 3, 5][tier] ?? 0;
         const sparkles = [];

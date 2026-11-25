@@ -15,6 +15,7 @@ export const enemies = [
         attack: 6,
         defense: 2,
         crit: 0.05,
+        attackSpeed: 2.5,
         xp: 15,
         goldRange: [3, 8],
         lootTable: [

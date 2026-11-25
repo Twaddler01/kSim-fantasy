@@ -4737,6 +4737,18 @@ ZONE
 }
 
 /* =========================================
+   ACTIVE COMBAT INDICATOR
+   ========================================= */
+
+.player-status-panel.is-in-combat,
+.target-status-panel.is-in-combat {
+    border-color: #dc5555;
+    box-shadow:
+        inset 0 0 0 1px #dc5555,
+        0 0 8px rgba(220, 85, 85, 0.25);
+}
+
+/* =========================================
    PANEL CONTENT
 ========================================= */
 

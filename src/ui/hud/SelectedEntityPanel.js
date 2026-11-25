@@ -118,4 +118,8 @@ export default class SelectedEntityPanel {
             this.healthFill.style.width = `${ratio * 100}%`;
         }
     }
+
+    setCombat(active) {
+        this.element.classList.toggle("is-in-combat", active);
+    }
 }

@@ -13,6 +13,7 @@ export default class ActionSelector {
         this.target = null;
         this.actions = [];
         this.activeActionId = null;
+        this.isInCombat = false;
 
         this.actionLabel = el("div", {
             className: "action-selector-label"
@@ -37,6 +38,20 @@ export default class ActionSelector {
         return this.element;
     }
 
+    setCombat(active) {
+        this.isInCombat = active;
+        this.updateVisibility();
+    }
+
+    updateVisibility() {
+        const hasActions = this.actions.length > 0;
+
+        this.element.classList.toggle(
+            "is-hidden",
+            this.isInCombat || !this.target || !hasActions
+        );
+    }
+
     update(target) {
         this.target = target;
         this.actions = target
@@ -45,7 +60,7 @@ export default class ActionSelector {
 
         if (!target || this.actions.length === 0) {
             this.activeActionId = null;
-            this.element.classList.add("is-hidden");
+            this.updateVisibility();
             return;
         }
 
@@ -57,7 +72,7 @@ export default class ActionSelector {
             ? defaultAction
             : this.actions[0].id;
 
-        this.element.classList.remove("is-hidden");
+        this.updateVisibility();
 
         this.changeButton.style.display = this.actions.length > 1 ? "" : "none";
 

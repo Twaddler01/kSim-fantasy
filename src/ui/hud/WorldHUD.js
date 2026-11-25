@@ -45,4 +45,17 @@ export default class WorldHUD {
         this.targetPanel.update(null);
         this.actionSelector.update(null);
     }
+
+    setCombat(battle) {
+        this.battle = battle ?? null;
+        this.isInCombat = Boolean(battle);
+
+        this.playerPanel.setCombat(this.isInCombat);
+        this.targetPanel.setCombat(this.isInCombat);
+        this.actionSelector.setCombat(this.isInCombat);
+    }
+
+    clearCombat() {
+        this.setCombat(null);
+    }
 }

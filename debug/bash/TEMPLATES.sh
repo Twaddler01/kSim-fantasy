@@ -244,4 +244,12 @@ fcss .world-hud \
 .battle-modal \
 .battle-actions \
 
-fc -clip ZoneCanvas
+fc -clip PlayerStatusPanel SelectedEntityPanel ActionSelector
+
+
+
+fcss .player-status-panel .target-status-panel .action-selector
+
+
+fc -clip ZoneCanvas ZoneScene WorldHUD PlayerStatusPanel SelectedEntityPanel
+

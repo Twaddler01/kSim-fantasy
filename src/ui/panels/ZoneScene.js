@@ -56,6 +56,7 @@ export default class ZoneScene {
         onEncounter,
         onOpenCache,
         onEnterCave,
+        onUpdate = null,
         getSprites = () => ({}),
         getTiles = () => null
     }) {
@@ -65,6 +66,7 @@ export default class ZoneScene {
         this.onEncounter = onEncounter;
         this.onOpenCache = onOpenCache;
         this.onEnterCave = onEnterCave;
+        this.onUpdate = onUpdate;
         this.getSprites = getSprites;
         this.getTiles = getTiles;
         this.rawMaterials = materials.filter(m => m.category === "raw");
@@ -100,7 +102,8 @@ export default class ZoneScene {
             onRespawn: entity => this.buildRespawn(entity),
             showToast: null,
             regions: this.zone.regions ?? [],
-            showBoundaries: WORLD_DEBUG.showBoundaries
+            showBoundaries: WORLD_DEBUG.showBoundaries,
+            onUpdate: dt => this.onUpdate?.(dt, this),
         });
 
         this.collected = 0;
@@ -118,6 +121,10 @@ export default class ZoneScene {
         this.canvas.deactivate();
     }
 
+    consumeEntity(entity, message = null) {
+        return this.canvas.consumeEntity(entity, message);
+    }
+    
     // -----------------------------------------------------------------
     // Entity building
     // -----------------------------------------------------------------
@@ -634,7 +641,10 @@ for (const region of this.zone.regions ?? []) {
                 const handled = this.onEncounter(this.zone, screenPos, {
                     enemyId: entity.enemyId
                 });
-                return handled !== false;
+                
+                // Starting combat does not consume the enemy.
+                // The combat system will consume it after victory.
+                return false;
             }
 
             case "cache": {
