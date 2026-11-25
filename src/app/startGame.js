@@ -535,7 +535,7 @@ export function startGame() {
         syncInventoryDiscovery(game);
         worldHUD.update();
         //ui.character?.update();
-        //ui.inventory?.update();
+        ui.inventory?.update();
     }
 
     function refreshUI({ database = false } = {}) {
@@ -692,6 +692,8 @@ export function startGame() {
         ui.inventory = new Inventory({
             getGame: () => game,
             formatNumber,
+            save,
+            refreshUI,
             openItemSheet: itemId => ui.itemSheet.show(itemId)
         });
 

@@ -8,11 +8,11 @@ export const resourceDefinitions = [
         initiallyDiscovered: true
     },
     {
-        id: "experience",
-        name: "Experience",
+        id: "trophy",
+        name: "Trophy",
         icon: "🌟",
         description:
-            "What you have learned. Accumulates toward the next level.",
-        initiallyDiscovered: true
+            "You earned it!",
+        initiallyDiscovered: false
     }
 ];

@@ -3,6 +3,10 @@ export const initialGameData = {
     stage: 0,
     clicks: 0,
     inventory: {
+        slots: Array(20).fill(null),
+        stash: {}
+    },
+    resources: {
         gold: 0
     },
     upgrades: {
