@@ -36,7 +36,16 @@ export default class BattleController {
     }
 
     start(enemyId, entity, scene) {
+        // If combat is already active, tapping the current enemy
+        // acts as the player's next attack command.
         if (this.isActive) {
+            if (this.enemyEntity === entity) {
+                const result = this.beginAttack();
+
+                // A failed attempt is expected during windup/cooldown.
+                return result.ok;
+            }
+
             this.showToast("You are already in combat.");
             return false;
         }
@@ -56,7 +65,7 @@ export default class BattleController {
 
         // Automatically begin the player's opening attack.
         beginPlayerAttack(this.battle);
-        
+
         return true;
     }
 
