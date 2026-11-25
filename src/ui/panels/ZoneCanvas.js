@@ -139,6 +139,7 @@ export default class ZoneCanvas {
         world = { width: 1200, height: 900 },
         regions = [],
         showBoundaries = false,
+        showCombatRanges = false,
         respawnDelay = 3,
         backgroundCanvas = null,
         fallbackEntityCount = 10,
@@ -174,6 +175,7 @@ export default class ZoneCanvas {
         this.backgroundCanvas = backgroundCanvas;
         this.regions = regions;
         this.showBoundaries = showBoundaries;
+        this.showCombatRanges = showCombatRanges;
         this.fallbackEntityCount = fallbackEntityCount;
 
         this.camera = { x: 0, y: 0 };
@@ -664,6 +666,51 @@ export default class ZoneCanvas {
         ctx.restore();
     }
 
+    drawDebugCombatRanges() {
+        if (!this.showCombatRanges) return;
+
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+
+        for (const entity of this.entities) {
+            if (!entity.active || entity.type !== "enemy") continue;
+
+            const ranges = [
+                {
+                    radius: entity.attackRange,
+                    color: "#ff4545"
+                },
+                {
+                    radius: entity.detectionRange,
+                    color: "#ffad42"
+                },
+                {
+                    radius: entity.pursuitRange,
+                    color: "#4da6ff"
+                }
+            ];
+
+            for (const range of ranges) {
+                if (!Number.isFinite(range.radius) || range.radius <= 0) {
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.strokeStyle = range.color;
+                ctx.globalAlpha = 0.8;
+
+                ctx.arc(entity.x, entity.y, range.radius, 0, Math.PI * 2);
+
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+
     drawWorld() {
         const ctx = this.ctx;
         const cam = this.camera;
@@ -701,8 +748,9 @@ export default class ZoneCanvas {
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, ww, wh);
 
-        // Debug geography — drawn in world coordinates.
+        // Debug areas — drawn in world coordinates.
         this.drawDebugBoundaries();
+        this.drawDebugCombatRanges();
 
         // Destination marker.
         ctx.strokeStyle = "rgba(120,200,255,0.45)";
@@ -1149,36 +1197,34 @@ export default class ZoneCanvas {
         this.consumeEntity(entity);
     }
 
-consumeEntity(entity, message = null) {
-    if (!entity?.active) return false;
+    consumeEntity(entity, message = null) {
+        if (!entity?.active) return false;
 
-    // Cancel any pending action involving this entity.
-    if (this.pendingAction?.entity === entity) {
-        this.pendingAction = null;
+        // Cancel any pending action involving this entity.
+        if (this.pendingAction?.entity === entity) {
+            this.pendingAction = null;
+        }
+
+        // Clear selection if this was the selected entity.
+        if (this.selectedEntity === entity) {
+            this.clearSelection();
+        }
+
+        entity.active = false;
+
+        entity.respawnAt =
+            entity.respawnSeconds === null
+                ? Infinity
+                : this.time + (entity.respawnSeconds ?? this.respawnDelay);
+
+        entity.strikesLanded = 0;
+        entity.cracks = [];
+
+        this.showToast?.(message ?? `${entity.label ?? "Object"} recovered`);
+
+        return true;
     }
 
-    // Clear selection if this was the selected entity.
-    if (this.selectedEntity === entity) {
-        this.clearSelection();
-    }
-
-    entity.active = false;
-
-    entity.respawnAt =
-        entity.respawnSeconds === null
-            ? Infinity
-            : this.time + (entity.respawnSeconds ?? this.respawnDelay);
-
-    entity.strikesLanded = 0;
-    entity.cracks = [];
-
-    this.showToast?.(
-        message ?? `${entity.label ?? "Object"} recovered`
-    );
-
-    return true;
-}
-    
     makeSparkles(tier, radius) {
         const count = [0, 2, 3, 5][tier] ?? 0;
         const sparkles = [];

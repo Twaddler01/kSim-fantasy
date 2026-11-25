@@ -102,8 +102,12 @@ export default class ZoneScene {
             onRespawn: entity => this.buildRespawn(entity),
             showToast: null,
             regions: this.zone.regions ?? [],
+
+            // Debug
             showBoundaries: WORLD_DEBUG.showBoundaries,
-            onUpdate: dt => this.onUpdate?.(dt, this),
+            showCombatRanges: WORLD_DEBUG.showCombatRanges,
+            
+            onUpdate: dt => this.onUpdate?.(dt, this)
         });
 
         this.collected = 0;
@@ -124,7 +128,7 @@ export default class ZoneScene {
     consumeEntity(entity, message = null) {
         return this.canvas.consumeEntity(entity, message);
     }
-    
+
     // -----------------------------------------------------------------
     // Entity building
     // -----------------------------------------------------------------
@@ -157,44 +161,41 @@ export default class ZoneScene {
             }
         }
 
-// 2. Regional populations.
-for (const region of this.zone.regions ?? []) {
-    const population = region.population ?? {};
+        // 2. Regional populations.
+        for (const region of this.zone.regions ?? []) {
+            const population = region.population ?? {};
 
-    const initial = Math.max(
-        0,
-        Math.floor(population.initial ?? region.entityCount ?? 0)
-    );
-
-    const max = Math.max(
-        0,
-        Math.floor(population.max ?? initial)
-    );
-
-    // Initial population can never exceed the region's maximum.
-    const count = Math.min(initial, max);
-
-    for (let i = 0; i < count; i++) {
-        const spawn = this.pickSpawn(rand, region.spawnTable, false);
-
-        if (!spawn) continue;
-
-        const entity = this.buildEntityFromSpawn(spawn, rand, index++);
-
-        entity.regionId = region.id;
-
-        // All regional entities use their region's respawn cycle.
-        if (Number.isFinite(population.respawnSeconds)) {
-            entity.respawnSeconds = Math.max(
+            const initial = Math.max(
                 0,
-                population.respawnSeconds
+                Math.floor(population.initial ?? region.entityCount ?? 0)
             );
-        }
 
-        this.placeEntity(entity, list, rand, region);
-        list.push(entity);
-    }
-}
+            const max = Math.max(0, Math.floor(population.max ?? initial));
+
+            // Initial population can never exceed the region's maximum.
+            const count = Math.min(initial, max);
+
+            for (let i = 0; i < count; i++) {
+                const spawn = this.pickSpawn(rand, region.spawnTable, false);
+
+                if (!spawn) continue;
+
+                const entity = this.buildEntityFromSpawn(spawn, rand, index++);
+
+                entity.regionId = region.id;
+
+                // All regional entities use their region's respawn cycle.
+                if (Number.isFinite(population.respawnSeconds)) {
+                    entity.respawnSeconds = Math.max(
+                        0,
+                        population.respawnSeconds
+                    );
+                }
+
+                this.placeEntity(entity, list, rand, region);
+                list.push(entity);
+            }
+        }
 
         // 3. Remaining world population.
         const worldCount = Math.max(0, this.entityCount - guaranteedCount);
@@ -252,6 +253,7 @@ for (const region of this.zone.regions ?? []) {
         entity.x = x;
         entity.y = y;
     }
+
     getRandomRegionPoint(region, rand) {
         const shape = region.shape;
 
@@ -360,6 +362,11 @@ for (const region of this.zone.regions ?? []) {
             type: "enemy",
             r: this.entityRadius,
             enemyId: spawn.enemyId,
+
+            attackRange: enemy?.attackRange ?? 85,
+            detectionRange: enemy?.detectionRange ?? 260,
+            pursuitRange: enemy?.pursuitRange ?? 380,
+            
             label: spawn.label ?? enemy?.name ?? spawn.enemyId ?? "Enemy",
             icon: enemy?.icon ?? "⚠️",
             showInteractionIndicator: true,
@@ -446,9 +453,9 @@ for (const region of this.zone.regions ?? []) {
 
         if (region) {
             entity.regionId = region.id;
-        
+
             const respawnSeconds = region.population?.respawnSeconds;
-        
+
             if (Number.isFinite(respawnSeconds)) {
                 entity.respawnSeconds = Math.max(0, respawnSeconds);
             }
@@ -643,7 +650,7 @@ for (const region of this.zone.regions ?? []) {
                     entity,
                     scene: this
                 });
-                
+
                 // Starting combat does not consume the enemy.
                 // The combat system will consume it after victory.
                 return false;

@@ -16,6 +16,12 @@ export const enemies = [
         defense: 2,
         crit: 0.05,
         attackSpeed: 2.5,
+        
+        // World-unit distances, measured center to center.
+        attackRange: 85,
+        detectionRange: 260,
+        pursuitRange: 380,
+        
         xp: 15,
         goldRange: [3, 8],
         lootTable: [

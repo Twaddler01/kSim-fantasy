@@ -1,5 +1,6 @@
 export const WORLD_DEBUG = {
-    showBoundaries: true
+    showBoundaries: true,
+    showCombatRanges: true
 };
 
 export const ZONE_DEFINITIONS = [
