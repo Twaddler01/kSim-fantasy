@@ -232,24 +232,9 @@ grep -nE "class WorldMapPanel|constructor|getElement|update\\(" \
 
 
 
-
-
-/hud/
-├── 
-├── 
-└── 
-
-fcss .world-hud \
-.battle-backdrop \
-.battle-modal \
-.battle-actions \
-
-fc -clip PlayerStatusPanel SelectedEntityPanel ActionSelector
-
-
-
 fcss .player-status-panel .target-status-panel .action-selector
+fc -clip startGame.js character.js WorldHUD.js SelectedEntityPanel.js
 
 
-fc -clip ZoneCanvas ZoneScene WorldHUD PlayerStatusPanel SelectedEntityPanel
+
 
