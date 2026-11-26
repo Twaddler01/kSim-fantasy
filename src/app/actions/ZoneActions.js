@@ -47,32 +47,35 @@ export default class ZoneActions {
     }
 
     handleGather(zone, event, target) {
-        const game = this.getGame();
-        const result = gatherMaterial(game, target.id, target.richness ?? 1);
+        const result = gatherMaterial(
+            this.getGame(),
+            target.id,
+            target.richness ?? 1
+        );
 
         if (!result.ok) {
             this.showToast(getResultMessage(result.reason));
             return false;
         }
 
-        this.resourcePopups.show(
-            [
+        const container = this.lootSystem.createContainer({
+            title: "Gathered Materials",
+            icon: "⛏️",
+            sourceType: "gathering",
+            items: [
                 {
-                    amount: result.amount,
-                    icon: result.item.icon,
-                    materialId: result.item.id
+                    itemId: result.itemId,
+                    quantity: result.quantity
                 }
-            ],
-            event
-        );
+            ]
+        });
 
-        if (result.newlyDiscovered) {
-            this.announceMaterialDiscovery(result.item);
+        if (this.lootSystem.isEmpty(container)) {
+            this.showToast("Nothing could be recovered.");
+            return false;
         }
 
-        this.processProgression();
-        this.save();
-        this.refreshUI({ database: true });
+        this.presentation.showLoot(container);
 
         return true;
     }

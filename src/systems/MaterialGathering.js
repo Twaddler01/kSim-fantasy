@@ -1,10 +1,9 @@
-import { addLog } from "../functions.js";
 import { getItemDefinition } from "../data/items.js";
-import { addItem } from "./InventorySystem.js";
 import { ok, fail } from "../results.js";
 
 /**
- * Adds a fixed amount of a defined raw material to inventory.
+ * Calculates a gathered material reward.
+ * Does not add anything to inventory.
  */
 export function gatherMaterial(game, materialId, amount = 1) {
     const material = getItemDefinition(materialId);
@@ -19,20 +18,10 @@ export function gatherMaterial(game, materialId, amount = 1) {
         return fail("invalid-amount");
     }
 
-    const result = addItem(game, material.id, quantity);
-
-    if (!result.ok) {
-        return fail(result.reason);
-    }
-
-    addLog(game, `MATERIAL RECOVERY: +${quantity} ${material.name}.`, {
-        category: "activity"
-    });
-
     return ok({
         item: material,
+        itemId: material.id,
         amount: quantity,
-        total: result.total,
-        newlyDiscovered: result.newlyDiscovered
+        quantity
     });
 }
