@@ -21,6 +21,16 @@ export default class TooltipManager {
         document.addEventListener("pointerdown", this.handleOutsidePointerDown);
 
         document.addEventListener("keydown", this.handleKeyDown);
+
+        this.element.addEventListener("pointerenter", () => {
+            this.clearHideTimer();
+        });
+        
+        this.element.addEventListener("pointerleave", () => {
+            if (!this.isPinned) {
+                this.scheduleHide();
+            }
+        });
     }
 
     createElement() {

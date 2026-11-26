@@ -3221,6 +3221,144 @@ body:not(.debug-mode) {
     --tier-5: #ff8000;
 }
 
+/* NEW -- to replace item-sheet */ 
+/* =========================================
+   ITEM TOOLTIP CONTENT
+========================================= */
+
+.item-tooltip-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.item-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-tooltip-icon {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+}
+
+.item-tooltip-icon-emoji {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.item-tooltip-title-block {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.item-tooltip-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.item-tooltip-type {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.item-tooltip-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.item-tooltip-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.8rem;
+}
+
+.item-tooltip-stat-label {
+    color: var(--text-muted);
+}
+
+.item-tooltip-stat-value {
+    font-weight: 700;
+    color: var(--text);
+}
+
+.item-tooltip-compare {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px 10px;
+    border: 1px solid rgba(120, 160, 200, 0.2);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.16);
+}
+
+.item-tooltip-compare-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.item-tooltip-compare-empty {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.item-tooltip-stat-delta {
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.item-tooltip-stat-delta.is-positive {
+    color: #72d69a;
+}
+
+.item-tooltip-stat-delta.is-negative {
+    color: #ed8585;
+}
+
+.item-tooltip-description {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+}
+
+.item-tooltip-footer {
+    padding-top: 2px;
+}
+
+.item-tooltip-action {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid rgba(120, 160, 200, 0.3);
+    border-radius: 7px;
+    background: rgba(75, 115, 160, 0.2);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.item-tooltip-action:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+
+/* OLD */
 /* ========================================
    Item Detail Bottom Sheet
    ======================================== */

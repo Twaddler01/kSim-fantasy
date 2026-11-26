@@ -38,7 +38,8 @@ import LootModal from "../ui/panels/LootModal.js";
 import CaveModal from "../ui/panels/CaveModal.js";
 
 import Inventory from "../ui/panels/Inventory.js";
-import ItemDetailSheet from "../ui/components/ItemDetailSheet.js";
+import TooltipManager from "../ui/components/TooltipManager.js";
+import ItemTooltipContent from "../ui/components/ItemTooltipContent.js";
 
 // Components
 import { el } from "../ui/components/Element.js";
@@ -534,7 +535,7 @@ export function startGame() {
     function updateSharedUI() {
         syncInventoryDiscovery(game);
         worldHUD.update();
-        //ui.character?.update();
+        ui.character?.update();
         ui.inventory?.update();
     }
 
@@ -676,8 +677,12 @@ export function startGame() {
             })
         ]);
 
-        ui.itemSheet = new ItemDetailSheet({
+        // Tooltip system
+        ui.tooltipManager = new TooltipManager();
+        
+        ui.itemTooltip = new ItemTooltipContent({
             getGame: () => game,
+            tooltipManager: ui.tooltipManager,
             onEquip: itemActions.equip,
             onUnequip: itemActions.unequip,
             onUse: itemActions.use
@@ -686,7 +691,8 @@ export function startGame() {
         ui.character = new Character({
             getPlayer: () => game.player,
             getEquipment: () => game.equipment,
-            openItemSheet: itemId => ui.itemSheet.show(itemId)
+            openItemSheet: (itemId, target) =>
+                ui.itemTooltip.show(itemId, target)
         });
 
         ui.inventory = new Inventory({
@@ -694,7 +700,9 @@ export function startGame() {
             formatNumber,
             save,
             refreshUI,
-            openItemSheet: itemId => ui.itemSheet.show(itemId)
+            openItemSheet: (itemId, target) =>
+                ui.itemTooltip.show(itemId, target),
+            closeTooltip: () => ui.tooltipManager.hide()
         });
 
         ui.overlayManager = new OverlayManager({

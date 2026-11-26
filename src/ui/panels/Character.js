@@ -107,9 +107,9 @@ export default class Character {
                         ? `${slotDef.name}: ${item?.name ?? equipped.id}. Tap for details.`
                         : `${slotDef.name}: empty`,
 
-                    onClick: () => {
+                    onClick: event => {
                         if (equipped) {
-                            this.openItemSheet(equipped.id);
+                            this.openItemSheet(equipped.id, event.currentTarget);
                         }
                     }
                 },

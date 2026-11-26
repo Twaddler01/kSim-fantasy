@@ -13,12 +13,20 @@ import {
 import { getItemDefinition } from "../../data/items.js";
 
 export default class Inventory {
-    constructor({ getGame, formatNumber, save, refreshUI, openItemSheet }) {
+    constructor({
+        getGame,
+        formatNumber,
+        save,
+        refreshUI,
+        openItemSheet,
+        closeTooltip
+    }) {
         this.getGame = getGame;
         this.formatNumber = formatNumber ?? (value => String(value));
         this.save = save ?? (() => {});
         this.refreshUI = refreshUI ?? (() => {});
         this.openItemSheet = openItemSheet ?? (() => {});
+        this.closeTooltip = closeTooltip ?? (() => {});
 
         this.activeTab = "items";
 
@@ -238,6 +246,8 @@ export default class Inventory {
     }
 
     startMoveMode(index) {
+        this.closeTooltip();
+
         const slots = getInventorySlots(this.game);
 
         if (!slots[index]) return;
@@ -410,7 +420,7 @@ export default class Inventory {
         const slot = slots[index];
 
         if (slot) {
-            this.openItemSheet(slot.itemId);
+            this.openItemSheet(slot.itemId, event.currentTarget);
         }
     }
 
@@ -544,7 +554,8 @@ export default class Inventory {
             {
                 type: "button",
                 className: "inventory-material-row",
-                onClick: () => this.openItemSheet(item.id),
+                onClick: event =>
+                    this.openItemSheet(item.id, event.currentTarget),
                 title: item.name
             },
             [
