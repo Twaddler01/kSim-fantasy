@@ -357,7 +357,7 @@ export function syncInventoryDiscovery(game) {
 // MUTATIONS
 // ===================================
 
-export function moveInventoryStack(game, sourceIndex, destinationIndex) {
+export function moveInventoryStack(game, sourceIndex, destinationIndex, amount = null) {
     if (!isInventoryReady(game)) {
         return fail("invalid-game");
     }
@@ -382,9 +382,7 @@ export function moveInventoryStack(game, sourceIndex, destinationIndex) {
     const source = slots[sourceIndex];
     const destination = slots[destinationIndex];
 
-    if (!source) {
-        return fail("empty-source");
-    }
+    if (!source) return fail("empty-source");
 
     const sourceItem = getItemDefinition(source.itemId);
 
@@ -392,16 +390,41 @@ export function moveInventoryStack(game, sourceIndex, destinationIndex) {
         return fail("invalid-item");
     }
 
-    // Empty destination: move the entire stack.
+    const requested = amount == null
+        ? source.quantity
+        : Math.floor(Number(amount));
+
+    if (
+        !Number.isFinite(requested) ||
+        requested <= 0 ||
+        requested > source.quantity
+    ) {
+        return fail("invalid-amount");
+    }
+
+    // Empty destination: move the requested quantity.
     if (!destination) {
-        slots[destinationIndex] = source;
-        slots[sourceIndex] = null;
+        const transferred = requested;
+
+        if (transferred === source.quantity) {
+            slots[destinationIndex] = source;
+            slots[sourceIndex] = null;
+        } else {
+            source.quantity -= transferred;
+
+            slots[destinationIndex] = {
+                itemId: source.itemId,
+                quantity: transferred
+            };
+        }
 
         return ok({
             action: "moved",
             sourceIndex,
             destinationIndex,
-            itemId: source.itemId
+            itemId: source.itemId,
+            transferred,
+            remaining: slots[sourceIndex]?.quantity ?? 0
         });
     }
 
@@ -411,16 +434,14 @@ export function moveInventoryStack(game, sourceIndex, destinationIndex) {
         return fail("invalid-destination");
     }
 
-    // Same item: merge as much as the destination can hold.
+    // Matching items: merge.
     if (source.itemId === destination.itemId) {
         const stackLimit = sourceItem.stackLimit ?? 1;
         const available = Math.max(0, stackLimit - destination.quantity);
 
-        if (available <= 0) {
-            return fail("stack-full");
-        }
+        if (available <= 0) return fail("stack-full");
 
-        const transferred = Math.min(source.quantity, available);
+        const transferred = Math.min(requested, available);
 
         destination.quantity += transferred;
         source.quantity -= transferred;
@@ -435,11 +456,15 @@ export function moveInventoryStack(game, sourceIndex, destinationIndex) {
             destinationIndex,
             itemId: source.itemId,
             transferred,
-            remaining: source.quantity
+            remaining: slots[sourceIndex]?.quantity ?? 0
         });
     }
 
-    // Different items: swap the two stacks.
+    // Swapping different items requires transferring the entire stack.
+    if (requested !== source.quantity) {
+        return fail("partial-swap");
+    }
+
     slots[sourceIndex] = destination;
     slots[destinationIndex] = source;
 

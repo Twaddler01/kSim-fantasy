@@ -22,20 +22,22 @@ export default class Inventory {
 
         this.activeTab = "items";
 
-        // Slot movement state.
+        // Movement state.
         this.moveSourceIndex = null;
+        this.moveAmountMode = "all";
+
         this.pressState = null;
         this.longPressTimer = null;
         this.ignoreClickUntil = 0;
 
-        this.element = this.render();
-
+        // Only cancel from document when tapping outside this panel.
         this.handleMoveOutsidePointerDown = event => {
-            // Tapping anything other than an actual slot cancels move mode.
-            if (!event.target.closest(".inventory-slot")) {
+            if (!this.element?.contains(event.target)) {
                 this.cancelMoveMode();
             }
         };
+
+        this.element = this.render();
     }
 
     get game() {
@@ -54,47 +56,163 @@ export default class Inventory {
         return getVisibleInventoryItems(this.game);
     }
 
-    // RESOURCES
+    // ===================================
+    // GOLD FOOTER
+    // ===================================
 
-    renderResources() {
-        const resources = this.getVisibleItems().filter(
-            entry => entry.item.storage === "resource"
+    renderGold() {
+        const gold = this.getVisibleItems().find(
+            entry =>
+                entry.item.id === "gold" ||
+                entry.item.name?.toLowerCase() === "gold"
         );
 
-        return el(
-            "div",
-            {
-                className: "inventory-resources",
-                "aria-label": "Tracked resources"
-            },
-            resources.map(({ item, amount }) =>
-                el(
-                    "div",
-                    {
-                        className: "inventory-resource",
-                        title: item.name
-                    },
-                    [
-                        this.createItemIcon(
-                            item,
-                            "inventory-resource-icon",
-                            16
-                        ),
-                        el("span", {
-                            className: "inventory-resource-name",
-                            text: item.name
-                        }),
-                        el("strong", {
-                            className: "inventory-resource-value",
-                            text: this.formatNumber(amount)
-                        })
-                    ]
-                )
-            )
-        );
+        if (!gold) return el("div", { className: "inventory-footer-gold" });
+
+        return el("div", { className: "inventory-footer-gold" }, [
+            this.createItemIcon(gold.item, "inventory-gold-icon", 20),
+            el("strong", {
+                className: "inventory-gold-value",
+                text: this.formatNumber(gold.amount)
+            })
+        ]);
     }
 
+    renderFooter() {
+        const used = getUsedSlotCount(this.game);
+        const capacity = getInventoryCapacity();
+
+        return el("footer", { className: "inventory-footer" }, [
+            this.renderGold(),
+            el("span", {
+                className: "inventory-footer-capacity",
+                text: `${used} / ${capacity} slots`
+            })
+        ]);
+    }
+
+    // ===================================
+    // TIP / MOVE CONTROLS
+    // ===================================
+
+    renderTipArea() {
+        if (this.moveSourceIndex !== null) {
+            return this.renderMoveControls();
+        }
+
+        return el("div", { className: "inventory-tip-area" }, [
+            el("span", {
+                className: "inventory-tip-title",
+                text: "TIP"
+            }),
+            el("span", {
+                className: "inventory-tip-text",
+                text: "Tap an item to view details. Press and hold to move items."
+            })
+        ]);
+    }
+
+    renderMoveControls() {
+        const slots = getInventorySlots(this.game);
+        const source = slots[this.moveSourceIndex];
+
+        if (!source) return this.renderTipArea();
+
+        const item = getItemDefinition(source.itemId);
+        const stackLimit = item?.stackLimit ?? 1;
+        const isStackable = stackLimit > 1;
+
+        const options = [
+            {
+                id: "one",
+                label: "1",
+                amount: 1
+            },
+            {
+                id: "half",
+                label: "HALF",
+                amount: Math.max(1, Math.floor(source.quantity / 2))
+            },
+            {
+                id: "all",
+                label: "ALL",
+                amount: source.quantity
+            }
+        ];
+
+        return el("div", { className: "inventory-move-controls" }, [
+            el("div", { className: "inventory-move-heading" }, [
+                el("span", {
+                    className: "inventory-move-item-name",
+                    text: `Moving: ${item?.name ?? "Item"}`
+                }),
+                el("span", {
+                    className: "inventory-move-quantity",
+                    text: `×${source.quantity}`
+                })
+            ]),
+
+            el("div", { className: "inventory-move-options" }, [
+                ...options
+                    .filter(option => isStackable || option.id === "all")
+                    .map(option => {
+                        const active = this.moveAmountMode === option.id;
+
+                        return el(
+                            "button",
+                            {
+                                type: "button",
+                                className:
+                                    "inventory-move-option" +
+                                    (active ? " is-active" : ""),
+                                "aria-pressed": String(active),
+                                onClick: () => {
+                                    this.moveAmountMode = option.id;
+                                    this.replaceElement();
+                                }
+                            },
+                            [
+                                el("strong", { text: option.label }),
+                                isStackable
+                                    ? el("span", {
+                                          text: String(option.amount)
+                                      })
+                                    : null
+                            ]
+                        );
+                    }),
+
+                el(
+                    "button",
+                    {
+                        type: "button",
+                        className: "inventory-move-cancel",
+                        title: "Cancel movement",
+                        "aria-label": "Cancel movement",
+                        onClick: () => this.cancelMoveMode()
+                    },
+                    ["×"]
+                )
+            ])
+        ]);
+    }
+
+    getSelectedTransferAmount(source) {
+        switch (this.moveAmountMode) {
+            case "one":
+                return 1;
+
+            case "half":
+                return Math.max(1, Math.floor(source.quantity / 2));
+
+            default:
+                return source.quantity;
+        }
+    }
+
+    // ===================================
     // SLOT MOVEMENT
+    // ===================================
 
     getMoveAction(sourceIndex, destinationIndex, slots) {
         if (sourceIndex === destinationIndex) return null;
@@ -104,63 +222,60 @@ export default class Inventory {
 
         if (!source) return null;
 
-        // Empty destination: move.
+        const amount = this.getSelectedTransferAmount(source);
+
         if (!destination) return "move";
 
-        // Same item: merge if space remains.
         if (source.itemId === destination.itemId) {
             const item = getItemDefinition(source.itemId);
-            const stackLimit = item?.stackLimit ?? 1;
+            const limit = item?.stackLimit ?? 1;
 
-            return destination.quantity < stackLimit ? "merge" : null;
+            return destination.quantity < limit ? "merge" : null;
         }
 
-        // Different items: swap.
-        return "swap";
+        // Swaps only make sense when transferring the entire stack.
+        return amount === source.quantity ? "swap" : null;
     }
 
     startMoveMode(index) {
         const slots = getInventorySlots(this.game);
-    
+
         if (!slots[index]) return;
-    
+
         this.moveSourceIndex = index;
-    
+        this.moveAmountMode = "all";
+
         document.addEventListener(
             "pointerdown",
             this.handleMoveOutsidePointerDown,
             true
         );
-    
+
         this.replaceElement();
     }
 
     cancelMoveMode({ render = true } = {}) {
         if (this.moveSourceIndex === null) return;
-    
+
         this.moveSourceIndex = null;
-    
+        this.moveAmountMode = "all";
+
         document.removeEventListener(
             "pointerdown",
             this.handleMoveOutsidePointerDown,
             true
         );
-    
-        if (render) {
-            this.replaceElement();
-        }
+
+        if (render) this.replaceElement();
     }
 
     beginSlotPress(index, event) {
         if (this.moveSourceIndex !== null) return;
 
-        if (event.button !== undefined && event.button !== 0) {
-            return;
-        }
+        if (event.button !== undefined && event.button !== 0) return;
 
         const slots = getInventorySlots(this.game);
 
-        // Only occupied slots can start move mode.
         if (!slots[index]) return;
 
         this.clearSlotPress();
@@ -172,8 +287,6 @@ export default class Inventory {
             startY: event.clientY
         };
 
-        // Keep receiving pointer events if the pointer moves outside
-        // the original slot.
         event.currentTarget.setPointerCapture?.(event.pointerId);
 
         this.longPressTimer = setTimeout(() => {
@@ -181,10 +294,7 @@ export default class Inventory {
 
             this.pressState = null;
             this.longPressTimer = null;
-
-            // Prevent the click generated after a long press from
-            // accidentally selecting a destination.
-            this.ignoreClickUntil = Date.now() + 700;
+            this.ignoreClickUntil = Date.now() + 150;
 
             this.startMoveMode(index);
         }, 450);
@@ -205,7 +315,6 @@ export default class Inventory {
         const deltaX = event.clientX - press.startX;
         const deltaY = event.clientY - press.startY;
 
-        // Movement beyond this tolerance cancels the long press.
         if (Math.hypot(deltaX, deltaY) > 12) {
             this.clearSlotPress();
         }
@@ -243,13 +352,17 @@ export default class Inventory {
 
         const slots = getInventorySlots(this.game);
 
-        // We are already moving a stack.
+        // -----------------------------------
+        // Move mode
+        // -----------------------------------
+
         if (this.moveSourceIndex !== null) {
-            // Tapping the source again cancels movement.
             if (index === this.moveSourceIndex) {
                 this.cancelMoveMode();
                 return;
             }
+
+            const source = slots[this.moveSourceIndex];
 
             const action = this.getMoveAction(
                 this.moveSourceIndex,
@@ -257,29 +370,43 @@ export default class Inventory {
                 slots
             );
 
-            // Invalid destination: cancel move mode.
             if (!action) {
                 this.cancelMoveMode();
                 return;
             }
 
+            const amount = this.getSelectedTransferAmount(source);
+
             const result = moveInventoryStack(
                 this.game,
                 this.moveSourceIndex,
-                index
+                index,
+                amount
             );
 
             if (result?.ok === false) return;
 
-            this.moveSourceIndex = null;
+            const remaining = slots[this.moveSourceIndex]?.quantity ?? 0;
 
             this.save();
+
+            // Keep moving while the source still has items.
+            if (remaining > 0 && action !== "swap") {
+                this.replaceElement();
+                return;
+            }
+
+            // Source is empty, or a swap completed.
+            this.cancelMoveMode({ render: false });
             this.refreshUI();
 
             return;
         }
 
-        // Normal tap: open item details.
+        // -----------------------------------
+        // Normal item selection
+        // -----------------------------------
+
         const slot = slots[index];
 
         if (slot) {
@@ -287,7 +414,9 @@ export default class Inventory {
         }
     }
 
+    // ===================================
     // INVENTORY SLOTS
+    // ===================================
 
     renderSlot(slot, index, slots) {
         const isMoving = this.moveSourceIndex !== null;
@@ -300,19 +429,12 @@ export default class Inventory {
 
         const classes = ["inventory-slot"];
 
-        if (slot) {
-            classes.push("is-occupied");
-        } else {
-            classes.push("is-empty");
-        }
+        classes.push(slot ? "is-occupied" : "is-empty");
 
-        if (isSource) {
-            classes.push("is-move-source");
-        }
+        if (isSource) classes.push("is-move-source");
 
         if (action) {
-            classes.push("is-move-target");
-            classes.push(`is-move-${action}`);
+            classes.push("is-move-target", `is-move-${action}`);
         }
 
         const children = [];
@@ -343,7 +465,6 @@ export default class Inventory {
             }
         }
 
-        // Small visual indicator for valid destinations.
         if (action) {
             const indicator = {
                 move: "↧",
@@ -364,25 +485,15 @@ export default class Inventory {
             children.push(
                 el("span", {
                     className: "inventory-slot-move-label",
-                    text: "MOVE",
+                    text: "SOURCE",
                     "aria-hidden": "true"
                 })
             );
         }
 
-        let label = slot
+        const label = slot
             ? `${getItemDefinition(slot.itemId)?.name ?? "Item"}, quantity ${slot.quantity}`
             : `Empty slot ${index + 1}`;
-
-        if (isSource) {
-            label += ", selected for movement";
-        } else if (action === "move") {
-            label += ", move destination";
-        } else if (action === "merge") {
-            label += ", merge destination";
-        } else if (action === "swap") {
-            label += ", swap destination";
-        }
 
         return el(
             "button",
@@ -393,63 +504,37 @@ export default class Inventory {
                 title: label,
                 "aria-label": label,
 
-                onPointerdown: event => {
-                    this.beginSlotPress(index, event);
-                },
-
-                onPointermove: event => {
-                    this.moveSlotPress(index, event);
-                },
-
-                onPointerup: event => {
-                    this.endSlotPress(index, event);
-                },
-
-                onPointercancel: () => {
-                    this.clearSlotPress();
-                },
-
-                onContextmenu: event => {
-                    event.preventDefault();
-                },
-
-                onClick: event => {
-                    this.handleSlotClick(index, event);
-                }
+                onPointerdown: event => this.beginSlotPress(index, event),
+                onPointermove: event => this.moveSlotPress(index, event),
+                onPointerup: event => this.endSlotPress(index, event),
+                onPointercancel: () => this.clearSlotPress(),
+                onContextmenu: event => event.preventDefault(),
+                onClick: event => this.handleSlotClick(index, event)
             },
             children
         );
     }
 
+    // ===================================
+    // TABS AND CONTENT
+    // ===================================
+
     renderItemsTab() {
         const slots = getInventorySlots(this.game);
         const capacity = getInventoryCapacity();
-        const used = getUsedSlotCount(this.game);
 
-        return el("div", { className: "inventory-tab-content" }, [
-            el("div", { className: "inventory-section-heading" }, [
-                el("strong", { text: "Inventory Slots" }),
-                el("span", {
-                    className: "inventory-capacity",
-                    text: `${used} / ${capacity}`
-                })
-            ]),
-
-            el(
-                "div",
-                {
-                    className: "inventory-slot-grid",
-                    role: "list",
-                    "aria-label": "Inventory slots"
-                },
-                Array.from({ length: capacity }, (_, index) =>
-                    this.renderSlot(slots[index], index, slots)
-                )
+        return el(
+            "div",
+            {
+                className: "inventory-slot-grid",
+                role: "list",
+                "aria-label": "Inventory slots"
+            },
+            Array.from({ length: capacity }, (_, index) =>
+                this.renderSlot(slots[index], index, slots)
             )
-        ]);
+        );
     }
-
-    // MATERIAL STASH
 
     renderMaterialRow(entry) {
         const { item, amount } = entry;
@@ -479,33 +564,23 @@ export default class Inventory {
     renderMaterialsTab() {
         const materials = getStashItems(this.game);
 
-        return el("div", { className: "inventory-tab-content" }, [
-            el("div", { className: "inventory-section-heading" }, [
-                el("strong", { text: "Material Stash" }),
-                el("span", {
-                    className: "inventory-capacity",
-                    text: `${materials.length} materials`
-                })
-            ]),
+        if (!materials.length) {
+            return el("div", {
+                className: "inventory-empty-message",
+                text: "No materials collected yet."
+            });
+        }
 
-            materials.length
-                ? el(
-                      "div",
-                      {
-                          className: "inventory-material-list",
-                          role: "list",
-                          "aria-label": "Stored materials"
-                      },
-                      materials.map(entry => this.renderMaterialRow(entry))
-                  )
-                : el("div", {
-                      className: "inventory-empty-message",
-                      text: "No materials collected yet."
-                  })
-        ]);
+        return el(
+            "div",
+            {
+                className: "inventory-material-list",
+                role: "list",
+                "aria-label": "Stored materials"
+            },
+            materials.map(entry => this.renderMaterialRow(entry))
+        );
     }
-
-    // TABS
 
     renderTabButton(id, label) {
         const active = this.activeTab === id;
@@ -530,61 +605,60 @@ export default class Inventory {
         );
     }
 
-    renderTabContent() {
-        return this.activeTab === "materials"
-            ? this.renderMaterialsTab()
-            : this.renderItemsTab();
+    renderTabs() {
+        return el(
+            "nav",
+            {
+                className: "inventory-tabs",
+                "aria-label": "Inventory categories"
+            },
+            [
+                this.renderTabButton("items", "Items"),
+                this.renderTabButton("materials", "Materials")
+            ]
+        );
     }
 
-    // RENDERING
-
-    render() {
-        const used = getUsedSlotCount(this.game);
-        const capacity = getInventoryCapacity();
+    renderTabContent() {
+        const content =
+            this.activeTab === "materials"
+                ? this.renderMaterialsTab()
+                : this.renderItemsTab();
 
         return el(
-            "section",
+            "div",
+            {
+                className: "inventory-scroll-area"
+            },
+            [content]
+        );
+    }
+
+    // ===================================
+    // RENDERING
+    // ===================================
+
+    render() {
+        return el(
+            "div",
             {
                 className: "inventory-panel",
-
                 onClick: event => {
-                    // Clicking elsewhere in the inventory cancels
-                    // move mode.
                     if (
                         this.moveSourceIndex !== null &&
-                        !event.target.closest(".inventory-slot-grid")
+                        !event.target.closest(
+                            ".inventory-slot, .inventory-move-controls"
+                        )
                     ) {
                         this.cancelMoveMode();
                     }
                 }
             },
             [
-                el("div", { className: "inventory-main-header" }, [
-                    el("strong", {
-                        className: "inventory-title",
-                        text: "Inventory"
-                    }),
-                    el("span", {
-                        className: "inventory-header-capacity",
-                        text: `${used} / ${capacity} slots`
-                    })
-                ]),
-
-                this.renderResources(),
-
-                el(
-                    "nav",
-                    {
-                        className: "inventory-tabs",
-                        "aria-label": "Inventory categories"
-                    },
-                    [
-                        this.renderTabButton("items", "Items"),
-                        this.renderTabButton("materials", "Materials")
-                    ]
-                ),
-
-                this.renderTabContent()
+                this.renderTipArea(),
+                this.renderTabs(),
+                this.renderTabContent(),
+                this.renderFooter()
             ]
         );
     }
@@ -599,7 +673,6 @@ export default class Inventory {
     }
 
     update() {
-        // An external inventory refresh invalidates any active move.
         this.clearSlotPress();
         this.cancelMoveMode({ render: false });
 

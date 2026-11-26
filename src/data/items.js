@@ -17,7 +17,7 @@ export const ITEM_STORAGE = Object.freeze({
     STASH: "stash"
 });
 
-export const INVENTORY_SLOT_COUNT = 20;
+export const INVENTORY_SLOT_COUNT = 40;
 export const DEFAULT_CONSUMABLE_STACK_LIMIT = 10;
 
 function getMaterialStorage(item) {
