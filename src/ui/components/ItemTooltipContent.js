@@ -37,6 +37,7 @@ export default class ItemTooltipContent {
     // PUBLIC API
     // ==================================================
 
+    // Inventory item inspection.
     show(itemId, target) {
         if (!itemId || !target) return;
 
@@ -47,14 +48,26 @@ export default class ItemTooltipContent {
             return;
         }
 
+        this.showEntry(entry, target, "inventory");
+    }
+
+    // Loot item inspection.
+    // The entry is supplied by the loot container, not inventory.
+    showLoot(entry, target, onTake) {
+        if (!entry?.item || !target) return;
+
+        this.showEntry(entry, target, "loot", onTake);
+    }
+
+    showEntry(entry, target, context, onTake = null) {
         this.tooltipManager.show({
             target,
-            content: this.build(entry),
+            content: this.build(entry, { context, onTake }),
             pinned: true
         });
     }
 
-    build(entry) {
+    build(entry, { context = "inventory", onTake = null } = {}) {
         const { item, amount } = entry;
         const game = this.game;
 
@@ -145,8 +158,11 @@ export default class ItemTooltipContent {
             );
         }
 
-        // Action
-        const action = this.renderAction(item, amount, slotId, isEquipped);
+        // Context-specific action
+        const action =
+            context === "loot"
+                ? this.renderTakeAction(onTake, amount)
+                : this.renderInventoryAction(item, amount, slotId, isEquipped);
 
         if (action) {
             content.append(
@@ -226,7 +242,11 @@ export default class ItemTooltipContent {
         return block;
     }
 
-    renderAction(item, amount, slotId, isEquipped) {
+    // ==================================================
+    // ACTIONS
+    // ==================================================
+
+    renderInventoryAction(item, amount, slotId, isEquipped) {
         if (item.consumable) {
             return el("button", {
                 type: "button",
@@ -258,9 +278,15 @@ export default class ItemTooltipContent {
         return null;
     }
 
-    // ==================================================
-    // ACTIONS
-    // ==================================================
+    renderTakeAction(onTake, amount) {
+        return el("button", {
+            type: "button",
+            className: "item-tooltip-action",
+            text: "TAKE",
+            disabled: amount < 1 || typeof onTake !== "function",
+            onClick: () => this.handleAction(onTake)
+        });
+    }
 
     handleAction(callback, value) {
         if (callback(value)) {

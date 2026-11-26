@@ -20,7 +20,8 @@ export default class ZoneActions {
         logEvent,
         processProgression,
         resourcePopups,
-        presentation
+        presentation,
+        lootSystem
     }) {
         this.getGame = getGame;
         this.save = save;
@@ -31,6 +32,11 @@ export default class ZoneActions {
         this.processProgression = processProgression;
         this.resourcePopups = resourcePopups;
         this.presentation = presentation;
+        this.lootSystem = lootSystem;
+
+        if (!this.lootSystem) {
+            throw new Error("ZoneActions requires a LootSystem instance.");
+        }
 
         // Preserve method context when passed as callbacks.
         this.handleGather = this.handleGather.bind(this);
@@ -75,7 +81,7 @@ export default class ZoneActions {
         return this.presentation.startBattle(enemyId, entity, scene);
     }
 
-    handleOpenCache(zone, screenPos, { lootTableId }) {
+    handleOpenCache(zone, screenPos, { lootTableId } = {}) {
         const table = getLootTable(lootTableId);
 
         if (!table) {
@@ -83,22 +89,24 @@ export default class ZoneActions {
             return false;
         }
 
-        const items = rollFromLootTable(this.getGame(), table);
-        const rewards = {
-            gold: 0,
-            xp: 0,
-            levelUps: [],
-            items
-        };
+        const rolledItems = rollFromLootTable(this.getGame(), table);
+
+        const container = this.lootSystem.createContainer({
+            title: "Cache Opened",
+            icon: "📦",
+            sourceType: "cache",
+            items: rolledItems
+        });
+
+        if (this.lootSystem.isEmpty(container)) {
+            this.showToast("This cache appears empty.");
+            return false;
+        }
 
         this.save();
         this.refreshUI({ database: true });
 
-        this.presentation.showLoot({
-            title: "Cache Opened",
-            icon: "📦",
-            rewards
-        });
+        this.presentation.showLoot(container);
 
         return true;
     }
@@ -113,11 +121,11 @@ export default class ZoneActions {
     announceDiscoveriesFrom(items) {
         for (const item of items ?? []) {
             if (!item.newlyDiscovered || item.failed) continue;
-    
+
             const material = materials.find(m => m.id === item.itemId);
-    
+
             if (!material) continue;
-    
+
             this.announceMaterialDiscovery(material);
         }
     }
@@ -131,12 +139,11 @@ export default class ZoneActions {
                 tab: "log"
             }
         );
-    
+
         this.showAnnouncement({
             title: "NEW MATERIAL DISCOVERED",
             message: `${material.name}: ${
-                material.description ??
-                "A new material enters your journal."
+                material.description ?? "A new material enters your journal."
             }`,
             symbol: this.presentation.createMaterialSymbol(material.id)
         });

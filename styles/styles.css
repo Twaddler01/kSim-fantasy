@@ -3357,6 +3357,222 @@ body:not(.debug-mode) {
     cursor: default;
 }
 
+/* ==================================================
+   LOOT PANEL
+   ================================================== */
+
+.loot-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.72);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 160ms ease, visibility 160ms ease;
+}
+
+.loot-panel-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loot-panel {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 440px);
+    max-height: min(85dvh, 720px);
+    min-height: 0;
+    overflow: hidden;
+    color: var(--text-primary, #eee);
+    background: var(--panel-bg, #202329);
+    border: 1px solid var(--border-color, #454950);
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    transform: translateY(10px);
+    transition: transform 160ms ease;
+}
+
+.loot-panel-backdrop.is-visible .loot-panel {
+    transform: translateY(0);
+}
+
+.loot-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color, #454950);
+}
+
+.loot-panel-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.loot-panel-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.loot-panel-title-block {
+    min-width: 0;
+}
+
+.loot-panel-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.loot-panel-subtitle {
+    margin-top: 3px;
+    color: var(--text-muted, #999);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+}
+
+.loot-panel-close {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--border-color, #454950);
+    border-radius: 7px;
+    font-size: 1rem;
+}
+
+.loot-panel-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px 16px;
+}
+
+.loot-panel-section + .loot-panel-section {
+    margin-top: 20px;
+}
+
+.loot-panel-section-title {
+    margin: 0 0 10px;
+    color: var(--text-muted, #aaa);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.loot-panel-slot-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.loot-panel-slot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    min-width: 0;
+    padding: 5px;
+    color: inherit;
+    background: var(--slot-bg, #292e35);
+    border: 1px solid var(--border-color, #454950);
+    border-radius: 7px;
+}
+
+.loot-panel-slot:active,
+.loot-panel-list-entry:active {
+    filter: brightness(1.2);
+}
+
+.loot-panel-quantity {
+    position: absolute;
+    right: 5px;
+    bottom: 3px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-shadow: 0 1px 3px #000;
+}
+
+.loot-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.loot-panel-list-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 10px;
+    color: inherit;
+    text-align: left;
+    background: var(--slot-bg, #292e35);
+    border: 1px solid var(--border-color, #454950);
+    border-radius: 7px;
+}
+
+.loot-panel-item-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.82rem;
+}
+
+.loot-panel-item-amount {
+    flex: 0 0 auto;
+    color: var(--text-muted, #aaa);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.loot-panel-empty {
+    padding: 30px 12px;
+    color: var(--text-muted, #aaa);
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.loot-panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color, #454950);
+}
+
+.loot-panel-remaining {
+    color: var(--text-muted, #aaa);
+    font-size: 0.75rem;
+}
+
+.loot-panel-take-all {
+    min-height: 38px;
+    padding: 0 18px;
+    color: #fff;
+    background: var(--accent-color, #926c37);
+    border: 0;
+    border-radius: 7px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.loot-panel-take-all:disabled {
+    opacity: 0.4;
+}
 
 /* OLD */
 /* ========================================

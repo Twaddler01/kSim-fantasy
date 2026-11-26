@@ -40,6 +40,8 @@ import CaveModal from "../ui/panels/CaveModal.js";
 import Inventory from "../ui/panels/Inventory.js";
 import TooltipManager from "../ui/components/TooltipManager.js";
 import ItemTooltipContent from "../ui/components/ItemTooltipContent.js";
+import LootSystem from "../systems/LootSystem.js";
+import LootPanel from "../ui/panels/LootPanel.js";
 
 // Components
 import { el } from "../ui/components/Element.js";
@@ -165,15 +167,12 @@ export function startGame() {
     const worldHUD = new WorldHUD({
         getPlayer: () => game.player,
         getEquipment: () => game.equipment,
-    
+
         onActionChange: (actionId, selectedData) => {
             const zoneId = game.appState.navigation.activeZoneId;
             const scene = worldPanel?.zoneViews?.get(zoneId);
-    
-            scene?.setSelectedAction(
-                actionId,
-                selectedData?.entity
-            );
+
+            scene?.setSelectedAction(actionId, selectedData?.entity);
         }
     });
 
@@ -312,9 +311,12 @@ export function startGame() {
     let worldPanel;
     let battleModal;
     let lootModal;
+    let lootPanel;
     let caveModal;
     let battleController = null;
     let battleControls = null;
+
+    const lootSystem = new LootSystem();
 
     const zoneActions = new ZoneActions({
         getGame: () => game,
@@ -330,11 +332,12 @@ export function startGame() {
             deactivateZone: () => worldPanel?.deactivateZone?.(),
             startBattle: (enemyId, entity, scene) =>
                 battleController?.start(enemyId, entity, scene) ?? false,
-            showLoot: rewards => lootModal.show(rewards),
+            showLoot: container => lootPanel?.show(container),
             showCave: dungeonId => caveModal.show(dungeonId),
             createMaterialSymbol: materialId =>
                 MaterialIcon(materialId, { size: 44 })
-        }
+        },
+        lootSystem
     });
 
     worldPanel = new WorldPanel({
@@ -388,11 +391,9 @@ export function startGame() {
         save,
         refreshUI,
         showToast,
-    
+
         onFinish: battle => {
-            zoneActions.announceDiscoveriesFrom(
-                battle.rewards?.items
-            );
+            zoneActions.announceDiscoveriesFrom(battle.rewards?.items);
         }
     });
 
@@ -401,28 +402,24 @@ export function startGame() {
             battleController?.beginAttack();
             updateBattleControls();
         },
-    
+
         onFlee: () => {
             battleController?.flee();
             updateBattleControls();
         },
-    
+
         onFocusEnemy: () => {
-            battleController?.scene?.focusEntity(
-                battleController?.enemyEntity
-            );
+            battleController?.scene?.focusEntity(battleController?.enemyEntity);
         }
     });
-    
+
     function updateBattleControls() {
         const battle = battleController?.battle;
         const enemy = battleController?.enemyEntity;
         const scene = battleController?.scene;
-    
-        const inRange = Boolean(
-            enemy && scene?.isEnemyInAttackRange(enemy)
-        );
-    
+
+        const inRange = Boolean(enemy && scene?.isEnemyInAttackRange(enemy));
+
         battleControls?.update(battle, {
             enemy,
             inRange
@@ -679,7 +676,7 @@ export function startGame() {
 
         // Tooltip system
         ui.tooltipManager = new TooltipManager();
-        
+
         ui.itemTooltip = new ItemTooltipContent({
             getGame: () => game,
             tooltipManager: ui.tooltipManager,
@@ -687,6 +684,22 @@ export function startGame() {
             onUnequip: itemActions.unequip,
             onUse: itemActions.use
         });
+
+        lootPanel = new LootPanel({
+            getGame: () => game,
+            lootSystem,
+            itemTooltip: ui.itemTooltip,
+            closeTooltip: () => ui.tooltipManager.hide(),
+            save,
+            refreshUI,
+            showToast,
+        
+            onClose: newlyDiscovered => {
+                zoneActions.announceDiscoveriesFrom(newlyDiscovered);
+            }
+        });
+        
+        ui.lootPanel = lootPanel;
 
         ui.character = new Character({
             getPlayer: () => game.player,

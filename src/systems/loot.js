@@ -13,30 +13,43 @@ import { gainXp } from "./character.js";
  * Returns an array of { itemId, qty, name, failed, newlyDiscovered }.
  */
 export function rollFromLootTable(game, table) {
-    if (!Array.isArray(table)) return [];
+    if (!Array.isArray(table)) {
+        console.warn("rollFromLootTable: Invalid loot table.");
+        return [];
+    }
 
-    const items = [];
+    const results = [];
 
     for (const entry of table) {
-        if (Math.random() * 100 >= (entry.weight ?? 0)) continue;
+        if (!entry?.itemId) continue;
 
-        const qty = randomInt(entry.minQty ?? 1, entry.maxQty ?? 1);
-        if (qty < 1) continue;
+        const weight = Number(entry.weight ?? 0);
 
-        const addResult = addItem(game, entry.itemId, qty);
-        const name =
-            getItemDefinition(entry.itemId)?.name ?? entry.itemId;
+        if (weight <= 0 || Math.random() * 100 >= weight) {
+            continue;
+        }
 
-        items.push({
+        const minQty = Math.max(1, Math.floor(entry.minQty ?? 1));
+        const maxQty = Math.max(minQty, Math.floor(entry.maxQty ?? minQty));
+
+        const qty = randomInt(minQty, maxQty);
+
+        const item = getItemDefinition(entry.itemId);
+        
+        if (!item) {
+            console.warn(`rollFromLootTable: Unknown item "${entry.itemId}".`);
+            continue;
+        }
+        
+        results.push({
             itemId: entry.itemId,
+            name: item.name,
             qty,
-            name,
-            failed: !addResult.ok,
-            newlyDiscovered: Boolean(addResult.newlyDiscovered)
+            quantity: qty
         });
     }
 
-    return items;
+    return results;
 }
 
 export function rollRewards(game, enemy) {
