@@ -377,7 +377,10 @@ export function startGame() {
                     worldHUD.update();
                 },
                 onOpenCache: zoneActions.handleOpenCache,
-                onEnterCave: zoneActions.handleEnterCave
+                onEnterCave: zoneActions.handleEnterCave,
+                onLootExpired: entity => {
+                    lootPanel?.expire(entity.lootContainer);
+                },
             });
         },
         onZoneEnter: () => ui.overlayManager?.close()

@@ -421,6 +421,12 @@ export default class LootPanel {
         document.body.classList.add("modal-open");
     }
 
+    expire(container) {
+        if (this.container === container && this.visible) {
+            this.hide();
+        }
+    }
+
     hide() {
         if (!this.visible) return;
 

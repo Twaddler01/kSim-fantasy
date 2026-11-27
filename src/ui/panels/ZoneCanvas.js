@@ -143,6 +143,8 @@ export default class ZoneCanvas {
         showBoundaries = false,
         showCombatRanges = false,
         respawnDelay = 3,
+        lootDuration = 60,
+        onLootExpired = null,
         backgroundCanvas = null,
         fallbackEntityCount = 10,
         title = null,
@@ -174,6 +176,8 @@ export default class ZoneCanvas {
         // Clone so caller mutations don't leak in.
         this.world = { width: world.width, height: world.height };
         this.respawnDelay = respawnDelay;
+        this.lootDuration = lootDuration;
+        this.onLootExpired = onLootExpired;
         this.backgroundCanvas = backgroundCanvas;
         this.regions = regions;
         this.showBoundaries = showBoundaries;
@@ -548,7 +552,48 @@ export default class ZoneCanvas {
                 }
             }
         }
-
+        
+        // Complete entities whose loot has all been collected.
+        for (const e of this.entities) {
+            if (
+                !e.active ||
+                !e.lootContainer ||
+                e.lootContainer.items.length > 0
+            ) {
+                continue;
+            }
+        
+            e.lootContainer = null;
+            e.lootExpiresAt = 0;
+        
+            this.consumeEntity(
+                e,
+                `${e.label ?? "Object"} recovered`
+            );
+        }
+        
+        // Expire uncollected loot and begin normal entity respawning.
+        for (const e of this.entities) {
+            if (
+                !e.active ||
+                !e.lootContainer ||
+                !Number.isFinite(e.lootExpiresAt) ||
+                this.time < e.lootExpiresAt
+            ) {
+                continue;
+            }
+        
+            this.onLootExpired?.(e);
+        
+            e.lootContainer = null;
+            e.lootExpiresAt = 0;
+        
+            this.consumeEntity(
+                e,
+                `${e.label ?? "Object"} loot expired`
+            );
+        }
+        
         // Respawn via the scene so it can pick the right entity definition.
         for (const e of this.entities) {
             if (e.active || this.time < e.respawnAt) continue;
@@ -888,6 +933,11 @@ export default class ZoneCanvas {
             // 5. Interaction indicator.
             this.drawInteractionIndicator(ctx, e, drawX, drawY);
 
+            // 6. Pending loot indicator.
+            if (e.lootContainer?.items?.length > 0) {
+                this.drawPendingLootIndicator(ctx, e, drawX, drawY);
+            }
+            
             // Cracks (gather only; enemies never add them).
             if (e.cracks && e.cracks.length > 0) {
                 ctx.strokeStyle = "rgba(0,0,0,0.55)";
@@ -931,7 +981,11 @@ export default class ZoneCanvas {
 
             // Progress pips (gather only, since others have strikesRequired 1).
             const required = e.strikesRequired ?? 1;
-            if (required > 1 && e.strikesLanded > 0) {
+            if (
+                !e.lootContainer?.items?.length &&
+                required > 1 &&
+                e.strikesLanded > 0
+            ) {
                 const pipY = drawY - e.r - 10;
                 const gap = 6;
                 const startX = drawX - ((required - 1) * gap) / 2;
@@ -1041,6 +1095,79 @@ export default class ZoneCanvas {
         ctx.restore();
     }
 
+drawPendingLootIndicator(ctx, entity, drawX, drawY) {
+    const x = drawX;
+    const y = drawY - (entity.r ?? 22) - 14;
+
+    const duration = this.lootDuration || 60;
+
+    const remaining = Math.max(
+        0,
+        Math.min(
+            1,
+            (entity.lootExpiresAt - this.time) / duration
+        )
+    );
+
+    const elapsed = 1 - remaining;
+
+    const radius = 11;
+    const startAngle = -Math.PI / 2;
+    const fullCircle = Math.PI * 2;
+
+    ctx.save();
+
+    // Badge shadow and background.
+    ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
+    ctx.shadowBlur = 5;
+    ctx.fillStyle = "rgba(35, 29, 18, 0.95)";
+
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, fullCircle);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    // Elapsed time: dark yellow base ring.
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#806020";
+
+    ctx.beginPath();
+    ctx.arc(
+        x,
+        y,
+        radius,
+        startAngle,
+        startAngle + fullCircle
+    );
+    ctx.stroke();
+
+    // Remaining time: bright gold ring.
+    if (remaining > 0) {
+        ctx.strokeStyle = "#f2c66d";
+
+        ctx.beginPath();
+        ctx.arc(
+            x,
+            y,
+            radius,
+            startAngle,
+            startAngle + fullCircle * remaining
+        );
+        ctx.stroke();
+    }
+
+    // Pickup arrow.
+    ctx.fillStyle = "#ffe5a3";
+    ctx.font = "bold 15px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("↓", x, y - 0.5);
+
+    ctx.restore();
+}
+    
     drawHUD() {
         const ctx = this.ctx;
 
@@ -1243,16 +1370,23 @@ export default class ZoneCanvas {
 
         this.pendingAction = { entity, actionId };
     }
-
+    
     executeAction(entity, actionId) {
         if (!entity?.active) return;
-
-        // Gathering retains its existing multi-strike progression.
+    
+        // Pending loot is already gathered.
+        // Reopening its container should never require more strikes.
+        if (entity.lootContainer?.items?.length > 0) {
+            this.completeEntity(entity, actionId);
+            return;
+        }
+    
+        // Gathering retains its normal multi-strike progression.
         if (entity.type === "gather" && actionId === "gather") {
             this.strikeEntity(entity);
             return;
         }
-
+    
         // Other entity actions are dispatched directly to ZoneScene.
         this.completeEntity(entity, actionId);
     }
@@ -1292,18 +1426,32 @@ export default class ZoneCanvas {
             clientY: rect.top + (entity.y - this.camera.y)
         };
 
-        // The scene decides whether this interaction consumes the entity.
-        const consumed =
-            this.onInteract?.(entity, screenPos, actionId) !== false;
-
-        if (!consumed) {
-            entity.strikesLanded = 0;
-            entity.cracks = [];
-            return;
+        const result = this.onInteract?.(
+                entity,
+                screenPos,
+                actionId
+            );
+        
+            if (result === false) {
+                entity.strikesLanded = 0;
+                entity.cracks = [];
+                return;
+            }
+        
+            // Loot is waiting to be collected.
+            // Keep the entity active and start/reset its expiration timer.
+            if (result?.keepActive) {
+                entity.lootExpiresAt =
+                    this.time + (result.lootDuration ?? this.lootDuration);
+        
+                entity.strikesLanded = 0;
+                entity.cracks = [];
+                return;
+            }
+        
+            // Ordinary interactions still consume the entity.
+            this.consumeEntity(entity);
         }
-
-        this.consumeEntity(entity);
-    }
 
     consumeEntity(entity, message = null) {
         if (!entity?.active) return false;

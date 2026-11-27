@@ -56,6 +56,7 @@ export default class ZoneScene {
         onEncounter,
         onOpenCache,
         onEnterCave,
+        onLootExpired = null,
         onUpdate = null,
         getSprites = () => ({}),
         getTiles = () => null
@@ -66,6 +67,7 @@ export default class ZoneScene {
         this.onEncounter = onEncounter;
         this.onOpenCache = onOpenCache;
         this.onEnterCave = onEnterCave;
+        this.onLootExpired = onLootExpired;
         this.onUpdate = onUpdate;
         this.getSprites = getSprites;
         this.getTiles = getTiles;
@@ -100,6 +102,9 @@ export default class ZoneScene {
             onInteract: (entity, screenPos, actionId) =>
                 this.handleInteract(entity, screenPos, actionId),
             onRespawn: entity => this.buildRespawn(entity),
+            onLootExpired: entity => {
+                this.onLootExpired?.(entity);
+            },
             showToast: null,
             regions: this.zone.regions ?? [],
 
@@ -620,21 +625,16 @@ export default class ZoneScene {
      */
     handleInteract(entity, screenPos, actionId) {
         switch (entity.type) {
-            case "gather": {
-                if (actionId !== "gather") return false;
-                if (!this.onGather) {
-                    console.warn(
-                        "[ZoneScene] No onGather handler; entity not processed:",
-                        entity.materialId
-                    );
-                    return false;
-                }
-                const ok = this.onGather(this.zone, screenPos, {
-                    id: entity.materialId,
-                    richness: entity.richness
-                });
-                return ok !== false;
-            }
+            case "gather":
+                return this.onGather?.(
+                    this.zone,
+                    screenPos,
+                    {
+                        id: entity.materialId,
+                        richness: entity.richness,
+                        entity
+                    }
+                ) ?? false;
 
             case "enemy": {
                 if (actionId !== "attack") return false;
@@ -656,20 +656,15 @@ export default class ZoneScene {
                 return false;
             }
 
-            case "cache": {
-                if (actionId !== "loot") return false;
-                if (!this.onOpenCache) {
-                    console.warn(
-                        "[ZoneScene] No onOpenCache handler; cache not processed:",
-                        entity.lootTableId
-                    );
-                    return false;
-                }
-                this.onOpenCache(this.zone, screenPos, {
-                    lootTableId: entity.lootTableId
-                });
-                return true;
-            }
+            case "cache":
+                return this.onOpenCache?.(
+                    this.zone,
+                    screenPos,
+                    {
+                        lootTableId: entity.lootTableId,
+                        entity
+                    }
+                ) ?? false;
 
             case "cave": {
                 if (actionId !== "enter") return false;

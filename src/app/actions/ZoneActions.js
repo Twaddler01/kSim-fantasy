@@ -47,71 +47,90 @@ export default class ZoneActions {
     }
 
     handleGather(zone, event, target) {
-        const result = gatherMaterial(
-            this.getGame(),
-            target.id,
-            target.richness ?? 1
-        );
+        const entity = target.entity;
 
-        if (!result.ok) {
-            this.showToast(getResultMessage(result.reason));
-            return false;
-        }
+        if (!entity) return false;
 
-        const container = this.lootSystem.createContainer({
-            title: "Gathered Materials",
-            icon: "⛏️",
-            sourceType: "gathering",
-            items: [
-                {
-                    itemId: result.itemId,
-                    quantity: result.quantity
-                }
-            ]
-        });
+        let container = entity.lootContainer;
 
-        if (this.lootSystem.isEmpty(container)) {
-            this.showToast("Nothing could be recovered.");
-            return false;
+        if (!container) {
+            const result = gatherMaterial(
+                this.getGame(),
+                target.id,
+                target.richness ?? 1
+            );
+
+            if (!result.ok) {
+                this.showToast(getResultMessage(result.reason));
+                return false;
+            }
+
+            container = this.lootSystem.createContainer({
+                title: "Gathered Materials",
+                icon: "⛏️",
+                sourceType: "gathering",
+                items: [
+                    {
+                        itemId: result.itemId,
+                        quantity: result.quantity
+                    }
+                ]
+            });
+
+            if (this.lootSystem.isEmpty(container)) {
+                this.showToast("Nothing could be recovered.");
+                return false;
+            }
+
+            entity.lootContainer = container;
         }
 
         this.presentation.showLoot(container);
 
-        return true;
+        return {
+            keepActive: true
+        };
     }
 
     handleEncounter(zone, screenPos, { enemyId, entity, scene }) {
         return this.presentation.startBattle(enemyId, entity, scene);
     }
 
-    handleOpenCache(zone, screenPos, { lootTableId } = {}) {
-        const table = getLootTable(lootTableId);
+    handleOpenCache(zone, screenPos, { lootTableId, entity } = {}) {
+        if (!entity) return false;
 
-        if (!table) {
-            this.showToast("This cache appears empty.");
-            return false;
+        let container = entity.lootContainer;
+
+        if (!container) {
+            const table = getLootTable(lootTableId);
+
+            if (!table) {
+                this.showToast("This cache appears empty.");
+                return false;
+            }
+
+            const rolledItems = rollFromLootTable(this.getGame(), table);
+
+            container = this.lootSystem.createContainer({
+                title: "Cache Opened",
+                icon: "📦",
+                sourceType: "cache",
+                items: rolledItems
+            });
+
+            if (this.lootSystem.isEmpty(container)) {
+                this.showToast("This cache appears empty.");
+                return false;
+            }
+
+            entity.lootContainer = container;
         }
-
-        const rolledItems = rollFromLootTable(this.getGame(), table);
-
-        const container = this.lootSystem.createContainer({
-            title: "Cache Opened",
-            icon: "📦",
-            sourceType: "cache",
-            items: rolledItems
-        });
-
-        if (this.lootSystem.isEmpty(container)) {
-            this.showToast("This cache appears empty.");
-            return false;
-        }
-
-        this.save();
-        this.refreshUI({ database: true });
 
         this.presentation.showLoot(container);
 
-        return true;
+        return {
+            keepActive: true
+        };
     }
 
     handleEnterCave(zone, screenPos, { dungeonId }) {
