@@ -259,7 +259,6 @@ export function fleeBattle(game, battle) {
 function resolvePlayerAttack(game, battle, isPlayerInRange) {
     if (battle.finished) return "finished";
 
-    // Validate distance at the exact moment of impact.
     if (!isPlayerInRange()) {
         return "out-of-range";
     }
@@ -272,14 +271,17 @@ function resolvePlayerAttack(game, battle, isPlayerInRange) {
 
     battle.enemyHp = Math.max(0, battle.enemyHp - result.damage);
 
-    // The opening hit officially starts combat.
     battle.combatStarted = true;
 
     battle.log.push({
         kind: result.critical ? "player-crit" : "player-attack",
         text: result.critical
             ? `Critical strike! You hit for ${result.damage}.`
-            : `You hit for ${result.damage}.`
+            : `You hit for ${result.damage}.`,
+        damage: result.damage,
+        critical: result.critical,
+        target: "enemy",
+        targetName: battle.enemy.name
     });
 
     if (battle.enemyHp <= 0) {
@@ -295,8 +297,6 @@ function resolvePlayerAttack(game, battle, isPlayerInRange) {
         return "hit";
     }
 
-    // The enemy gets its first attack opportunity
-    // only after surviving the player's first hit.
     if (!battle.enemyCanAttack) {
         battle.enemyCanAttack = true;
         battle.enemyWindupRemaining = battle.enemyWindupDuration;
@@ -308,8 +308,6 @@ function resolvePlayerAttack(game, battle, isPlayerInRange) {
 function resolveRealtimeEnemyAttack(game, battle, isPlayerInRange) {
     if (battle.finished) return;
 
-    // Enemy attacks are silently cancelled if the player
-    // has moved outside the enemy's attack range.
     if (!isPlayerInRange()) {
         battle.enemyCooldownRemaining = battle.enemyAttackInterval;
         return;
@@ -327,7 +325,11 @@ function resolveRealtimeEnemyAttack(game, battle, isPlayerInRange) {
         kind: result.critical ? "enemy-crit" : "enemy-attack",
         text: result.critical
             ? `${battle.enemy.name} critically hits you for ${result.damage}.`
-            : `${battle.enemy.name} hits you for ${result.damage}.`
+            : `${battle.enemy.name} hits you for ${result.damage}.`,
+        damage: result.damage,
+        critical: result.critical,
+        target: "player",
+        targetName: "You"
     });
 
     battle.turn += 1;
@@ -345,7 +347,6 @@ function resolveRealtimeEnemyAttack(game, battle, isPlayerInRange) {
         return;
     }
 
-    // Begin the enemy's next cooldown.
     battle.enemyCooldownRemaining = battle.enemyAttackInterval;
 }
 
@@ -495,6 +496,8 @@ function finalizeVictory(game, battle) {
 }
 
 function finalizeDefeat(game, battle) {
+    battle.playerDefeated = true;
+    
     const stats = getDerivedStats(game.player, game.equipment);
     const goldBefore = getItemAmount(game, "gold");
     const goldLost = Math.min(goldBefore, Math.floor(goldBefore * 0.1));
@@ -536,7 +539,10 @@ export function useConsumableAction(game, battle, itemId) {
 
     battle.log.push({
         kind: "player-heal",
-        text: `You use ${item.name} and restore ${result.restored} HP.`
+        text: `You use ${item.name} and restore ${result.restored} HP.`,
+        heal: result.restored,
+        target: "player",
+        targetName: "You"
     });
 
     // Using a potion consumes the player's turn.

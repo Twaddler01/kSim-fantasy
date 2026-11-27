@@ -1282,34 +1282,29 @@ body:not(.debug-mode) {
     }
 }
 
+/* resource popups */
+
 .resource-float {
     position: fixed;
-    z-index: 10000;
     pointer-events: none;
-    white-space: nowrap;
-
-    display: flex;
+    z-index: 9999;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
+    transform-origin: center bottom;
+    will-change: translate, scale, opacity;
 
-    padding: 5px 9px;
-    border: 1px solid rgba(100, 220, 255, 0.35);
-    border-radius: 999px;
+    /* Baked into keyframes via calc() — see .resource-float-critical. */
+    --crit-scale: 1;
 
-    background: rgba(7, 17, 31, 0.92);
-    color: #9be9ff;
-    font-size: 0.8rem;
-    font-weight: 700;
-
-    transform: translate(-50%, -50%);
-    animation: resource-float-up 850ms ease-out forwards;
-}
-
-.resource-float-icon--svg {
-    display: block;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
+    animation:
+        resource-float-drift var(--resource-float-duration, 2200ms)
+            cubic-bezier(0.25, 0.8, 0.35, 1) forwards,
+        resource-float-fade  var(--resource-float-duration, 2200ms)
+            linear forwards,
+        resource-float-pop   var(--resource-float-duration, 2200ms)
+            ease-out forwards;
 }
 
 .resource-gain {
@@ -1320,24 +1315,84 @@ body:not(.debug-mode) {
     color: #ff6b6b;
 }
 
-@keyframes resource-float-up {
-    0% {
-        opacity: 0;
-        margin-top: 10px;
-    }
+/* XP / progression tone — sits alongside the gain/loss pair. */
+.resource-xp {
+    color: #7fb3ff;
+}
 
-    15% {
-        opacity: 1;
-    }
+.resource-xp .resource-float-amount {
+    text-shadow:
+        0 0 6px rgba(127, 179, 255, 0.55),
+        0 1px 0 rgba(0, 0, 0, 0.5);
+}
 
-    75% {
-        opacity: 0.9;
-    }
+/* Optional, unused by default: useful if you ever want gold-colored
+   pickups. Add tone: "gold" at the call site to enable. */
+.resource-gold {
+    color: #f2c66d;
+}
 
-    100% {
-        opacity: 0;
-        margin-top: -42px;
-    }
+/* Single-segment motion: constant structure, no per-segment easing
+   to pump against. Fast off the mark, gentle settle. */
+@keyframes resource-float-drift {
+    0%   { translate: 0 6px; }
+    100% { translate: 0 -64px; }
+}
+
+/* Linear fade with a hold. The fade-out lands over the last ~35%
+   rather than diluting across the whole animation. */
+@keyframes resource-float-fade {
+    0%   { opacity: 0; }
+    12%  { opacity: 1; }
+    65%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Quick scale-in on the first ~14%, then steady. The critical
+   scale multiplies in through the CSS variable instead of via a
+   static transform (which the animation would override). */
+@keyframes resource-float-pop {
+    0%   { scale: calc(0.9 * var(--crit-scale)); }
+    14%  { scale: var(--crit-scale); }
+    100% { scale: var(--crit-scale); }
+}
+
+.resource-float-icon--svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.resource-float-name {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    opacity: 0.9;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resource-float-emoji {
+    font-size: 14px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.3));
+}
+
+.resource-float-critical {
+    --crit-scale: 1.08;
+    filter: brightness(1.15);
+    /* No `transform: scale(...)` here — the pop keyframes handle it
+       via --crit-scale. A static transform would be silently ignored. */
+}
+
+.resource-float-critical .resource-float-amount {
+    color: #ffb347;
+    text-shadow:
+        0 0 6px rgba(255, 179, 71, 0.6),
+        0 1px 0 rgba(0, 0, 0, 0.5);
 }
 
 .log-panel {
@@ -2418,6 +2473,82 @@ body:not(.debug-mode) {
         opacity: 1;
         transform: scale(1.15);
     }
+}
+
+/* Player death visual: hide the SVG, show a skull. */
+.exploration-player.is-dead .sprite {
+    display: none;
+}
+
+.exploration-player.is-dead::after {
+    content: "💀";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 46px;
+    line-height: 1;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.7));
+    animation: player-death-pop 400ms ease-out;
+}
+
+@keyframes player-death-pop {
+    0%   { transform: scale(0.4); opacity: 0; }
+    60%  { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Full-screen death overlay (rendered inside .exploration-demo). */
+.death-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+    z-index: 100;
+}
+
+.death-overlay.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.death-overlay-title {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #ff4a4a;
+    text-shadow: 0 2px 16px rgba(255, 60, 60, 0.6);
+    margin-bottom: 8px;
+}
+
+.death-overlay-countdown {
+    font-size: 140px;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 6px 30px rgba(255, 60, 60, 0.8);
+    font-variant-numeric: tabular-nums;
+}
+
+.death-overlay-countdown.is-ticking {
+    animation: death-countdown-pop 950ms ease-out;
+}
+
+@keyframes death-countdown-pop {
+    0%   { opacity: 0; transform: scale(0.4); }
+    20%  { opacity: 1; transform: scale(1.15); }
+    35%  { transform: scale(1); }
+    85%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0.2; transform: scale(0.95); }
 }
 
 /* OBJECTIVES */

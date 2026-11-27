@@ -5,6 +5,10 @@ import ActionSelector from "./ActionSelector.js";
 
 export default class WorldHUD {
     constructor({ getPlayer, getEquipment, onActionChange = null }) {
+        // NEW: keep a reference so WorldHUD can emit actions directly
+        // for entity kinds that don't route through ActionSelector.
+        this.onActionChange = onActionChange;
+
         this.playerPanel = new PlayerStatusPanel({
             getPlayer,
             getEquipment
@@ -73,6 +77,13 @@ export default class WorldHUD {
         this.actionSelector.update(target);
 
         this.update();
+
+        // Lootable entities have exactly one valid action.
+        // Bypass the action selector and hand it straight to the
+        // canvas via the same channel the action selector would use.
+        if (target?.type === "loot" && target.entity) {
+            this.onActionChange?.("loot", target);
+        }
     }
 
     clearTarget() {
@@ -81,6 +92,9 @@ export default class WorldHUD {
         this.targetPanel.update(null);
         this.targetPanel.setCombat(false);
         this.actionSelector.update(null);
+
+        // NEW: tell the canvas the action is gone too.
+        this.onActionChange?.(null, null);
     }
 
     clearTargetIf(entity) {

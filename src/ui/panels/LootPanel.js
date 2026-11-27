@@ -16,7 +16,8 @@ export default class LootPanel {
         save,
         refreshUI,
         showToast,
-        onClose
+        onClose,
+        resourcePopups = null
     } = {}) {
         if (typeof getGame !== "function") {
             throw new Error("LootPanel requires getGame().");
@@ -38,7 +39,8 @@ export default class LootPanel {
         this.refreshUI = refreshUI ?? (() => {});
         this.showToast = showToast ?? (() => {});
         this.onClose = onClose ?? (() => {});
-
+        this.resourcePopups = resourcePopups;
+        
         this.container = null;
         this.newlyDiscovered = [];
         this.visible = false;
@@ -317,52 +319,53 @@ export default class LootPanel {
 
     takeItem(itemId) {
         if (!this.container) return false;
-
+    
         const result = this.lootSystem.takeItem(
             this.getGame(),
             this.container,
             itemId
         );
-
+    
         if (!result.ok) {
             this.showToast(
                 result.reason === "inventory-full"
                     ? "Not enough inventory space."
                     : "Unable to collect this item."
             );
-
             return false;
         }
-
+    
         this.recordDiscovery(result);
+        this.recordTaken({ ...result, itemId: result.itemId ?? itemId });
         this.afterTransfer();
-
+    
         return true;
     }
 
-    takeAll() {
-        if (!this.container || this.lootSystem.isEmpty(this.container)) {
-            return;
-        }
-
-        this.closeTooltip();
-
-        const result = this.lootSystem.takeAll(this.getGame(), this.container);
-
-        for (const entry of result.taken) {
-            this.recordDiscovery(entry);
-        }
-
-        if (result.taken.length) {
-            this.afterTransfer();
-        }
-
-        if (result.failed.length) {
-            this.showToast(
-                "Some items could not be collected. They remain here."
-            );
-        }
+takeAll() {
+    if (!this.container || this.lootSystem.isEmpty(this.container)) {
+        return;
     }
+
+    this.closeTooltip();
+
+    const result = this.lootSystem.takeAll(this.getGame(), this.container);
+
+    for (const entry of result.taken) {
+        this.recordDiscovery(entry);
+        this.recordTaken(entry);
+    }
+
+    if (result.taken.length) {
+        this.afterTransfer();
+    }
+
+    if (result.failed.length) {
+        this.showToast(
+            "Some items could not be collected. They remain here."
+        );
+    }
+}
 
     recordDiscovery(result) {
         if (!result.newlyDiscovered) return;
@@ -374,6 +377,25 @@ export default class LootPanel {
         });
     }
 
+recordTaken(result) {
+    if (!this.resourcePopups) return;
+    if (!result?.itemId) return;
+
+    const quantity = result.quantity ?? result.amount ?? 1;
+    const existing = this.takenItems.find(
+        t => t.itemId === result.itemId
+    );
+
+    if (existing) {
+        existing.amount += quantity;
+    } else {
+        this.takenItems.push({
+            itemId: result.itemId,
+            amount: quantity
+        });
+    }
+}
+    
     afterTransfer() {
         this.save();
         this.refreshUI({ database: true });
@@ -430,6 +452,7 @@ export default class LootPanel {
 
         this.container = container;
         this.newlyDiscovered = [];
+        this.takenItems = [];
         this.visible = true;
 
         this.render();
@@ -444,28 +467,34 @@ export default class LootPanel {
         }
     }
 
-    hide(force = false) {
-        if (!this.visible) return;
+hide(force = false) {
+    if (!this.visible) return;
 
-        // Prevent accidental dismissal immediately after opening.
-        if (!force && Date.now() < this.canCloseAt) {
-            return;
-        }
-
-        clearTimeout(this.closeTimer);
-        this.closeTimer = null;
-
-        this.closeTooltip();
-        this.visible = false;
-        this.backdrop.classList.remove("is-visible");
-        document.body.classList.remove("modal-open");
-
-        const discovered = [...this.newlyDiscovered];
-        this.container = null;
-        this.newlyDiscovered = [];
-
-        this.onClose(discovered);
+    if (!force && Date.now() < this.canCloseAt) {
+        return;
     }
+
+    clearTimeout(this.closeTimer);
+    this.closeTimer = null;
+
+    this.closeTooltip();
+    this.visible = false;
+    this.backdrop.classList.remove("is-visible");
+    document.body.classList.remove("modal-open");
+
+    const discovered = [...this.newlyDiscovered];
+    const taken = [...this.takenItems];
+
+    this.container = null;
+    this.newlyDiscovered = [];
+    this.takenItems = [];
+
+    if (taken.length && this.resourcePopups) {
+        this.resourcePopups.show(taken, null);
+    }
+
+    this.onClose(discovered);
+}
 
     handleKeyDown(event) {
         if (event.key === "Escape" && this.visible) {

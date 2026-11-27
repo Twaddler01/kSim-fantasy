@@ -132,8 +132,23 @@ const ENTITY_RING_COLORS = {
     poi: {
         fill: "rgba(65, 220, 115, 0.18)",
         stroke: alpha => `rgba(90, 255, 145, ${alpha})`
+    },
+    loot: {
+        fill: "rgba(255, 200, 80, 0.18)",
+        stroke: alpha => `rgba(255, 220, 110, ${alpha})`
     }
 };
+
+/**
+ * Loot drops are stored as "enemy" internally (so respawn rebuilds
+ * an enemy) but render and color like a cache while loot is pending.
+ */
+function getEntityDisplayType(entity) {
+    if (entity.type === "enemy" && entity.lootContainer?.items?.length > 0) {
+        return "loot";
+    }
+    return entity.type;
+}
 
 export default class ZoneCanvas {
     constructor({
@@ -215,6 +230,14 @@ export default class ZoneCanvas {
         this.pendingAction = null;
         this.selectedEntity = null;
         this.selectedActionId = null;
+
+        this.paused = false;
+        this.playerSpawn = {
+            x: this.world.width / 2,
+            y: this.world.height / 2
+        };
+        this.deathOverlay = null;
+        this.deathOverlayCountdown = null;
     }
 
     setBackground(canvas) {
@@ -308,6 +331,85 @@ export default class ZoneCanvas {
             this._onPointerCancel
         );
         this.pointer = null;
+    }
+
+    pause() {
+        this.paused = true;
+        this.pointer = null;
+        this.pendingAction = null;
+        this.playerEl?.classList.remove("is-moving");
+    }
+
+    resume() {
+        this.paused = false;
+    }
+
+    setPlayerSpawn(x, y) {
+        this.playerSpawn = { x, y };
+    }
+
+    respawnPlayer() {
+        const p = this.player;
+        p.x = this.playerSpawn.x;
+        p.y = this.playerSpawn.y;
+        p.tx = this.playerSpawn.x;
+        p.ty = this.playerSpawn.y;
+        this.centerCameraOnPlayer();
+    }
+
+    setPlayerDead(dead) {
+        this.playerEl?.classList.toggle("is-dead", dead);
+    }
+
+    showDeathOverlay(countdown) {
+        if (this.deathOverlay) this.hideDeathOverlay();
+
+        const overlay = document.createElement("div");
+        overlay.className = "death-overlay";
+
+        const title = document.createElement("div");
+        title.className = "death-overlay-title";
+        title.textContent = "YOU DIED";
+
+        const countdownEl = document.createElement("div");
+        countdownEl.className = "death-overlay-countdown";
+        countdownEl.textContent = String(countdown);
+
+        overlay.append(title, countdownEl);
+        this.element.appendChild(overlay);
+
+        void overlay.offsetHeight; // force reflow for transition
+        overlay.classList.add("is-visible");
+
+        this.deathOverlay = overlay;
+        this.deathOverlayCountdown = countdownEl;
+
+        this._popCountdown();
+    }
+
+    updateDeathOverlay(remaining) {
+        if (!this.deathOverlayCountdown) return;
+        this.deathOverlayCountdown.textContent = String(remaining);
+        this._popCountdown();
+    }
+
+    _popCountdown() {
+        const el = this.deathOverlayCountdown;
+        if (!el) return;
+        el.classList.remove("is-ticking");
+        void el.offsetWidth;
+        el.classList.add("is-ticking");
+    }
+
+    hideDeathOverlay() {
+        const overlay = this.deathOverlay;
+        if (!overlay) return;
+
+        overlay.classList.remove("is-visible");
+        this.deathOverlay = null;
+        this.deathOverlayCountdown = null;
+
+        setTimeout(() => overlay.remove(), 350);
     }
 
     // ---------------------------------------------------------------
@@ -516,6 +618,11 @@ export default class ZoneCanvas {
     step(dt) {
         this.time += dt;
 
+        if (this.paused) {
+            this.playerEl?.classList.remove("is-moving");
+            return;
+        }
+
         // Allow external systems (such as combat) to update
         // using the same clock as world movement and animation.
         this.onUpdate?.(dt);
@@ -541,10 +648,15 @@ export default class ZoneCanvas {
             if (!entity.active) {
                 this.pendingAction = null;
             } else {
-                const inRange =
-                    actionId === "attack" && entity.type === "enemy"
-                        ? this.isEnemyInAttackRange(entity)
-                        : this.inReach(entity);
+                const isLootDrop = entity.lootContainer?.items?.length > 0;
+                const usesCombatRange =
+                    actionId === "attack" &&
+                    entity.type === "enemy" &&
+                    !isLootDrop;
+
+                const inRange = usesCombatRange
+                    ? this.isEnemyInAttackRange(entity)
+                    : this.inReach(entity);
 
                 if (inRange) {
                     this.pendingAction = null;
@@ -552,7 +664,7 @@ export default class ZoneCanvas {
                 }
             }
         }
-        
+
         // Complete entities whose loot has all been collected.
         for (const e of this.entities) {
             if (
@@ -562,16 +674,13 @@ export default class ZoneCanvas {
             ) {
                 continue;
             }
-        
+
             e.lootContainer = null;
             e.lootExpiresAt = 0;
-        
-            this.consumeEntity(
-                e,
-                `${e.label ?? "Object"} recovered`
-            );
+
+            this.consumeEntity(e, `${e.label ?? "Object"} recovered`);
         }
-        
+
         // Expire uncollected loot and begin normal entity respawning.
         for (const e of this.entities) {
             if (
@@ -582,18 +691,15 @@ export default class ZoneCanvas {
             ) {
                 continue;
             }
-        
+
             this.onLootExpired?.(e);
-        
+
             e.lootContainer = null;
             e.lootExpiresAt = 0;
-        
-            this.consumeEntity(
-                e,
-                `${e.label ?? "Object"} loot expired`
-            );
+
+            this.consumeEntity(e, `${e.label ?? "Object"} loot expired`);
         }
-        
+
         // Respawn via the scene so it can pick the right entity definition.
         for (const e of this.entities) {
             if (e.active || this.time < e.respawnAt) continue;
@@ -899,8 +1005,10 @@ export default class ZoneCanvas {
                 // Backdrop tint. Always rendered for emoji entities —
                 // it anchors the emoji, and the interaction ring sits
                 // around it as the type signal.
+                const displayType = getEntityDisplayType(e);
+
                 ctx.fillStyle =
-                    ENTITY_FALLBACK_COLORS[e.type] ??
+                    ENTITY_FALLBACK_COLORS[displayType] ??
                     ENTITY_FALLBACK_COLORS.gather;
                 ctx.globalAlpha = 0.2;
                 ctx.beginPath();
@@ -919,8 +1027,10 @@ export default class ZoneCanvas {
                 ctx.restore();
             } else {
                 const r = e.r ?? 22;
+                const displayType = getEntityDisplayType(e);
+
                 ctx.fillStyle =
-                    ENTITY_FALLBACK_COLORS[e.type] ??
+                    ENTITY_FALLBACK_COLORS[displayType] ??
                     ENTITY_FALLBACK_COLORS.gather;
                 ctx.beginPath();
                 ctx.arc(drawX, drawY, r * scale, 0, Math.PI * 2);
@@ -937,7 +1047,7 @@ export default class ZoneCanvas {
             if (e.lootContainer?.items?.length > 0) {
                 this.drawPendingLootIndicator(ctx, e, drawX, drawY);
             }
-            
+
             // Cracks (gather only; enemies never add them).
             if (e.cracks && e.cracks.length > 0) {
                 ctx.strokeStyle = "rgba(0,0,0,0.55)";
@@ -1067,9 +1177,10 @@ export default class ZoneCanvas {
     drawInteractionIndicator(ctx, entity, drawX, drawY) {
         if (this.selectedEntity !== entity) return;
 
-        const colors =
-            ENTITY_RING_COLORS[entity.type] ?? ENTITY_RING_COLORS.gather;
+        const displayType = getEntityDisplayType(entity);
 
+        const colors =
+            ENTITY_RING_COLORS[displayType] ?? ENTITY_RING_COLORS.gather;
         const radius = entity.indicatorRadius ?? entity.r ?? 20;
 
         // Very subtle pulse: oscillates the stroke alpha between
@@ -1095,79 +1206,70 @@ export default class ZoneCanvas {
         ctx.restore();
     }
 
-drawPendingLootIndicator(ctx, entity, drawX, drawY) {
-    const x = drawX;
-    const y = drawY - (entity.r ?? 22) - 14;
+    drawPendingLootIndicator(ctx, entity, drawX, drawY) {
+        const x = drawX;
+        const y = drawY - (entity.r ?? 22) - 14;
 
-    const duration = this.lootDuration || 60;
+        const duration = this.lootDuration || 60;
 
-    const remaining = Math.max(
-        0,
-        Math.min(
-            1,
-            (entity.lootExpiresAt - this.time) / duration
-        )
-    );
+        const remaining = Math.max(
+            0,
+            Math.min(1, (entity.lootExpiresAt - this.time) / duration)
+        );
 
-    const elapsed = 1 - remaining;
+        const elapsed = 1 - remaining;
 
-    const radius = 11;
-    const startAngle = -Math.PI / 2;
-    const fullCircle = Math.PI * 2;
+        const radius = 11;
+        const startAngle = -Math.PI / 2;
+        const fullCircle = Math.PI * 2;
 
-    ctx.save();
+        ctx.save();
 
-    // Badge shadow and background.
-    ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
-    ctx.shadowBlur = 5;
-    ctx.fillStyle = "rgba(35, 29, 18, 0.95)";
-
-    ctx.beginPath();
-    ctx.arc(x, y, 9, 0, fullCircle);
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-
-    // Elapsed time: dark yellow base ring.
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#806020";
-
-    ctx.beginPath();
-    ctx.arc(
-        x,
-        y,
-        radius,
-        startAngle,
-        startAngle + fullCircle
-    );
-    ctx.stroke();
-
-    // Remaining time: bright gold ring.
-    if (remaining > 0) {
-        ctx.strokeStyle = "#f2c66d";
+        // Badge shadow and background.
+        ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
+        ctx.shadowBlur = 5;
+        ctx.fillStyle = "rgba(35, 29, 18, 0.95)";
 
         ctx.beginPath();
-        ctx.arc(
-            x,
-            y,
-            radius,
-            startAngle,
-            startAngle + fullCircle * remaining
-        );
+        ctx.arc(x, y, 9, 0, fullCircle);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        // Elapsed time: dark yellow base ring.
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#806020";
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, startAngle, startAngle + fullCircle);
         ctx.stroke();
+
+        // Remaining time: bright gold ring.
+        if (remaining > 0) {
+            ctx.strokeStyle = "#f2c66d";
+
+            ctx.beginPath();
+            ctx.arc(
+                x,
+                y,
+                radius,
+                startAngle,
+                startAngle + fullCircle * remaining
+            );
+            ctx.stroke();
+        }
+
+        // Pickup arrow.
+        ctx.fillStyle = "#ffe5a3";
+        ctx.font = "bold 15px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("↓", x, y - 0.5);
+
+        ctx.restore();
     }
 
-    // Pickup arrow.
-    ctx.fillStyle = "#ffe5a3";
-    ctx.font = "bold 15px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("↓", x, y - 0.5);
-
-    ctx.restore();
-}
-    
     drawHUD() {
         const ctx = this.ctx;
 
@@ -1213,8 +1315,13 @@ drawPendingLootIndicator(ctx, entity, drawX, drawY) {
         // Entities.
         for (const e of this.entities) {
             if (!e.active) continue;
+
+            const displayType = getEntityDisplayType(e);
+
             ctx.fillStyle =
-                ENTITY_MINIMAP_COLORS[e.type] ?? ENTITY_MINIMAP_COLORS.gather;
+                ENTITY_MINIMAP_COLORS[displayType] ??
+                ENTITY_MINIMAP_COLORS.gather;
+
             ctx.beginPath();
             ctx.arc(mmX + e.x * sx, mmY + e.y * sy, 2, 0, Math.PI * 2);
             ctx.fill();
@@ -1258,7 +1365,6 @@ drawPendingLootIndicator(ctx, entity, drawX, drawY) {
     selectEntity(entity) {
         if (!entity?.active) return;
 
-        // Tapping the already-selected entity executes its active action.
         if (this.selectedEntity === entity) {
             if (this.selectedActionId) {
                 this.requestAction(entity, this.selectedActionId);
@@ -1266,13 +1372,35 @@ drawPendingLootIndicator(ctx, entity, drawX, drawY) {
             return;
         }
 
-        // Selecting a different entity cancels any previous action.
         this.pendingAction = null;
         this.selectedActionId = null;
         this.selectedEntity = entity;
 
-        // The HUD will choose the new entity's default action.
+        // HUD gets first crack at the entity → action mapping.
         this.onSelect?.(entity);
+
+        // Fallback for entity kinds the HUD doesn't map (e.g. loot
+        // drops). Runs after onSelect so a real HUD mapping wins.
+        if (this.selectedActionId === null) {
+            this.selectedActionId = this.inferAction(entity);
+        }
+    }
+
+    inferAction(entity) {
+        if (entity.lootContainer?.items?.length > 0) return "loot";
+
+        switch (entity.type) {
+            case "gather":
+                return "gather";
+            case "enemy":
+                return "attack";
+            case "cache":
+                return "open";
+            case "cave":
+                return "enter";
+            default:
+                return null;
+        }
     }
 
     clearSelection() {
@@ -1308,16 +1436,59 @@ drawPendingLootIndicator(ctx, entity, drawX, drawY) {
         return isWithinRange(this.player, entity, entity.attackRange);
     }
 
+    /**
+     * Screen-space position of an entity in page coordinates.
+     * Returns { x, y, rect } or null if the canvas isn't mounted.
+     * Correctly tracks camera panning and (for enemies) any
+     * pursuit movement, since x/y are read live.
+     */
+    getEntityScreenPosition(entity) {
+        if (!entity) return null;
+
+        const rect = this.canvas?.getBoundingClientRect();
+        if (!rect || !rect.width) return null;
+
+        return {
+            x: entity.x - this.camera.x + rect.left,
+            y: entity.y - this.camera.y + rect.top,
+            rect
+        };
+    }
+
+    /**
+     * Screen-space position of the player sprite in page coordinates.
+     */
+    getPlayerScreenPosition() {
+        const rect = this.canvas?.getBoundingClientRect();
+        if (!rect || !rect.width) return null;
+
+        return {
+            x: this.player.x - this.camera.x + rect.left,
+            y: this.player.y - this.camera.y + rect.top,
+            rect
+        };
+    }
+
     requestAction(entity, actionId) {
         if (!entity?.active) return;
 
-        // Combat uses its own center-to-center attack range.
+        // Loot drops (defeated enemies, gathered nodes whose loot is
+        // pending) use touch range — not combat range — even when the
+        // entity's stored type is "enemy".
+        if (entity.lootContainer?.items?.length > 0) {
+            this.requestReachAction(entity, actionId);
+            return;
+        }
+
         if (actionId === "attack" && entity.type === "enemy") {
             this.requestCombatAction(entity, actionId);
             return;
         }
 
-        // All ordinary interactions retain their existing behavior.
+        this.requestReachAction(entity, actionId);
+    }
+
+    requestReachAction(entity, actionId) {
         const p = this.player;
 
         if (this.inReach(entity)) {
@@ -1370,23 +1541,23 @@ drawPendingLootIndicator(ctx, entity, drawX, drawY) {
 
         this.pendingAction = { entity, actionId };
     }
-    
+
     executeAction(entity, actionId) {
         if (!entity?.active) return;
-    
+
         // Pending loot is already gathered.
         // Reopening its container should never require more strikes.
         if (entity.lootContainer?.items?.length > 0) {
             this.completeEntity(entity, actionId);
             return;
         }
-    
+
         // Gathering retains its normal multi-strike progression.
         if (entity.type === "gather" && actionId === "gather") {
             this.strikeEntity(entity);
             return;
         }
-    
+
         // Other entity actions are dispatched directly to ZoneScene.
         this.completeEntity(entity, actionId);
     }
@@ -1426,32 +1597,28 @@ drawPendingLootIndicator(ctx, entity, drawX, drawY) {
             clientY: rect.top + (entity.y - this.camera.y)
         };
 
-        const result = this.onInteract?.(
-                entity,
-                screenPos,
-                actionId
-            );
-        
-            if (result === false) {
-                entity.strikesLanded = 0;
-                entity.cracks = [];
-                return;
-            }
-        
-            // Loot is waiting to be collected.
-            // Keep the entity active and start/reset its expiration timer.
-            if (result?.keepActive) {
-                entity.lootExpiresAt =
-                    this.time + (result.lootDuration ?? this.lootDuration);
-        
-                entity.strikesLanded = 0;
-                entity.cracks = [];
-                return;
-            }
-        
-            // Ordinary interactions still consume the entity.
-            this.consumeEntity(entity);
+        const result = this.onInteract?.(entity, screenPos, actionId);
+
+        if (result === false) {
+            entity.strikesLanded = 0;
+            entity.cracks = [];
+            return;
         }
+
+        // Loot is waiting to be collected.
+        // Keep the entity active and start/reset its expiration timer.
+        if (result?.keepActive) {
+            entity.lootExpiresAt =
+                this.time + (result.lootDuration ?? this.lootDuration);
+
+            entity.strikesLanded = 0;
+            entity.cracks = [];
+            return;
+        }
+
+        // Ordinary interactions still consume the entity.
+        this.consumeEntity(entity);
+    }
 
     consumeEntity(entity, message = null) {
         if (!entity?.active) return false;

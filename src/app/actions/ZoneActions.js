@@ -43,6 +43,7 @@ export default class ZoneActions {
         this.handleEncounter = this.handleEncounter.bind(this);
         this.handleOpenCache = this.handleOpenCache.bind(this);
         this.handleEnterCave = this.handleEnterCave.bind(this);
+        this.handleOpenLoot = this.handleOpenLoot.bind(this);
         this.announceDiscoveriesFrom = this.announceDiscoveriesFrom.bind(this);
     }
 
@@ -140,6 +141,19 @@ export default class ZoneActions {
         return false;
     }
 
+    handleOpenLoot(zone, screenPos, { container, entity } = {}) {
+        if (!container || this.lootSystem.isEmpty(container)) {
+            this.showToast("Nothing to collect.");
+            return false;
+        }
+    
+        this.presentation.showLoot(container);
+    
+        // Same contract as handleGather / handleOpenCache:
+        // entity stays active, expiry timer resets each time.
+        return { keepActive: true };
+    }
+    
     announceDiscoveriesFrom(items) {
         for (const item of items ?? []) {
             if (!item.newlyDiscovered || item.failed) continue;

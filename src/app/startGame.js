@@ -28,6 +28,7 @@ import Character from "../ui/panels/Character.js";
 import BattleModal from "../ui/panels/BattleModal.js";
 import BattleController from "../systems/BattleController.js";
 import BattleControls from "../ui/hud/BattleControls.js";
+import PlayerDeathController from "../systems/PlayerDeathController.js";
 
 import MainObjective from "../ui/panels/MainObjective.js";
 import ObjectiveTracker from "../ui/panels/ObjectiveTracker.js";
@@ -378,9 +379,10 @@ export function startGame() {
                 },
                 onOpenCache: zoneActions.handleOpenCache,
                 onEnterCave: zoneActions.handleEnterCave,
+                onOpenLoot: zoneActions.handleOpenLoot,
                 onLootExpired: entity => {
                     lootPanel?.expire(entity.lootContainer);
-                },
+                }
             });
         },
         onZoneEnter: () => ui.overlayManager?.close()
@@ -394,12 +396,33 @@ export function startGame() {
         save,
         refreshUI,
         showToast,
+        lootSystem,
+        resourcePopups,
 
         onFinish: battle => {
-            zoneActions.announceDiscoveriesFrom(battle.rewards?.items);
+            // Reward discoveries are now announced when the player
+            // *loots* the drop, not at victory time. Keep this hook
+            // for gold/XP-log style notifications if you want them.
+            // (Leave the existing announceDiscoveriesFrom call out
+            // of here — LootPanel.onClose already handles discovery.)
+        },
+
+        onPlayerDeath: ({ battle, enemyEntity, scene }) => {
+            playerDeath.start({ battle, enemyEntity, scene });
         }
     });
 
+    const playerDeath = new PlayerDeathController({
+        getGame: () => game,
+        worldHUD,
+        save,
+        onRespawn: () => {
+            // Optional: refresh anything that cares about position
+            // (e.g. a future minimap or compass).
+            worldHUD.update();
+        }
+    });
+    
     battleControls = new BattleControls({
         onAttack: () => {
             battleController?.beginAttack();
@@ -696,12 +719,13 @@ export function startGame() {
             save,
             refreshUI,
             showToast,
-        
+            resourcePopups,
+
             onClose: newlyDiscovered => {
                 zoneActions.announceDiscoveriesFrom(newlyDiscovered);
             }
         });
-        
+
         ui.lootPanel = lootPanel;
 
         ui.character = new Character({

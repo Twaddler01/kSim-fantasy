@@ -56,6 +56,7 @@ export default class ZoneScene {
         onEncounter,
         onOpenCache,
         onEnterCave,
+        onOpenLoot,
         onLootExpired = null,
         onUpdate = null,
         getSprites = () => ({}),
@@ -67,6 +68,7 @@ export default class ZoneScene {
         this.onEncounter = onEncounter;
         this.onOpenCache = onOpenCache;
         this.onEnterCave = onEnterCave;
+        this.onOpenLoot = onOpenLoot;
         this.onLootExpired = onLootExpired;
         this.onUpdate = onUpdate;
         this.getSprites = getSprites;
@@ -111,7 +113,7 @@ export default class ZoneScene {
             // Debug
             showBoundaries: WORLD_DEBUG.showBoundaries,
             showCombatRanges: WORLD_DEBUG.showCombatRanges,
-            
+
             onUpdate: dt => this.onUpdate?.(dt, this)
         });
 
@@ -132,6 +134,39 @@ export default class ZoneScene {
 
     consumeEntity(entity, message = null) {
         return this.canvas.consumeEntity(entity, message);
+    }
+
+    /**
+     * Convert an existing entity into a loot drop in place.
+     *
+     * Follows the exact same lifecycle as a gathered material's loot:
+     *   · entity stays active, `lootContainer` attached
+     *   · `lootExpiresAt` counts down; auto-consume when reached
+     *   · `executeAction()` short-circuits straight to `completeEntity()`
+     *     while the container has items
+     *   · respawn happens through the entity's normal `respawnSeconds`
+     */
+    spawnLootDrop(
+        entity,
+        container,
+        { icon = "💰", label = null, lootDuration = 60 } = {}
+    ) {
+        if (!entity || !container?.items?.length) return false;
+
+        entity.lootContainer = container;
+        entity.lootExpiresAt = (this.canvas?.time ?? 0) + lootDuration;
+        entity.icon = icon;
+        entity.label = label ?? container.title ?? "Loot";
+        entity.sprite = null;
+        entity.inCombat = false;
+
+        // Neutralise combat metadata so nothing mistakes this for a live
+        // enemy mid-drop. Respawn restores these via buildEnemyEntity().
+        entity.attackRange = 0;
+        entity.detectionRange = 0;
+        entity.pursuitRange = 0;
+
+        return true;
     }
 
     // -----------------------------------------------------------------
@@ -371,7 +406,7 @@ export default class ZoneScene {
             attackRange: enemy?.attackRange ?? 85,
             detectionRange: enemy?.detectionRange ?? 260,
             pursuitRange: enemy?.pursuitRange ?? 380,
-            
+
             label: spawn.label ?? enemy?.name ?? spawn.enemyId ?? "Enemy",
             icon: enemy?.icon ?? "⚠️",
             showInteractionIndicator: true,
@@ -536,8 +571,18 @@ export default class ZoneScene {
 
         switch (entity.type) {
             case "enemy": {
-                const enemy = getEnemy(entity.enemyId);
+                // Defeated enemies are loot pickups, not combat targets.
+                if (entity.lootContainer?.items?.length > 0) {
+                    return {
+                        entity,
+                        type: "loot",
+                        name: entity.label ?? "Loot",
+                        subtitle: "Loot",
+                        icon: entity.icon ?? "💰"
+                    };
+                }
 
+                const enemy = getEnemy(entity.enemyId);
                 if (!enemy) return null;
 
                 return {
@@ -626,17 +671,28 @@ export default class ZoneScene {
     handleInteract(entity, screenPos, actionId) {
         switch (entity.type) {
             case "gather":
-                return this.onGather?.(
-                    this.zone,
-                    screenPos,
-                    {
+                return (
+                    this.onGather?.(this.zone, screenPos, {
                         id: entity.materialId,
                         richness: entity.richness,
                         entity
-                    }
-                ) ?? false;
+                    }) ?? false
+                );
 
             case "enemy": {
+                // A defeated enemy carrying loot opens its container instead
+                // of starting a new encounter. This runs before the actionId
+                // gate so whatever action the HUD sent (attack, loot, …)
+                // resolves to the pickup.
+                if (entity.lootContainer?.items?.length > 0) {
+                    return (
+                        this.onOpenLoot?.(this.zone, screenPos, {
+                            container: entity.lootContainer,
+                            entity
+                        }) ?? false
+                    );
+                }
+
                 if (actionId !== "attack") return false;
                 if (!this.onEncounter) {
                     console.warn(
@@ -650,21 +706,16 @@ export default class ZoneScene {
                     entity,
                     scene: this
                 });
-
-                // Starting combat does not consume the enemy.
-                // The combat system will consume it after victory.
                 return false;
             }
 
             case "cache":
-                return this.onOpenCache?.(
-                    this.zone,
-                    screenPos,
-                    {
+                return (
+                    this.onOpenCache?.(this.zone, screenPos, {
                         lootTableId: entity.lootTableId,
                         entity
-                    }
-                ) ?? false;
+                    }) ?? false
+                );
 
             case "cave": {
                 if (actionId !== "enter") return false;
@@ -802,14 +853,14 @@ export default class ZoneScene {
     getDistanceTo(entity) {
         return this.canvas.getDistanceTo(entity);
     }
-    
+
     isEnemyInAttackRange(entity) {
         return this.canvas.isEnemyInAttackRange(entity);
     }
 
     focusEntity(entity) {
         if (!entity?.active) return;
-    
+
         // Update the target panel only.
         // Do not change canvas.selectedEntity.
         this.onSelect?.(this.getSelectedEntityData(entity));
