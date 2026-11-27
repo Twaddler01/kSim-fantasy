@@ -42,6 +42,8 @@ export default class LootPanel {
         this.container = null;
         this.newlyDiscovered = [];
         this.visible = false;
+        this.canCloseAt = 0;
+        this.closeTimer = null;
 
         this.buildDOM();
 
@@ -376,6 +378,19 @@ export default class LootPanel {
         this.save();
         this.refreshUI({ database: true });
         this.render();
+
+        // Automatically close after the final item is collected.
+        if (this.lootSystem.isEmpty(this.container)) {
+            clearTimeout(this.closeTimer);
+
+            this.closeTimer = setTimeout(() => {
+                this.closeTimer = null;
+
+                if (this.visible && this.lootSystem.isEmpty(this.container)) {
+                    this.hide(true);
+                }
+            }, 300);
+        }
     }
 
     // ==================================================
@@ -409,6 +424,8 @@ export default class LootPanel {
             return;
         }
 
+        this.canCloseAt = Date.now() + 400;
+
         this.closeTooltip();
 
         this.container = container;
@@ -427,17 +444,23 @@ export default class LootPanel {
         }
     }
 
-    hide() {
+    hide(force = false) {
         if (!this.visible) return;
 
-        this.closeTooltip();
+        // Prevent accidental dismissal immediately after opening.
+        if (!force && Date.now() < this.canCloseAt) {
+            return;
+        }
 
+        clearTimeout(this.closeTimer);
+        this.closeTimer = null;
+
+        this.closeTooltip();
         this.visible = false;
         this.backdrop.classList.remove("is-visible");
         document.body.classList.remove("modal-open");
 
         const discovered = [...this.newlyDiscovered];
-
         this.container = null;
         this.newlyDiscovered = [];
 
@@ -451,7 +474,8 @@ export default class LootPanel {
     }
 
     destroy() {
-        this.hide();
+        clearTimeout(this.closeTimer);
+        this.hide(true);
         document.removeEventListener("keydown", this.handleKeyDown);
         this.backdrop.remove();
     }
