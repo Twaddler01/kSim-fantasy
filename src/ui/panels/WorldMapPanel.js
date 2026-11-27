@@ -19,7 +19,10 @@ export default class WorldMapPanel {
         unlockManager,
         unreadManager,
         zoneDefinitions,
-        onEnterZone
+        onEnterZone,
+        mapWidth = 700,
+        mapHeight = 490,
+        mapPadding = 100
     }) {
         this.getGame = getGame;
         this.unlockManager = unlockManager;
@@ -29,12 +32,25 @@ export default class WorldMapPanel {
 
         this.element = null;
         this.viewport = null;
+        this.mapStage = null;
         this.mapContainer = null;
         this.pinLayer = null;
         this.detailsPanel = null;
 
         this.selectedZoneId = null;
         this.cameraPosition = null;
+
+        this.detailsSummary = null;
+        this.detailsContent = null;
+        this.detailsToggleButton = null;
+        this.detailsExpanded = false;
+
+        this.mapWidth = mapWidth;
+        this.mapHeight = mapHeight;
+        this.mapPadding = mapPadding;
+
+        this.stageWidth = mapWidth + mapPadding * 2;
+        this.stageHeight = mapHeight + mapPadding * 2;
     }
 
     get game() {
@@ -72,9 +88,28 @@ export default class WorldMapPanel {
         this.mapContainer = el(
             "div",
             {
-                className: "world-map-container"
+                className: "world-map-container",
+                style: {
+                    width: `${this.mapWidth}px`,
+                    height: `${this.mapHeight}px`,
+                    left: `${this.mapPadding}px`,
+                    top: `${this.mapPadding}px`
+                }
             },
             [svg, this.pinLayer]
+        );
+
+        // Surrounding pannable terrain.
+        this.mapStage = el(
+            "div",
+            {
+                className: "world-map-stage",
+                style: {
+                    width: `${this.stageWidth}px`,
+                    height: `${this.stageHeight}px`
+                }
+            },
+            [this.mapContainer]
         );
 
         this.viewport = el(
@@ -83,7 +118,7 @@ export default class WorldMapPanel {
                 className: "world-map-viewport",
                 "aria-label": "World map. Scroll to explore."
             },
-            [this.mapContainer]
+            [this.mapStage]
         );
 
         // Reposition the camera when the map becomes visible or its
@@ -107,9 +142,22 @@ export default class WorldMapPanel {
             { passive: true }
         );
 
-        this.detailsPanel = el("div", {
-            className: "world-map-details"
+        // Persistent bottom-right zone details card.
+        this.detailsSummary = el("div", {
+            className: "world-map-details-summary"
         });
+
+        this.detailsContent = el("div", {
+            className: "world-map-details-content"
+        });
+
+        this.detailsPanel = el(
+            "div",
+            {
+                className: "world-map-details"
+            },
+            [this.detailsSummary, this.detailsContent]
+        );
 
         this.element = el(
             "div",
@@ -141,26 +189,44 @@ export default class WorldMapPanel {
     }
 
     update() {
-        if (!this.pinLayer || !this.detailsPanel) return this;
+        if (!this.pinLayer || !this.detailsSummary || !this.detailsContent) {
+            return this;
+        }
 
         this.pinLayer.replaceChildren(
             ...this.zoneDefinitions.map(zone => this.renderPin(zone))
         );
 
         const selectedZone = this.getSelectedZone();
+        const detailsScrollTop = this.detailsContent.scrollTop;
 
-        this.detailsPanel.replaceChildren(
-            ...(selectedZone
-                ? this.renderZoneDetails(selectedZone)
-                : [
-                      el("p", {
-                          className: "world-map-empty",
-                          text: "No zones are available."
-                      })
-                  ])
-        );
+        if (selectedZone) {
+            const { summary, expanded } = this.renderZoneDetails(selectedZone);
+
+            this.detailsSummary.replaceChildren(...summary);
+            this.detailsContent.replaceChildren(...expanded);
+        } else {
+            this.detailsSummary.replaceChildren(
+                el("p", {
+                    className: "world-map-empty",
+                    text: "No zones are available."
+                })
+            );
+
+            this.detailsContent.replaceChildren();
+        }
+
+        this.detailsContent.scrollTop = detailsScrollTop;
+
+        this.detailsPanel.classList.toggle("is-expanded", this.detailsExpanded);
 
         return this;
+    }
+
+    setDetailsVisible(visible) {
+        this.detailsPanel?.classList.toggle("is-hidden", !visible);
+
+        this.detailsShowButton?.classList.toggle("is-hidden", visible);
     }
 
     getSelectedZone() {
@@ -241,14 +307,38 @@ export default class WorldMapPanel {
         if (this.selectedZoneId === zoneId) return;
 
         this.selectedZoneId = zoneId;
+
+        // Every newly selected zone starts in compact mode.
+        this.detailsExpanded = false;
+
+        if (this.detailsContent) {
+            this.detailsContent.scrollTop = 0;
+        }
+
         this.update();
+    }
+
+    toggleDetails() {
+        this.detailsExpanded = !this.detailsExpanded;
+
+        this.detailsPanel?.classList.toggle(
+            "is-expanded",
+            this.detailsExpanded
+        );
+
+        if (this.detailsToggleButton) {
+            this.detailsToggleButton.textContent = this.detailsExpanded
+                ? "COLLAPSE ↑"
+                : "MORE DETAILS ↓";
+        }
     }
 
     renderZoneDetails(zone) {
         const unlocked = this.unlockManager.isUnlocked(zone.id);
         const unread = this.unreadManager.isUnread("world", `zone-${zone.id}`);
 
-        const children = [
+        // Always-visible summary.
+        const summary = [
             el(
                 "div",
                 {
@@ -266,14 +356,20 @@ export default class WorldMapPanel {
                                 {
                                     className: "world-map-details-icon"
                                 },
-                                [createZoneIcon(zone, { size: 30 })]
+                                [createZoneIcon(zone, { size: 28 })]
                             ),
+
                             el(
                                 "div",
                                 {
                                     className: "world-map-status-row"
                                 },
                                 [
+                                    el("span", {
+                                        className: "world-map-zone-name",
+                                        text: zone.name
+                                    }),
+
                                     el("span", {
                                         className: unlocked
                                             ? "world-map-status is-unlocked"
@@ -295,6 +391,38 @@ export default class WorldMapPanel {
                 ]
             ),
 
+            el(
+                "div",
+                {
+                    className: "world-map-details-actions"
+                },
+                [
+                    unlocked
+                        ? el("button", {
+                              type: "button",
+                              className: "world-map-enter-button",
+                              text: "ENTER ZONE",
+                              onClick: () => this.onEnterZone(zone.id)
+                          })
+                        : null,
+
+                    (this.detailsToggleButton = el("button", {
+                        type: "button",
+                        className: "world-map-details-toggle",
+                        text: this.detailsExpanded
+                            ? "COLLAPSE ↑"
+                            : "MORE DETAILS ↓",
+                        "aria-expanded": this.detailsExpanded
+                            ? "true"
+                            : "false",
+                        onClick: () => this.toggleDetails()
+                    }))
+                ].filter(Boolean)
+            )
+        ];
+
+        // Optional expanded information.
+        const expanded = [
             el("p", {
                 className: "world-map-description",
                 text: zone.description ?? "No description available."
@@ -302,7 +430,7 @@ export default class WorldMapPanel {
         ];
 
         if (!unlocked) {
-            children.push(this.renderUnlockRequirement(zone));
+            expanded.push(this.renderUnlockRequirement(zone));
         }
 
         const resources = this.getResourceItems(zone);
@@ -311,21 +439,21 @@ export default class WorldMapPanel {
         const buildings = this.getTownItems(zone);
 
         if (resources.length) {
-            children.push(this.renderContentGroup("RESOURCES", resources));
+            expanded.push(this.renderContentGroup("RESOURCES", resources));
         }
 
         if (enemies.length) {
-            children.push(this.renderContentGroup("CREATURES", enemies));
+            expanded.push(this.renderContentGroup("CREATURES", enemies));
         }
 
         if (pointsOfInterest.length) {
-            children.push(
+            expanded.push(
                 this.renderContentGroup("POINTS OF INTEREST", pointsOfInterest)
             );
         }
 
         if (buildings.length) {
-            children.push(this.renderContentGroup("SETTLEMENT", buildings));
+            expanded.push(this.renderContentGroup("SETTLEMENT", buildings));
         }
 
         if (
@@ -334,7 +462,7 @@ export default class WorldMapPanel {
             !pointsOfInterest.length &&
             !buildings.length
         ) {
-            children.push(
+            expanded.push(
                 el("p", {
                     className: "world-map-empty",
                     text: "Nothing of note has been discovered here yet."
@@ -342,18 +470,7 @@ export default class WorldMapPanel {
             );
         }
 
-        if (unlocked) {
-            children.push(
-                el("button", {
-                    type: "button",
-                    className: "world-map-enter-button",
-                    text: "ENTER ZONE",
-                    onClick: () => this.onEnterZone(zone.id)
-                })
-            );
-        }
-
-        return children;
+        return { summary, expanded };
     }
 
     renderUnlockRequirement(zone) {
@@ -599,8 +716,13 @@ export default class WorldMapPanel {
 
             const pos = ashBrook?.mapPosition ?? FALLBACK_POSITION;
 
-            const targetX = (this.mapContainer.clientWidth * pos.x) / 100;
-            const targetY = (this.mapContainer.clientHeight * pos.y) / 100;
+            const targetX =
+                this.mapContainer.offsetLeft +
+                (this.mapContainer.clientWidth * pos.x) / 100;
+
+            const targetY =
+                this.mapContainer.offsetTop +
+                (this.mapContainer.clientHeight * pos.y) / 100;
 
             this.viewport.scrollLeft = targetX - this.viewport.clientWidth / 2;
 

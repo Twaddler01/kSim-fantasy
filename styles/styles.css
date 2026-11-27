@@ -2038,19 +2038,35 @@ body:not(.debug-mode) {
 
 .craft-panel {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 14px;
+
     width: 100%;
     min-width: 0;
-}
+    min-height: 0;
 
-/* Catalog toolbar */
+    overflow: hidden;
+}
 
 .craft-toolbar {
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+}
+
+.craft-scroll-area {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .craft-toolbar-title {
@@ -4976,44 +4992,57 @@ ZONE
     color: var(--cyan);
 }
 
-
 /* ========================================
-   World Map — viewport and map surface
-   ======================================== */
+   World Map — full-panel workspace
+======================================== */
 
 .world-map-body {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    min-width: 0;
-}
-
-.world-map-viewport {
-    width: 100%;
-    height: clamp(260px, 42vh, 360px);
-    overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: #0e1710;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line) transparent;
-}
-
-.world-map-container {
     position: relative;
-    width: 700px;
-    height: 490px;
-    flex: none;
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
     overflow: hidden;
+}
+
+/* Entire pannable surface */
+.world-map-stage {
+    position: relative;
+    flex: none;
+
+    background-color: #172720;
+
+    background-image:
+        radial-gradient(
+            circle,
+            rgba(145, 174, 139, 0.12) 1px,
+            transparent 1.5px
+        ),
+        linear-gradient(
+            45deg,
+            transparent 48%,
+            rgba(145, 174, 139, 0.035) 49%,
+            rgba(145, 174, 139, 0.035) 51%,
+            transparent 52%
+        );
+
+    background-size:
+        24px 24px,
+        48px 48px;
+}
+
+/* Actual map */
+.world-map-container {
+    position: absolute;
+    overflow: hidden;
+    flex: none;
 }
 
 .world-map-bg {
     position: absolute;
     inset: 0;
-    display: block;
     width: 100%;
     height: 100%;
 }
@@ -5021,29 +5050,208 @@ ZONE
 .world-map-pin-layer {
     position: absolute;
     inset: 0;
-    pointer-events: none;
+}
+
+/* Map fills the entire panel */
+.world-map-viewport {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #0e1710;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+}
+
+/* ========================================
+   Floating zone details
+======================================== */
+
+/* Bottom-right zone card */
+.world-map-details {
+    position: absolute;
+    z-index: 5;
+    right: 10px;
+    bottom: 10px;
+
+    display: flex;
+    flex-direction: column;
+
+    width: min(360px, calc(100% - 20px));
+    max-height: min(70%, 460px);
+    min-width: 0;
+    min-height: 0;
+
+    overflow: hidden;
+
+    border: 1px solid var(--line);
+    border-radius: 12px;
+
+    background: rgba(8, 18, 30, 0.96);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.world-map-details-toolbar {
+    display: flex;
+    flex: 0 0 auto;
+
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 34px;
+    padding: 0 10px;
+
+    border-bottom: 1px solid var(--line);
+
+    color: var(--muted);
+    font: 600 0.62rem "DM Mono", monospace;
+    letter-spacing: 0.1em;
+}
+
+.world-map-details-close {
+    display: grid;
+    place-items: center;
+
+    width: 28px;
+    height: 28px;
+
+    border: 0;
+    border-radius: 6px;
+
+    background: transparent;
+    color: var(--text);
+
+    font-size: 1.3rem;
+    cursor: pointer;
+}
+
+.world-map-details-close:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.world-map-details-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.world-map-enter-button {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 34px;
+    padding: 7px 10px;
+
+    border: 1px solid var(--cyan, #62e4f4);
+    border-radius: 7px;
+
+    background: rgba(98, 228, 244, 0.12);
+    color: var(--cyan, #62e4f4);
+
+    font: 700 0.65rem "DM Mono", monospace;
+    letter-spacing: 0.06em;
+
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.world-map-enter-button:active {
+    background: rgba(98, 228, 244, 0.22);
+    transform: translateY(1px);
+}
+
+.world-map-details-toggle {
+    flex: 0 0 auto;
+    padding: 8px 2px;
+
+    border: 0;
+    background: transparent;
+    color: var(--cyan, #62e4f4);
+
+    font: 600 0.62rem "DM Mono", monospace;
+    white-space: nowrap;
+
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* Expanded information scrolls independently */
+.world-map-details-content {
+    display: none;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 12px;
+
+    min-width: 0;
+    min-height: 0;
+    padding: 0 12px 12px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+}
+
+.world-map-details.is-expanded .world-map-details-content {
+    display: flex;
+}
+
+/* Restore button */
+.world-map-details-show {
+    position: absolute;
+    z-index: 6;
+
+    right: 12px;
+    bottom: 12px;
+
+    padding: 9px 12px;
+
+    border: 1px solid var(--cyan);
+    border-radius: 8px;
+
+    background: rgba(8, 18, 30, 0.94);
+    color: var(--cyan);
+
+    font: 600 0.65rem "DM Mono", monospace;
+    cursor: pointer;
+}
+
+.world-map-details.is-hidden,
+.world-map-details-show.is-hidden {
+    display: none;
 }
 
 /* ========================================
    World Map — selected zone information
    ======================================== */
 
-.world-map-details {
+/* Always-visible summary */
+.world-map-details-summary {
     display: flex;
+    flex: 0 0 auto;
     flex-direction: column;
-    gap: 12px;
+    gap: 7px;
+
     min-width: 0;
-    padding: 14px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--panel, #111c2a);
+    padding: 9px 11px;
 }
 
 .world-map-details-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    min-width: 0;
 }
 
 .world-map-details-title {
@@ -5060,15 +5268,14 @@ ZONE
 }
 
 .world-map-details-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     flex: none;
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.035);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .world-map-status {
@@ -5088,27 +5295,36 @@ ZONE
 
 .world-map-status-row {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+}
+
+.world-map-zone-name {
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 .world-map-description {
     margin: 0;
     color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
+    font-size: 0.74rem;
+    line-height: 1.45;
 }
 
+/* Locked-zone requirement */
 .world-map-lock-requirement {
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 10px 12px;
-    border: 1px solid rgba(220, 170, 90, 0.25);
+    padding: 10px;
+    border: 1px solid rgba(255, 180, 80, 0.2);
     border-radius: 8px;
-    background: rgba(220, 170, 90, 0.07);
+    background: rgba(255, 180, 80, 0.06);
     color: var(--text);
-    font-size: 0.76rem;
+    font-size: 0.74rem;
 }
 
 .world-map-lock-icon {
@@ -5172,34 +5388,6 @@ ZONE
     font-size: 0.76rem;
     font-style: italic;
 }
-
-.world-map-enter-button {
-    width: 100%;
-    min-height: 42px;
-    margin-top: 4px;
-    padding: 10px 14px;
-    border: 1px solid var(--cyan, #62e4f4);
-    border-radius: 8px;
-    background: rgba(98, 228, 244, 0.1);
-    color: var(--cyan, #62e4f4);
-    font: 700 0.7rem "DM Mono", monospace;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.world-map-enter-button:active {
-    background: rgba(98, 228, 244, 0.2);
-    transform: translateY(1px);
-}
-
-@media (hover: hover) {
-    .world-map-enter-button:hover {
-        background: rgba(98, 228, 244, 0.16);
-    }
-}
-
 
 .world-map-pin {
     position: absolute;

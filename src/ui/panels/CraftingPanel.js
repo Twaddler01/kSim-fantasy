@@ -485,6 +485,7 @@ export default class CraftingPanel {
                 className: "craft-panel"
             });
 
+            // Fixed toolbar
             const toolbar = el("div", {
                 className: "craft-toolbar"
             });
@@ -503,11 +504,17 @@ export default class CraftingPanel {
             collapseButton.classList.add("craft-collapse-all");
 
             toolbar.append(title, collapseButton);
-            this.element.append(toolbar);
+
+            // Scrollable recipe catalog
+            const scrollArea = el("div", {
+                className: "craft-scroll-area"
+            });
 
             for (const group of RECIPE_GROUPS) {
-                this.element.append(this.createGroup(group));
+                scrollArea.append(this.createGroup(group));
             }
+
+            this.element.append(toolbar, scrollArea);
         }
 
         this.update();
