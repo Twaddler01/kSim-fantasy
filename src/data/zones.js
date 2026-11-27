@@ -100,7 +100,6 @@ export const ZONE_DEFINITIONS = [
         margin: 80,
         minSpacing: 100,
         entityRadius: 22,
-        strikeCountTable: null,
         sparkleTable: null,
 
         // Guaranteed spawns — placed first, always present, unaffected by RNG.
@@ -158,7 +157,6 @@ export const ZONE_DEFINITIONS = [
         margin: 80,
         minSpacing: 100,
         entityRadius: 22,
-        strikeCountTable: null,
         sparkleTable: null,
 
         // The mine always has at least 3 iron veins. Prevents Quest 2 from

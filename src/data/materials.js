@@ -13,7 +13,11 @@ export const materials = [
         icon: "🪨",
         description:
             "A chunk of rock heavy with iron. Smelts into usable ingots.",
-        mining: { strikesBase: 6, sparkleBase: 0 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 0
+        }
     },
     {
         id: "copperOre",
@@ -23,7 +27,11 @@ export const materials = [
         tier: 1,
         icon: "🟠",
         description: "A softer ore, useful for early tools and alloys.",
-        mining: { strikesBase: 5, sparkleBase: 0 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 0
+        }
     },
     {
         id: "coal",
@@ -33,7 +41,11 @@ export const materials = [
         tier: 1,
         icon: "⬛",
         description: "Black, brittle, and burns hot. Fuel for the forge.",
-        mining: { strikesBase: 4, sparkleBase: 0 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 0
+        }
     },
     {
         id: "sunpetal",
@@ -44,7 +56,11 @@ export const materials = [
         icon: "🌻",
         description:
             "A small golden flower, warm to the touch. Common in meadows.",
-        mining: { strikesBase: 3, sparkleBase: 0 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 0
+        }
     },
     {
         id: "moonbloom",
@@ -54,7 +70,11 @@ export const materials = [
         tier: 2,
         icon: "🌙",
         description: "A pale blue flower that only opens under moonlight.",
-        mining: { strikesBase: 5, sparkleBase: 1 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 1
+        }
     },
     {
         id: "oakLog",
@@ -65,7 +85,11 @@ export const materials = [
         icon: "🌳",
         description:
             "A sturdy log, useful for handles and simple construction.",
-        mining: { strikesBase: 4, sparkleBase: 0 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 0
+        }
     },
     {
         id: "wolfHide",
@@ -76,7 +100,11 @@ export const materials = [
         icon: "🐺",
         description: "A rough pelt, still smelling of pine and blood.",
         // Not mined from a zone — dropped by creatures in battle.
-        mining: { strikesBase: 1, sparkleBase: 0 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 0
+        }
     },
     {
         id: "voidShard",
@@ -86,7 +114,11 @@ export const materials = [
         tier: 3,
         icon: "💠",
         description: "A crystal that seems to drink the light around it.",
-        mining: { strikesBase: 12, sparkleBase: 2 }
+        gathering: {
+            durationBase: 3,
+            durationPerRichness: 0.5,
+            sparkleBase: 2
+        }
     },
 
     // ==========================================

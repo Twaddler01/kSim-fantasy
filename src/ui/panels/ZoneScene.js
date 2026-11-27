@@ -10,14 +10,14 @@
 //
 // ZoneCanvas owns:
 //   · Rendering, camera, input, tap-to-move, auto-approach
-//   · Per-entity strike counting (strikesRequired / strikesLanded)
+//   · Per-entity progress duration base, duration per richness
 //   · Deactivation and respawn timing
 //
 // Entity types this scene understands:
-//   "gather"  → tap gathers a raw material (existing behavior)
-//   "enemy"   → tap opens an encounter (wired in Phase 4.5)
-//   "cache"   → tap opens a loot cache (Phase 4.7)
-//   "cave"    → tap enters a dungeon / POI (Phase 4.7)
+//   "gather"  → tap gathers a raw material
+//   "enemy"   → tap opens an encounter
+//   "cache"   → tap opens a loot cache
+//   "cave"    → tap enters a dungeon / POI
 //
 // Zones can mix types in one spawnTable. Entities that have no
 // corresponding scene callback stay in place when tapped (they do not
@@ -383,7 +383,10 @@ export default class ZoneScene {
             r: this.entityRadius,
             materialId: material.id,
             richness,
-            strikesRequired: this.selectStrikes(richness, material.id),
+            gatherDuration: this.selectGatherDuration(
+                richness,
+                material.id
+            ),
             sparkleTier: this.selectSparkleTier(richness, material.id),
             showInteractionIndicator: true,
             label: material.name,
@@ -411,7 +414,6 @@ export default class ZoneScene {
             icon: enemy?.icon ?? "⚠️",
             showInteractionIndicator: true,
             sprite: null,
-            strikesRequired: 1,
             sparkleTier: 0,
             rotation: 0,
             scale: 1,
@@ -430,7 +432,6 @@ export default class ZoneScene {
             icon: "📦",
             showInteractionIndicator: true,
             sprite: null,
-            strikesRequired: 1,
             sparkleTier: 0,
             rotation: 0,
             scale: 1,
@@ -449,7 +450,6 @@ export default class ZoneScene {
             icon: "🕳️",
             showInteractionIndicator: true,
             sprite: null,
-            strikesRequired: 1,
             sparkleTier: 0,
             rotation: 0,
             scale: 1,
@@ -798,22 +798,22 @@ export default class ZoneScene {
         return valid[valid.length - 1].amount;
     }
 
-    selectStrikes(richness, materialId) {
-        // 1. Zone override (opt-in)
-        const table = this.zone.strikeCountTable;
-        if (Array.isArray(table)) {
-            const entry = table.find(e => e.richness === richness);
-            if (entry && Number.isFinite(entry.strikes)) {
-                return Math.max(1, Math.round(entry.strikes));
-            }
-        }
-
-        // 2. Material base + richness scaling
-        const material = materials.find(m => m.id === materialId);
-        const base = material?.mining?.strikesBase ?? 2;
-        return Math.max(1, base + (richness - 1));
+    selectGatherDuration(richness, materialId) {
+        const material = materials.find(
+            m => m.id === materialId
+        );
+    
+        const settings = material?.gathering ?? {};
+    
+        const base = settings.durationBase ?? 3;
+        const perRichness = settings.durationPerRichness ?? 0.5;
+    
+        return Math.max(
+            0.1,
+            base + (Math.max(1, richness) - 1) * perRichness
+        );
     }
-
+    
     selectSparkleTier(richness, materialId) {
         // 1. Zone override (opt-in)
         const table = this.zone.sparkleTable;
@@ -826,7 +826,7 @@ export default class ZoneScene {
 
         // 2. Material base + richness scaling
         const material = materials.find(m => m.id === materialId);
-        const base = material?.mining?.sparkleBase ?? 0;
+        const base = material?.gathering?.sparkleBase ?? 0;
         return Math.max(0, Math.min(3, base + (richness - 1)));
     }
 

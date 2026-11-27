@@ -13,6 +13,7 @@
 //     blends into the background.
 
 import { isWithinRange, getDistance } from "../../systems/CombatRange.js";
+import ActionProgress from "../../systems/ActionProgress.js";
 
 const INTERACT_REACH = 12; // px beyond touching that counts as "in reach"
 const TAP_HIT_RADIUS = 1.6; // tap hit detection, × entity.r
@@ -228,6 +229,8 @@ export default class ZoneCanvas {
         this._onPointerCancel = e => this.handlePointerCancel(e);
 
         this.pendingAction = null;
+        // Currently running timed world action, if any.
+        this.actionProgress = null;
         this.selectedEntity = null;
         this.selectedActionId = null;
 
@@ -337,6 +340,7 @@ export default class ZoneCanvas {
         this.paused = true;
         this.pointer = null;
         this.pendingAction = null;
+        this.cancelActionProgress("interface");
         this.playerEl?.classList.remove("is-moving");
     }
 
@@ -664,6 +668,9 @@ export default class ZoneCanvas {
                 }
             }
         }
+
+        // Advance any active timed world action.
+        this.updateActionProgress(dt);
 
         // Complete entities whose loot has all been collected.
         for (const e of this.entities) {
@@ -1089,25 +1096,47 @@ export default class ZoneCanvas {
                 }
             }
 
-            // Progress pips (gather only, since others have strikesRequired 1).
-            const required = e.strikesRequired ?? 1;
+            // Timed action progress (gathering for now).
+            const action = this.actionProgress;
+
             if (
-                !e.lootContainer?.items?.length &&
-                required > 1 &&
-                e.strikesLanded > 0
+                action?.isActive &&
+                action.entity === e
             ) {
-                const pipY = drawY - e.r - 10;
-                const gap = 6;
-                const startX = drawX - ((required - 1) * gap) / 2;
-                for (let i = 0; i < required; i++) {
-                    ctx.fillStyle =
-                        i < e.strikesLanded
-                            ? "#7cc8ff"
-                            : "rgba(255,255,255,0.18)";
+                const barWidth = 38;
+                const barHeight = 5;
+                const barX = drawX - barWidth / 2;
+                const barY = drawY - (e.r ?? 22) - 10;
+
+                ctx.save();
+
+                // Track.
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.beginPath();
+                ctx.roundRect(
+                    barX,
+                    barY,
+                    barWidth,
+                    barHeight,
+                    3
+                );
+                ctx.fill();
+
+                // Progress.
+                if (action.progress > 0) {
+                    ctx.fillStyle = "#42c9a0";
                     ctx.beginPath();
-                    ctx.arc(startX + i * gap, pipY, 2, 0, Math.PI * 2);
+                    ctx.roundRect(
+                        barX,
+                        barY,
+                        barWidth * action.progress,
+                        barHeight,
+                        3
+                    );
                     ctx.fill();
                 }
+
+                ctx.restore();
             }
         }
 
@@ -1357,6 +1386,7 @@ export default class ZoneCanvas {
 
         if (this.selectedActionId !== actionId) {
             this.pendingAction = null;
+            this.cancelActionProgress("selection-changed");
         }
 
         this.selectedActionId = actionId;
@@ -1371,6 +1401,8 @@ export default class ZoneCanvas {
             }
             return;
         }
+
+        this.cancelActionProgress("selection-changed");
 
         this.pendingAction = null;
         this.selectedActionId = null;
@@ -1407,6 +1439,7 @@ export default class ZoneCanvas {
         if (!this.selectedEntity) return;
 
         this.pendingAction = null;
+        this.cancelActionProgress("selection-changed");
         this.selectedEntity = null;
         this.selectedActionId = null;
 
@@ -1542,6 +1575,76 @@ export default class ZoneCanvas {
         this.pendingAction = { entity, actionId };
     }
 
+
+    // ---------------------------------------------------------------
+    // Timed actions
+    // ---------------------------------------------------------------
+
+    startGathering(entity) {
+        if (!entity?.active) return;
+
+        // Tapping the same target again must not restart its timer.
+        if (
+            this.actionProgress?.isActive &&
+            this.actionProgress.entity === entity
+        ) {
+            return;
+        }
+
+        this.cancelActionProgress("replaced");
+
+        const duration = entity.gatherDuration ?? 3;
+
+        const action = new ActionProgress({
+            type: "gather",
+            duration,
+
+            canContinue: () => {
+                if (!entity.active) return "target-unavailable";
+                if (this.selectedEntity !== entity) {
+                    return "selection-changed";
+                }
+                if (!this.inReach(entity)) return "out-of-range";
+
+                return true;
+            },
+
+            onComplete: () => {
+                this.actionProgress = null;
+                this.completeEntity(entity, "gather");
+            }
+        });
+
+        // Keep the target alongside the reusable progress object.
+        action.entity = entity;
+
+        this.actionProgress = action;
+    }
+
+    cancelActionProgress(reason = "cancelled") {
+        if (!this.actionProgress) return;
+
+        const action = this.actionProgress;
+        this.actionProgress = null;
+
+        action.cancel(reason);
+    }
+
+    updateActionProgress(dt) {
+        const action = this.actionProgress;
+        if (!action) return;
+
+        action.update(dt);
+
+        // Completion callbacks may already have cleared the reference.
+        if (
+            this.actionProgress === action &&
+            !action.isActive
+        ) {
+            this.actionProgress = null;
+        }
+    }
+    
     executeAction(entity, actionId) {
         if (!entity?.active) return;
 
@@ -1552,42 +1655,14 @@ export default class ZoneCanvas {
             return;
         }
 
-        // Gathering retains its normal multi-strike progression.
+        // Gathering uses the reusable timed-action system.
         if (entity.type === "gather" && actionId === "gather") {
-            this.strikeEntity(entity);
+            this.startGathering(entity);
             return;
         }
 
         // Other entity actions are dispatched directly to ZoneScene.
         this.completeEntity(entity, actionId);
-    }
-
-    strikeEntity(entity) {
-        if (!entity.active) return;
-        const required = entity.strikesRequired ?? 1;
-        if (entity.strikesLanded >= required) return;
-
-        entity.strikesLanded++;
-        entity.hitFlash = this.time;
-
-        // Cracks are a gather-specific visual. Enemies / caches / caves /
-        // POIs skip them.
-        if (entity.type === "gather") {
-            entity.cracks.push(this.makeCrack(entity));
-        }
-
-        if (entity.strikesLanded >= required) {
-            this.completeEntity(entity, "gather");
-        }
-    }
-
-    makeCrack(entity) {
-        const r = entity.r ?? 22;
-        return {
-            angle: Math.random() * Math.PI * 2,
-            innerR: r * (0.15 + Math.random() * 0.1),
-            outerR: r * (0.75 + Math.random() * 0.35)
-        };
     }
 
     completeEntity(entity, actionId) {
@@ -1626,6 +1701,9 @@ export default class ZoneCanvas {
         // Cancel any pending action involving this entity.
         if (this.pendingAction?.entity === entity) {
             this.pendingAction = null;
+        }
+        if (this.actionProgress?.entity === entity) {
+            this.cancelActionProgress("target-unavailable");
         }
 
         // Clear selection if this was the selected entity.

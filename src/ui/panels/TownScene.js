@@ -72,7 +72,6 @@ export default class TownScene {
             // Universal indicator: green ring over the door.
             showInteractionIndicator: true,
 
-            strikesRequired: 1,
             respawnSeconds: null
         }));
     }
