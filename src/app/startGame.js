@@ -901,6 +901,20 @@ export function startGame() {
         resetGame
     });
 
+    const _addVoid = new DebugButton({
+        id: "_addVoid",
+        description: "add +1 voidShard",
+        label: "add +1 voidShard",
+        run: () => game.inventory.stash['voidShard'] += 1
+    });
+    
+    const _showGame = new DebugButton({
+        id: "btn0",
+        description: "show game",
+        label: "show game",
+        run: () => console.log(JSON.stringify(game))
+    });
+
     const _showMap = new DebugButton({
         id: "btn1",
         description: "show map",
