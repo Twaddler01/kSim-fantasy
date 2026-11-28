@@ -118,3 +118,55 @@ function rollGold(range) {
 function randomInt(min, max) {
     return min + Math.floor(Math.random() * (max - min + 1));
 }
+
+export function rollGuaranteedLootFromTable(game, table) {
+    const results = rollFromLootTable(game, table);
+
+    if (results.length > 0) {
+        return results;
+    }
+
+    if (!Array.isArray(table)) return [];
+
+    const valid = table.filter(entry => {
+        const weight = Number(entry?.weight ?? 0);
+
+        return (
+            entry?.itemId &&
+            weight > 0 &&
+            Boolean(getItemDefinition(entry.itemId))
+        );
+    });
+
+    if (valid.length === 0) return [];
+
+    const totalWeight = valid.reduce(
+        (sum, entry) => sum + Number(entry.weight),
+        0
+    );
+
+    let roll = Math.random() * totalWeight;
+
+    let selected = valid[valid.length - 1];
+
+    for (const entry of valid) {
+        roll -= Number(entry.weight);
+
+        if (roll < 0) {
+            selected = entry;
+            break;
+        }
+    }
+
+    const minQty = Math.max(1, Math.floor(selected.minQty ?? 1));
+    const maxQty = Math.max(minQty, Math.floor(selected.maxQty ?? minQty));
+    const quantity = randomInt(minQty, maxQty);
+    const item = getItemDefinition(selected.itemId);
+
+    return [{
+        itemId: selected.itemId,
+        name: item.name,
+        qty: quantity,
+        quantity
+    }];
+}

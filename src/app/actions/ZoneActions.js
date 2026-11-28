@@ -6,7 +6,10 @@
 
 import { gatherMaterial } from "../../systems/MaterialGathering.js";
 import { getLootTable } from "../../data/lootTables.js";
-import { rollFromLootTable } from "../../systems/loot.js";
+import {
+    rollFromLootTable,
+    rollGuaranteedLootFromTable
+} from "../../systems/loot.js";
 import { materials } from "../../data/materials.js";
 import { getResultMessage } from "../../notifications/resultMessages.js";
 
@@ -110,7 +113,10 @@ export default class ZoneActions {
                 return false;
             }
 
-            const rolledItems = rollFromLootTable(this.getGame(), table);
+            const rolledItems = rollGuaranteedLootFromTable(
+                this.getGame(),
+                table
+            );
 
             container = this.lootSystem.createContainer({
                 title: "Cache Opened",
@@ -146,14 +152,14 @@ export default class ZoneActions {
             this.showToast("Nothing to collect.");
             return false;
         }
-    
+
         this.presentation.showLoot(container);
-    
+
         // Same contract as handleGather / handleOpenCache:
         // entity stays active, expiry timer resets each time.
         return { keepActive: true };
     }
-    
+
     announceDiscoveriesFrom(items) {
         for (const item of items ?? []) {
             if (!item.newlyDiscovered || item.failed) continue;
