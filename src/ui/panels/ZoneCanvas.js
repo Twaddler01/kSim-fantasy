@@ -12,6 +12,7 @@
 //     shared by town doors, future NPCs, and any POI that otherwise
 //     blends into the background.
 
+import WorldCamera from "../world/WorldCamera.js";
 import { isWithinRange, getDistance } from "../../systems/CombatRange.js";
 import ActionProgress from "../../systems/ActionProgress.js";
 
@@ -200,8 +201,7 @@ export default class ZoneCanvas {
         this.showCombatRanges = showCombatRanges;
         this.fallbackEntityCount = fallbackEntityCount;
 
-        this.camera = { x: 0, y: 0 };
-        this.cameraInitialized = false;
+        this.camera = new WorldCamera(this.world);
 
         this.player = {
             x: this.world.width / 2,
@@ -358,7 +358,7 @@ export default class ZoneCanvas {
         p.y = this.playerSpawn.y;
         p.tx = this.playerSpawn.x;
         p.ty = this.playerSpawn.y;
-        this.centerCameraOnPlayer();
+        this.camera.centerOn(this.player.x, this.player.y);
     }
 
     setPlayerDead(dead) {
@@ -427,9 +427,6 @@ export default class ZoneCanvas {
 
         if (!rect.width || !rect.height) return;
 
-        const previousWidth = this.width;
-        const previousHeight = this.height;
-
         this.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
         this.width = rect.width;
@@ -438,7 +435,6 @@ export default class ZoneCanvas {
         const pixelWidth = Math.round(this.width * this.dpr);
         const pixelHeight = Math.round(this.height * this.dpr);
 
-        // Only reset the canvas backing store when necessary.
         if (
             this.canvas.width !== pixelWidth ||
             this.canvas.height !== pixelHeight
@@ -449,40 +445,7 @@ export default class ZoneCanvas {
 
         this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-        if (!this.cameraInitialized) {
-            this.centerCameraOnPlayer();
-            this.cameraInitialized = true;
-            return;
-        }
-
-        // Preserve the current camera center during resizing.
-        const centerX = this.camera.x + previousWidth / 2;
-        const centerY = this.camera.y + previousHeight / 2;
-
-        this.camera.x = this.clampCameraX(centerX - this.width / 2);
-
-        this.camera.y = this.clampCameraY(centerY - this.height / 2);
-    }
-
-    centerCameraOnPlayer() {
-        this.camera.x = this.clampCameraX(this.player.x - this.width / 2);
-        this.camera.y = this.clampCameraY(this.player.y - this.height / 2);
-    }
-
-    clampCameraX(x) {
-        return Math.max(0, Math.min(x, this.world.width - this.width));
-    }
-
-    clampCameraY(y) {
-        return Math.max(0, Math.min(y, this.world.height - this.height));
-    }
-
-    clampWorldX(x) {
-        return Math.max(0, Math.min(x, this.world.width));
-    }
-
-    clampWorldY(y) {
-        return Math.max(0, Math.min(y, this.world.height));
+        this.camera.resize(this.width, this.height, this.player);
     }
 
     // ---------------------------------------------------------------
@@ -567,8 +530,12 @@ export default class ZoneCanvas {
         }
 
         if (this.pointer.hasPanned) {
-            this.camera.x = this.clampCameraX(this.pointer.startCameraX - dx);
-            this.camera.y = this.clampCameraY(this.pointer.startCameraY - dy);
+            this.camera.panFrom(
+                this.pointer.startCameraX,
+                this.pointer.startCameraY,
+                dx,
+                dy
+            );
         }
     }
 
@@ -588,8 +555,8 @@ export default class ZoneCanvas {
             } else {
                 this.clearSelection();
 
-                this.player.tx = this.clampWorldX(worldX);
-                this.player.ty = this.clampWorldY(worldY);
+                this.player.tx = this.camera.clampWorldX(worldX);
+                this.player.ty = this.camera.clampWorldY(worldY);
             }
         }
 
@@ -641,6 +608,12 @@ export default class ZoneCanvas {
             const step = Math.min(dist, p.speed * dt);
             p.x += (dx / dist) * step;
             p.y += (dy / dist) * step;
+        }
+
+        // Follow the player while moving.
+        // Camera clamps naturally at the world boundaries.
+        if (moving) {
+            this.camera.centerOn(p.x, p.y);
         }
 
         this.playerEl.classList.toggle("is-moving", moving);
@@ -1099,10 +1072,7 @@ export default class ZoneCanvas {
             // Timed action progress (gathering for now).
             const action = this.actionProgress;
 
-            if (
-                action?.isActive &&
-                action.entity === e
-            ) {
+            if (action?.isActive && action.entity === e) {
                 const barWidth = 38;
                 const barHeight = 5;
                 const barX = drawX - barWidth / 2;
@@ -1113,13 +1083,7 @@ export default class ZoneCanvas {
                 // Track.
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.beginPath();
-                ctx.roundRect(
-                    barX,
-                    barY,
-                    barWidth,
-                    barHeight,
-                    3
-                );
+                ctx.roundRect(barX, barY, barWidth, barHeight, 3);
                 ctx.fill();
 
                 // Progress.
@@ -1537,8 +1501,8 @@ export default class ZoneCanvas {
         const stopDist = p.r + (entity.r ?? 22) + INTERACT_REACH * 0.5;
 
         if (dist > stopDist) {
-            p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
-            p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
+            p.tx = this.camera.clampWorldX(entity.x - (dx / dist) * stopDist);
+            p.ty = this.camera.clampWorldY(entity.y - (dy / dist) * stopDist);
         }
 
         this.pendingAction = { entity, actionId };
@@ -1568,13 +1532,11 @@ export default class ZoneCanvas {
         // floating-point precision issues at the exact edge.
         const stopDist = Math.max(0, entity.attackRange - 2);
 
-        p.tx = this.clampWorldX(entity.x - (dx / dist) * stopDist);
-
-        p.ty = this.clampWorldY(entity.y - (dy / dist) * stopDist);
+        p.tx = this.camera.clampWorldX(entity.x - (dx / dist) * stopDist);
+        p.ty = this.camera.clampWorldY(entity.y - (dy / dist) * stopDist);
 
         this.pendingAction = { entity, actionId };
     }
-
 
     // ---------------------------------------------------------------
     // Timed actions
@@ -1637,14 +1599,11 @@ export default class ZoneCanvas {
         action.update(dt);
 
         // Completion callbacks may already have cleared the reference.
-        if (
-            this.actionProgress === action &&
-            !action.isActive
-        ) {
+        if (this.actionProgress === action && !action.isActive) {
             this.actionProgress = null;
         }
     }
-    
+
     executeAction(entity, actionId) {
         if (!entity?.active) return;
 
