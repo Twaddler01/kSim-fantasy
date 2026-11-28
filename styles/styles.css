@@ -2381,7 +2381,8 @@ body:not(.debug-mode) {
     font-variant-numeric: tabular-nums;
 }
 
-.exploration-demo {
+/* DOM overlay for the world  */
+.exploration-world {
     position: relative;
     display: flex;
     flex: 1 1 auto;
@@ -2400,9 +2401,37 @@ body:not(.debug-mode) {
     border: 1px solid rgba(120, 200, 255, 0.15);
 }
 
+/* World-space effects above the player */
+.exploration-world canvas.exploration-world-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+
+    display: block;
+    flex: none;
+
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+}
+
+/* World-space effects above the player */
+.exploration-world-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+}
+
 /* DOM overlay for the player sprite */
 .exploration-player {
     position: absolute;
+    z-index: 2;
     left: 0;
     top: 0;
     width: 40px;
@@ -2461,18 +2490,6 @@ body:not(.debug-mode) {
     }
 }
 
-.exploration-player {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 48px; /* was 40px */
-    height: 48px;
-    pointer-events: none;
-    will-change: transform;
-    /* warm glow now — miner's headlamp, not a drone */
-    filter: drop-shadow(0 0 5px rgba(255, 210, 100, 0.55));
-}
-
 /* Warm breathing glow from the headlamp */
 .exploration-player .lamp-glow {
     animation: lamp-pulse 3.2s infinite ease-in-out;
@@ -2514,7 +2531,7 @@ body:not(.debug-mode) {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* Full-screen death overlay (rendered inside .exploration-demo). */
+/* Full-screen death overlay (rendered inside .exploration-world). */
 .death-overlay {
     position: absolute;
     inset: 0;
@@ -5533,16 +5550,6 @@ ZONE
     min-height: 0;
 
     overflow: hidden;
-}
-
-.exploration-demo canvas {
-    display: block;
-    flex: 1 1 auto;
-
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    min-height: 0;
 }
 
 /* ================================================
